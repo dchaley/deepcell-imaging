@@ -31,3 +31,14 @@ Implications:
 - we can reuse (or have to reload) previously opened files
 - file load aka networking is 💰 + ⏳
 
+### Cloud Function Memory Info
+
+From docs (and our testing):
+- v1 vs v2 differing limits
+- default for both is 256 MB
+- v1 max is ~ 8 GB
+- v2 max is ~ 16 GB
+
+* Also - max CPU is 4 and no GPUs are available. v2 creates a 'visible' container is published to GCP Artifact registry and can be modified and/or used in CloudRun with has the capability of more RAM and CPU, still no GPUs.
+* Additionally, max associated disk for CloudFunctions is 100 MB compressed or 500 MB for uncompressed.
+
