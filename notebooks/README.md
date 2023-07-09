@@ -18,8 +18,11 @@ Next steps:
 - actually implement channel extraction from TIF files (see also: ark-analysis examples)
 - with non-trivial TIF input, size the steps (with focus on prediction)
 - parameterize paths properly, unify var names etc
+- load input + model from supplied path not hardcoded S3
 - create an end-to-end pipeline notebook (?)
 - consider automation? ex: upload npz, triggers cloud function to start visualization job
+
+Make a demo of it all!
 
 # How to run locally
 
