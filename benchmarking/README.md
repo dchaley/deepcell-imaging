@@ -3,9 +3,11 @@
 
 # Idea
 
-Deploy cloud function, configure its memory/CPU ([see docs](https://cloud.google.com/functions/docs/configuring/memory))
+Start with the "[notebook pipeline](../notebooks/README.md)".
 
-Run some benchmarking, maybe some warm-ups then measure "A Bunch" of calls to the function. (*Question*: in parallel? in sequence?)
+Run a Vertex AI "execution" with various machine sizes. (I can't see any other way to programmatically run a notebook on Vertex AI? I don't wanna set up & measure the permutations myself but maybe am overthinking it)
+
+Record timing results.
 
 Assign tags as appropriate, maybe by benchmark setup: machine size (ram/cpu settings), input size (pixels? file MBs? yes?)
 
