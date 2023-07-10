@@ -41,9 +41,13 @@ python -m pip install -r requirements.txt
 venv/bin/jupyter-lab
 ```
 
+NOTE from Lynn: prefer testing in GCP and avoid running locally if possible. This is a cloud-dev anti-pattern.
+
 # How to run in Vertex AI
 
 Hopefully just upload the notebooks to a managed notebook instance! 🤞🏻
+
+NOTE from Lynn: Vertex AI includes a dedicated model training service (SaaS, pay by the minute), this is commonly used when 'productizing ML' processes.
 
 # Questions
 
