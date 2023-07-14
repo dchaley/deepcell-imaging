@@ -41,7 +41,57 @@ python -m pip install -r requirements.txt
 venv/bin/jupyter-lab
 ```
 
-NOTE from Lynn: prefer testing in GCP and avoid running locally if possible. This is a cloud-dev anti-pattern.
+## Local benchmarking
+
+### Without tensorflow-metal
+
+Parallel cpu --> lots of "time" !
+```
+PID    COMMAND      %CPU      TIME     #TH    #WQ  #PORT MEM
+84741  Python       765.0     66:54.67 65/13  1    88    8660M+
+
+PID    COMMAND      %CPU      TIME     #TH    #WQ   #PORT MEM
+95657  Python       95.0      02:03:16 51/1   1     74    14G
+```
+
+Peaks at 18gb.
+
+deepcell debug logs:
+
+```
+6:45:54 PM
+INFO:root:Converting image dtype to float
+6:46:44 PM
+DEBUG:Mesmer:Pre-processed data with mesmer_preprocess in 56.7202 s
+6:46:46 PM
+DEBUG:Mesmer:_tile_input finished in 1.9673 s
+7:05:33 PM
+DEBUG:Mesmer:_batch_predict finished in 1127.0536 s
+7:06:39 PM
+DEBUG:Mesmer:_untile_output finished in 65.9215 s
+7:06:40 PM
+DEBUG:Mesmer:Run model finished in 1251.8428 s
+DEBUG:Mesmer:Post-processing results with mesmer_postprocess and kwargs: {'whole_cell_kwargs': {'maxima_threshold': 0.075, 'maxima_smooth': 0, 'interior_threshold': 0.2, 'interior_smooth': 2, 'small_objects_threshold': 15, 'fill_holes_threshold': 15, 'radius': 2}, 'nuclear_kwargs': {'maxima_threshold': 0.1, 'maxima_smooth': 0, 'interior_threshold': 0.2, 'interior_smooth': 2, 'small_objects_threshold': 15, 'fill_holes_threshold': 15, 'radius': 2}, 'compartment': 'whole-cell'}
+/Users/davidhaley/dev/deepcell-imaging/notebooks/venv/lib/python3.10/site-packages/deepcell_toolbox/deep_watershed.py:108: UserWarning: h_maxima peak finding algorithm was selected, but the provided image is larger than 5k x 5k pixels.This will lead to slow prediction performance.
+  warnings.warn('h_maxima peak finding algorithm was selected, '
+7:11:32 PM
+DEBUG:Mesmer:Post-processed results with mesmer_postprocess in 291.9621 s
+DEBUG:Mesmer:_resize_output finished in 0.0 s
+7:11:52 PM
+Prediction finished in 1564.53423699399 s
+```
+
+
+### No tensorflow-metal
+
+I wasn't able to test this, because DeepCell uses TF 2.8 but the TF 2.8 Metal/MacOS distro isn't available for 2.8 on MacOS 12 or 13.
+
+https://developer.apple.com/metal/tensorflow-plugin/
+
+```
+python -m pip install tensorflow-metal
+```
+
 
 # How to run in Vertex AI
 
