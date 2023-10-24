@@ -1,6 +1,8 @@
 # deepcell-imaging
 Notes / utilities / stuff for Deep Cell imaging project
 
+You are probably interested in the [notebooks](notebooks).
+
 ## Notes
 
 ### Python vs reading tiffs

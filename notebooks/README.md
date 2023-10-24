@@ -1,34 +1,31 @@
-# What is this
+# DeepCell Imaging Notebooks
 
-Starting point: [deepcell sample notebook](https://github.com/vanvalenlab/deepcell-tf/blob/3234a52eb48b53f704590c1b649b5c8b19804a06/notebooks/applications/Mesmer-Application.ipynb)
+This is a set of notebooks based on the [deepcell sample notebook](https://github.com/vanvalenlab/deepcell-tf/blob/3234a52eb48b53f704590c1b649b5c8b19804a06/notebooks/applications/Mesmer-Application.ipynb). Each step is extracted into its own notebook, with the outputs persisted at each step.
 
-A collection of notebooks to replicate the steps(???) in a cellular image segmentation.
+This allows easy re-runs of any step, assuming the previous outputs remain unchanged.
 
-This pipeline starts from an image file (j/k it's a numpy array of numbers):
+This pipeline starts from a numpy array of numbers; the input TIFF image has already been processed to an extent.
 
-- Extract input channels (nucleus + membrane) from the image (j/k just load the `multiplex_tissue` dataset)
-- Visualize input:
-  - Combine channels into a single array + visualize with green (nucleus) & blue (membrane).
-- Predict segments from input channels
-- Visualize segmentation
-  - Overlay segments on the input RGB and generate output images
+- [Extract input channels](Extract-Channels.ipynb): extract nucleus + membrane channels from the image into numpy arrays
+- [Visualize input](Visualize-Inputs.ipynb): combine channels into a single array + visualize with green (nucleus) & blue (membrane).
+- [Predict segments from input channels](Predict-Segments.ipynb): run the model on the input channels to generate a segmentation
+- [Visualize segments](Visualize-Segmentation.ipynb): overlay segments on the input RGB and generate output images
 
-Next steps:
+Some potential next steps:
 
 - actually implement channel extraction from TIF files (see also: ark-analysis examples)
 - with non-trivial TIF input, size the steps (with focus on prediction)
 - parameterize paths properly, unify var names etc
-- load input + model from supplied path not hardcoded S3
 - create an end-to-end pipeline notebook (?)
 - consider automation? ex: upload npz, triggers cloud function to start visualization job
 
-Make a demo of it all!
+.. and make a demo of it all!
 
 # How to run locally
 
-It's probably possible to create a conda environment from requirements.txt but I didn't figure out how! 😅
+This assumes unixen, if you're on Windows use `venv\Scripts\activate` instead.
 
-```
+```bash
 # Create & activate a venv.
 # Important: DeepCell only supports up to Python 3.10, not 3.11, as of 2023-07-08
 python3.10 -m venv venv
@@ -36,6 +33,11 @@ source venv/bin/activate
 
 # Install dependencies.
 python -m pip install -r requirements.txt
+
+# Install ipython
+python -m pip install ipython
+# Reload venv to refresh path.
+source venv/bin/activate
 
 # Open jupyter-lab
 venv/bin/jupyter-lab
