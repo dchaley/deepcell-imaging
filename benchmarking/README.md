@@ -19,15 +19,15 @@ Resources:
 | GPU | 0 | 1 T4 | 
 | RAM | 16 | 60 |
 
-# Idea / raw notes / don't trust me
+# Idea / raw notes 
 
 Start with the "[notebook pipeline](../notebooks/README.md)".
 
 Run a Vertex AI "execution" with various machine sizes. (I can't see any other way to programmatically run a notebook on Vertex AI? I don't wanna set up & measure the permutations myself but maybe am overthinking it)
 
 Record timing results.
-testest
-Assign tags as appropriate, maybe by benchmark setup: machine size (ram/cpu settings), input size (pixels? file MBs? yes?)
+- testest
+- Assign tags as appropriate, maybe by benchmark setup: machine size (ram/cpu settings), input size (pixels? file MBs? yes?)
 
 # Notes
 
@@ -35,11 +35,13 @@ Assign tags as appropriate, maybe by benchmark setup: machine size (ram/cpu sett
 
 [This notebook](https://github.com/angelolab/ark-analysis/blob/main/templates/1_Segment_Image_Data.ipynb) by Angelo Lab shows how to convert from some tiff files into deepcell input then run deepcell
 
-Potential contribution? Separate code to convert from img to numpy, then from numpy to tiffs
+#### Potential Work Area
+- Separate code to convert from `img` to `numpy`
+- then from `numpy` to `tiffs`
 
-We are working with deep cell in memory … so not sure we need indirection to/from image files (it is *very useful* for proof of work though)
+NOTE: We are working with deep cell in memory … so not sure we need indirection to/from image files (it is *very useful* for proof of work though)
 
-## How does Cloud Function do files, even
+## Test Cloud Function 
 
 Cloud Function local storage appears to be implemented in RAM, [see docs](https://cloud.google.com/functions/docs/concepts/execution-environment#memory-file-system)
 
