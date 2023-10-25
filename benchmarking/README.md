@@ -1,14 +1,32 @@
 
 # Benchmarking deepcell imaging
 
-# Idea
+Current benchmarks. See also: [2023-10-18 Deepcell performance optimization notes](https://docs.google.com/document/d/1LVOktQ9RAAn5jjYhDpH_OSoDLtSdHc0-3BcaclNnvO4/edit) and [2023-10-13 deepcell notes running on vertex ai](https://docs.google.com/document/d/1aMqO9H09AEsqOqfJ27byvRA3wmLuxdqy6kuwQMnTmhA/edit)
+
+Time:
+
+| Task | Local | Cloud |
+| ---- | ----- | ----- |
+| Preprocess | 53s | 43s |
+| Predict | 928s | 193s |
+| Postprocess | 275s | 264s |
+
+Resources:
+
+| Resource | Local | Cloud |
+| -------- | ----- | ----- |
+| CPU |  6-core | 16 vcpu |
+| GPU | 0 | 1 T4 | 
+| RAM | 16 | 60 |
+
+# Idea / raw notes / don't trust me
 
 Start with the "[notebook pipeline](../notebooks/README.md)".
 
 Run a Vertex AI "execution" with various machine sizes. (I can't see any other way to programmatically run a notebook on Vertex AI? I don't wanna set up & measure the permutations myself but maybe am overthinking it)
 
 Record timing results.
-
+testest
 Assign tags as appropriate, maybe by benchmark setup: machine size (ram/cpu settings), input size (pixels? file MBs? yes?)
 
 # Notes
