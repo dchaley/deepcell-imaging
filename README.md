@@ -1,5 +1,5 @@
 # deepcell-imaging
-Notes / utilities / info for Deep Cell imaging project. Our goal is to understand and optimize using DeepCell to perform cellular image segmentation most effectively on GCP.  
+Notes / utilities / info for [Deep Cell](https://github.com/vanvalenlab/deepcell-tf) imaging project. Our goal is to understand and optimize using DeepCell to perform cellular image segmentation most effectively on GCP.  
 
 You are probably interested in the [notebooks](notebooks).
 
