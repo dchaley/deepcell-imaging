@@ -1,44 +1,8 @@
 from collections import deque
-import cv2
 import logging
 import numpy as np
-from skimage.morphology import h_maxima
-from skimage.morphology import disk
 import timeit
-
-from fasthybridreconstruct import fast_hybrid_reconstruct
-
-
-def scikit_h_maxima(image, h=0.075, radius=2):
-    return h_maxima(image=image, h=h, footprint=disk(radius))
-
-
-# Note that this modifies the marker image in place
-def opencv_reconstruct(marker: np.ndarray, mask: np.ndarray, radius: int = 2):
-    kernel = disk(radius)
-
-    # .item() converts the numpy scalar to a python scalar
-    pad_value = np.min(marker).item()
-
-    # Create an output buffer
-    expanded = np.ndarray.copy(marker)
-
-    while True:
-        expanded = cv2.dilate(
-            src=marker,
-            dst=expanded,
-            kernel=kernel,
-            borderType=cv2.BORDER_CONSTANT,
-            borderValue=pad_value,
-        )
-        expanded = np.fmin(expanded, mask)
-
-        # Termination criterion: Expansion didn't change the image at all
-        if (marker == expanded).all():
-            return expanded
-
-        np.copyto(dst=marker, src=expanded)
-
+from skimage.morphology import disk
 
 def get_neighborhood_max(
     image: np.ndarray,
@@ -123,7 +87,7 @@ def should_propagate(
     return False
 
 
-def reconstruct_fast_hybrid_python(
+def fast_hybrid_reconstruct(
     marker: np.ndarray, mask: np.ndarray, radius: int = 2
 ):
     # N(G), the pixels in our neighborhood.
@@ -252,32 +216,3 @@ def reconstruct_fast_hybrid_python(
 
     return marker
 
-
-def opencv_h_maxima(image, h=0.075, radius=2):
-    # This is mostly copied from scikit h_maxima
-    # except using our own grayscale reconstruction
-    resolution = 2 * np.finfo(image.dtype).resolution * np.abs(image)
-    shifted_img = image - h - resolution
-    reconstructed = opencv_reconstruct(shifted_img, image, radius)
-    residue_img = image - reconstructed
-    return (residue_img >= h).astype(np.uint8)
-
-
-def python_h_maxima(image, h=0.075, radius=2):
-    # This is mostly copied from scikit h_maxima
-    # except using our own grayscale reconstruction
-    resolution = 2 * np.finfo(image.dtype).resolution * np.abs(image)
-    shifted_img = image - h - resolution
-    reconstructed = reconstruct_fast_hybrid_python(shifted_img, image, radius)
-    residue_img = image - reconstructed
-    return (residue_img >= h).astype(np.uint8)
-
-
-def cython_h_maxima(image, h=0.075, radius=2):
-    # This is mostly copied from scikit h_maxima
-    # except using our own grayscale reconstruction
-    resolution = 2 * np.finfo(image.dtype).resolution * np.abs(image)
-    shifted_img = image - h - resolution
-    reconstructed = fast_hybrid_reconstruct(shifted_img, image, radius)
-    residue_img = image - reconstructed
-    return (residue_img >= h).astype(np.uint8)
