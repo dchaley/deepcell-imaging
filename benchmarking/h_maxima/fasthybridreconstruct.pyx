@@ -183,6 +183,62 @@ def fast_hybrid_loop(
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
+def process_queue(
+   my_type[:, ::1] marker,
+   Py_ssize_t marker_rows,
+   Py_ssize_t marker_cols,
+   my_type[:, ::1] mask,
+   uint8_t[:, ::1] footprint_raster_after,
+   Py_ssize_t footprint_center_row,
+   Py_ssize_t footprint_center_col,
+   queue,
+):
+    cdef Py_ssize_t row, col
+    cdef Py_ssize_t footprint_row_offset, footprint_col_offset
+
+    # Process the queue of pixels that need to be updated.
+    logging.debug("Queue size: %s", len(queue))
+    t = timeit.default_timer()
+    while len(queue) > 0:
+        point = queue.popleft()
+        row = point[0]
+        col = point[1]
+
+        for footprint_row_offset in range(
+                -footprint_center_row, footprint_center_row + 1
+        ):
+            for footprint_col_offset in range(
+                    -footprint_center_col, footprint_center_col + 1
+            ):
+                if not footprint_raster_after[
+                    footprint_center_row + footprint_row_offset,
+                    footprint_center_col + footprint_col_offset,
+                ]:
+                    continue
+
+                neighbor_row = row + footprint_row_offset
+                neighbor_col = col + footprint_col_offset
+                if (
+                        neighbor_row < 0
+                        or neighbor_row >= marker_rows
+                        or neighbor_col < 0
+                        or neighbor_col >= marker_cols
+                ):
+                    # Skip out of bounds
+                    continue
+
+                if marker[row, col] > marker[neighbor_row, neighbor_col] != mask[neighbor_row, neighbor_col]:
+                    neighbor_coord = (
+                        row + footprint_row_offset,
+                        col + footprint_col_offset,
+                    )
+                    marker[neighbor_row, neighbor_col] = min(marker[row, col], mask[neighbor_row, neighbor_col])
+                    queue.append(neighbor_coord)
+
+    logging.debug("Queue processing time: %s", timeit.default_timer() - t)
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def fast_hybrid_reconstruct(
     my_type[:, ::1] marker, my_type[:, ::1] mask, radius = 2
 ):
@@ -242,46 +298,17 @@ def fast_hybrid_reconstruct(
         queue,
     )
 
-    # Process the queue of pixels that need to be updated.
-    logging.debug("Queue size: %s", len(queue))
-    t = timeit.default_timer()
-    while len(queue) > 0:
-        point = queue.popleft()
-        row = point[0]
-        col = point[1]
+    process_queue(
+        marker,
+        marker_rows,
+        marker_cols,
+        mask,
+        footprint_raster_after,
+        footprint_center_row,
+        footprint_center_col,
+        queue,
+    )
 
-        for footprint_row_offset in range(
-            -footprint_center_row, footprint_center_row + 1
-        ):
-            for footprint_col_offset in range(
-                -footprint_center_col, footprint_center_col + 1
-            ):
-                if not footprint_raster_after[
-                    footprint_center_row + footprint_row_offset,
-                    footprint_center_col + footprint_col_offset,
-                ]:
-                    continue
-
-                neighbor_row = row + footprint_row_offset
-                neighbor_col = col + footprint_col_offset
-                if (
-                    neighbor_row < 0
-                    or neighbor_row >= marker_rows
-                    or neighbor_col < 0
-                    or neighbor_col >= marker_cols
-                ):
-                    # Skip out of bounds
-                    continue
-
-                if marker[row, col] > marker[neighbor_row, neighbor_col] != mask[neighbor_row, neighbor_col]:
-                    neighbor_coord = (
-                        row + footprint_row_offset,
-                        col + footprint_col_offset,
-                    )
-                    marker[neighbor_row, neighbor_col] = min(marker[row, col], mask[neighbor_row, neighbor_col])
-                    queue.append(neighbor_coord)
-
-    logging.debug("Queue processing time: %s", timeit.default_timer() - t)
 
     return marker
 
