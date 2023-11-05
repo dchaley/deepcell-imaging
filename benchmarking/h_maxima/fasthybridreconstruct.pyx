@@ -188,7 +188,7 @@ def process_queue(
    Py_ssize_t marker_rows,
    Py_ssize_t marker_cols,
    my_type[:, ::1] mask,
-   uint8_t[:, ::1] footprint_raster_after,
+   uint8_t[:, ::1] footprint,
    Py_ssize_t footprint_center_row,
    Py_ssize_t footprint_center_col,
    queue,
@@ -210,7 +210,7 @@ def process_queue(
             for footprint_col_offset in range(
                     -footprint_center_col, footprint_center_col + 1
             ):
-                if not footprint_raster_after[
+                if not footprint[
                     footprint_center_row + footprint_row_offset,
                     footprint_center_col + footprint_col_offset,
                 ]:
@@ -303,7 +303,7 @@ def fast_hybrid_reconstruct(
         marker_rows,
         marker_cols,
         mask,
-        footprint_raster_after,
+        footprint,
         footprint_center_row,
         footprint_center_col,
         queue,
