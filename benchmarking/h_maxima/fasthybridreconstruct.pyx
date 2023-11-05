@@ -1,5 +1,4 @@
 # cython:language_level=3
-# cython:infer_types=True
 
 from collections import deque
 import logging
@@ -27,13 +26,14 @@ cdef my_type get_neighborhood_max(
     Py_ssize_t footprint_center_col,
     my_type border_value,
 ):
-    # OOB values get the border value
     cdef my_type pixel_value
+    # OOB values get the border value
     cdef my_type neighborhood_max = border_value
     cdef Py_ssize_t neighbor_row, neighbor_col
     cdef Py_ssize_t footprint_x, footprint_y
-    cdef Py_ssize_t footprint_row_offset
-    cdef Py_ssize_t footprint_col_offset
+    cdef Py_ssize_t footprint_row_offset, footprint_col_offset
+    cdef Py_ssize_t image_rows = image.shape[0]
+    cdef Py_ssize_t image_cols = image.shape[1]
 
     for footprint_row_offset in range(-footprint_center_row, footprint_center_row + 1):
         for footprint_col_offset in range(
@@ -50,9 +50,9 @@ cdef my_type get_neighborhood_max(
 
             if (
                 neighbor_row < 0
-                or neighbor_row >= image.shape[0]
+                or neighbor_row >= image_rows
                 or neighbor_col < 0
-                or neighbor_col >= image.shape[1]
+                or neighbor_col >= image_cols
             ):
                 continue
             else:
@@ -64,11 +64,12 @@ cdef my_type get_neighborhood_max(
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef should_propagate(
+cdef uint8_t should_propagate(
     my_type[:, ::1] image,
     my_type[:, ::1] mask,
     Py_ssize_t point_row,
     Py_ssize_t point_col,
+    my_type point_value,
     uint8_t[:, ::1] footprint,
     Py_ssize_t footprint_center_row,
     Py_ssize_t footprint_center_col,
@@ -77,6 +78,8 @@ cdef should_propagate(
     cdef Py_ssize_t neighbor_row, neighbor_col
     cdef my_type neighbor_value
     cdef Py_ssize_t footprint_x, footprint_y
+    cdef Py_ssize_t image_rows = image.shape[0]
+    cdef Py_ssize_t image_cols = image.shape[1]
 
     for footprint_row_offset in range(-footprint_center_row, footprint_center_row + 1):
         for footprint_col_offset in range(
@@ -94,20 +97,20 @@ cdef should_propagate(
             # Skip out of bounds
             if (
                 neighbor_row < 0
-                or neighbor_row >= image.shape[0]
+                or neighbor_row >= image_rows
                 or neighbor_col < 0
-                or neighbor_col >= image.shape[1]
+                or neighbor_col >= image_cols
             ):
                 continue
 
             neighbor_value = image[neighbor_row, neighbor_col]
             if (
-                neighbor_value < image[point_row, point_col]
+                neighbor_value < point_value
                 and neighbor_value < mask[neighbor_row, neighbor_col]
             ):
-                return True
+                return 1
 
-    return False
+    return 0
 
 
 @cython.boundscheck(False)
@@ -125,7 +128,7 @@ def fast_hybrid_loop(
     cdef Py_ssize_t marker_rows, marker_cols
     cdef Py_ssize_t footprint_rows, footprint_cols
     cdef Py_ssize_t footprint_center_row, footprint_center_col
-    cdef my_type neighborhood_max
+    cdef my_type neighborhood_max, point_value, point_mask
 
     marker_rows = marker.shape[0]
     marker_cols = marker.shape[1]
@@ -138,8 +141,11 @@ def fast_hybrid_loop(
     t = timeit.default_timer()
     for row in range(marker_rows):
         for col in range(marker_cols):
+            point_value = marker[row, col]
+            point_mask = mask[row, col]
+
             # If the marker is already at the maximum mask value, skip this pixel.
-            if marker[row, col] == mask[row, col]:
+            if point_value == point_mask:
                 continue
 
             neighborhood_max = get_neighborhood_max(
@@ -151,34 +157,43 @@ def fast_hybrid_loop(
                 footprint_center_col,
                 border_value,
             )
-            marker[row, col] = min(neighborhood_max, mask[row, col])
+            marker[row, col] = min(neighborhood_max, point_mask)
+
+    logging.debug("Raster scan time: %s", timeit.default_timer() - t)
+    t = timeit.default_timer()
 
     # Scan in reverse-raster order.
     for row in range(marker_rows - 1, -1, -1):
         for col in range(marker_cols - 1, -1, -1):
-            neighborhood_max = get_neighborhood_max(
-                marker,
-                row,
-                col,
-                footprint_raster_after,
-                footprint_center_row,
-                footprint_center_col,
-                border_value,
-            )
-            marker[row, col] = min(neighborhood_max, mask[row, col])
+            # If we're already at the mask, skip the neighbor test.
+            # But note: we still need to test for propagation (below).
+            if marker[row, col] != mask[row, col]:
+                neighborhood_max = get_neighborhood_max(
+                    marker,
+                    row,
+                    col,
+                    footprint_raster_after,
+                    footprint_center_row,
+                    footprint_center_col,
+                    border_value,
+                )
+                point_mask = mask[row, col]
+                point_value = min(neighborhood_max, point_mask)
+                marker[row, col] = point_value
 
             if should_propagate(
                     marker,
                     mask,
                     row,
                     col,
+                    marker[row, col],
                     footprint_propagation_test,
                     footprint_center_row,
                     footprint_center_col,
             ):
                 queue.append((row, col))
 
-    logging.debug("Raster scan/anti-scan time: %s", timeit.default_timer() - t)
+    logging.debug("Raster anti-scan time: %s", timeit.default_timer() - t)
 
 
 @cython.boundscheck(False)
@@ -195,6 +210,8 @@ def process_queue(
 ):
     cdef Py_ssize_t row, col
     cdef Py_ssize_t footprint_row_offset, footprint_col_offset
+    cdef Py_ssize_t neighbor_row, neighbor_col
+    cdef my_type neighbor_mask, neighbor_value, point_value
 
     # Process the queue of pixels that need to be updated.
     logging.debug("Queue size: %s", len(queue))
@@ -203,6 +220,7 @@ def process_queue(
         point = queue.popleft()
         row = point[0]
         col = point[1]
+        point_value = marker[row, col]
 
         for footprint_row_offset in range(
                 -footprint_center_row, footprint_center_row + 1
@@ -227,12 +245,15 @@ def process_queue(
                     # Skip out of bounds
                     continue
 
-                if marker[row, col] > marker[neighbor_row, neighbor_col] != mask[neighbor_row, neighbor_col]:
+                neighbor_value = marker[neighbor_row, neighbor_col]
+                neighbor_mask = mask[neighbor_row, neighbor_col]
+
+                if point_value > neighbor_value != neighbor_mask:
                     neighbor_coord = (
                         row + footprint_row_offset,
                         col + footprint_col_offset,
                     )
-                    marker[neighbor_row, neighbor_col] = min(marker[row, col], mask[neighbor_row, neighbor_col])
+                    marker[neighbor_row, neighbor_col] = min(point_value, neighbor_mask)
                     queue.append(neighbor_coord)
 
     logging.debug("Queue processing time: %s", timeit.default_timer() - t)
