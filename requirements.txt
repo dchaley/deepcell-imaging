@@ -1,3 +1,4 @@
+deepcell
 smart_open[gcs]
 snakeviz
 tifffile
