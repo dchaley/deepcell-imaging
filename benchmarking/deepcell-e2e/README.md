@@ -13,5 +13,5 @@ See also: [sample data README](https://github.com/dchaley/deepcell-imaging/tree/
 # Method
 
 - Setup a GCP Vertex AI managed notebook instance, connect to the instance using the link `OPEN JUPYTERLAB`
-- Run `pip install deepcell` in the VertexAI *terminal* prior to running the test notebook
+- Run `pip install deepcell --user` in the VertexAI *terminal* prior to running the test notebook
 - Run [the notebook](deepcell-e2e-benchmark.ipynb), which documents the configuration parameters
