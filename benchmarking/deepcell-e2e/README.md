@@ -1,4 +1,4 @@
-# End-to-end DeepCell benchmar
+# End-to-end DeepCell benchmark
 
 **Objective**: measure how long it takes to process an image, varying the image size & resource allocation.
 
@@ -12,4 +12,5 @@ See also: [sample data README](https://github.com/dchaley/deepcell-imaging/tree/
 
 # Method
 
-Run [the notebook](deepcell-e2e-benchmark.ipynb), which documents the configuration parameters.
+- Run [the notebook](deepcell-e2e-benchmark.ipynb), which documents the configuration parameters.
+- NOTE: `pip install deepcell` in the VertexAI terminal prior to running the test notebook
