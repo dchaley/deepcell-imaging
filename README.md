@@ -1,4 +1,4 @@
-# DeepCell-imaging
+# Cloud DeepCell - Scaling Image Analysis
 
 <img src="https://github.com/dchaley/deepcell-imaging/blob/main/images/deepcell-perf.png" width=1000>
 
@@ -6,7 +6,7 @@ This working Repo contains our notes / utilities / info for our cloud [DeepCell]
 
 ## Goal and Key Links
 
-- GOAL: Understand and optimize using DeepCell to perform cellular image segmentation on GCP at scale.
+- **GOAL: Understand and optimize using DeepCell to perform cellular image segmentation on GCP at scale.**
 - KEY LINK #1: Here's a link to our example/testing [notebooks](notebooks).
 - KEY LINK #2: See our [project board](https://github.com/users/dchaley/projects/1) to understand our work areas for this project.
 
