@@ -15,10 +15,10 @@ See also: [sample data README](https://github.com/dchaley/deepcell-imaging/tree/
 - Provision a GCP Vertex AI managed notebook instance
   - Connect to the instance using the link `OPEN JUPYTERLAB`
 - Upload the example notebook
-  - Run [the notebook](deepcell-e2e-benchmark.ipynb), which documents the configuration parameters
+  - Run [the notebook](deepcell-e2e-benchmark.ipynb), which installs dependencies documents the configuration parameters
+    - If you install dependencies this way, you need to restart the kernel after the pip install.
+    - Just run, restart, and re-run – it should be fine.
   - Set the notebook runtime to `tensorflow 2.12 (local)`
+    - But something is off with the kernel? See also: https://github.com/dchaley/deepcell-imaging/issues/59
  
-NOTE: You must set up the model info (create/copy)
-  - at ` /home/jupyter/.keras/models/MultiplexSegmentation`
-
-Tip: To manually install DeepCell, run `pip install deepcell --user` in the VertexAI *terminal* prior to running the test notebook
+Tip: to avoid restarting the kernel after installing dependencies, run: `pip install --user -r requirements.txt` in the VertexAI *terminal* prior to running the benchmark notebook.
