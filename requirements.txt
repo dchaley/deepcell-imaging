@@ -1,4 +1,4 @@
-deepcell~=0.12.6
+deepcell==0.12.9
 google-cloud-notebooks
 smart_open[gcs]
 snakeviz
