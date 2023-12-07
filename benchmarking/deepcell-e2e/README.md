@@ -18,17 +18,16 @@ See also: [sample data README](https://github.com/dchaley/deepcell-imaging/tree/
   - Take note of the notebook runtime ID (see below to enter into the notebook)
     
 - Clone the repo
-    - in jupyter, go to the github icon, and check "clone repo" and "download repo"
-    - download [github repo]https://github.com/dchaley/deepcell-imaging.git
+    - in jupyter, go to the github icon, and click "clone a repository"
+    - ![Screenshot 2023-12-06 at 9 22 57 PM](https://github.com/dchaley/deepcell-imaging/assets/352005/8424a47e-ab92-47dd-ab2e-365c3f1e4448)
+
+    - repository url: https://github.com/dchaley/deepcell-imaging.git
  
 - Set the notebook runtime to `tensorflow 2.10 (local)`
     - But something is off with the kernel? See also: https://github.com/dchaley/deepcell-imaging/issues/59
 
 - Installing dependencies
-  - Run [the notebook](deepcell-e2e-benchmark.ipynb), which installs dependencies documents the configuration parameters
-    - If you install dependencies this way, you need to restart the kernel after the pip install.
-    - Just run, restart, and re-run – it should be fine.
-  - Or create a setup notebook which includes the cell that installs the dependencies. Run this notebook first. Then we don't have to restart the kernal of the notebook for benchmarking. https://github.com/dchaley/deepcell-imaging/issues/67
+  - Run [the setup notebook](setup.ipynb), which installs dependencies.
     
 ## Running the benchmark
 - adjust the machine type as needed
