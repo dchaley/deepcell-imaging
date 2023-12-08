@@ -1,5 +1,6 @@
 deepcell==0.12.9
 google-cloud-notebooks
+imagecodecs
 smart_open[gcs]
 snakeviz
 tifffile
