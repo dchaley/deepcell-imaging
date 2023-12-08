@@ -19,6 +19,8 @@ Input image:
 - [direct url](https://storage.cloud.google.com/davids-genomics-data-public/cellular-segmentation/10x-genomics/preview-human-breast-20221103-418mb/Xenium_FFPE_Human_Breast_Cancer_Rep1_if_image.tif) (needs a google login)
 - md5sum: `cf8e28717304d0490c0e763b9b4b07b2`
 
+TIFF file processed by [notebook](https://github.com/dchaley/deepcell-imaging/blob/main/notebooks/Extract-Sample_preview-human-breast-20221103-418mb.ipynb) into input_channels.tgz file: `gs://davids-genomics-data-public/cellular-segmentation/10x-genomics/preview-human-breast-20221103-418mb/input_channels.npz`
+
 Selected portion, approx 2300 × 1675; HER2 channel (channel #2 of 3). [Breastcancer.org](https://www.breastcancer.org/pathology-report/her2-status) says "HER2 proteins are receptors on breast cells". So (I think) this image shows the membranes (outer layers) of breast cells. ([full size image](preview-human-breast-20221103-418mb/selectedregion_input_image_channel_HER2_small.png))
 
 ![HER2 channel of input image](preview-human-breast-20221103-418mb/selectedregion_input_image_channel_HER2_small.png)
