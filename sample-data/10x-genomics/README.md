@@ -41,13 +41,15 @@ Same portion, segments predicted by DeepCell: ([full size image](preview-human-b
 > - Channel 2 = 1:100 Vimentin (Cell Signalling, Cat. No. 9856S)
 > - Channel 3 = 1:5000 DAPI (Thermo Scientific, Cat. No. 62248)
 
-⚠️ this sample is todo: https://github.com/dchaley/deepcell-imaging/issues/38
+TIFF file processed by [notebook](https://github.com/dchaley/deepcell-imaging/blob/main/notebooks/Extract-Sample_human-prostate-cancer-20210727-725mb.ipynb) into input_channels.tgz file: `gs://davids-genomics-data-public/cellular-segmentation/10x-genomics/human-prostate-cancer-20210727-725mb/input_channels.npz`
 
 Input image:
 
 - 26624 × 25088, 8-bit grayscale, 3 channels, 725 MB
 
 md5sum: `1df0f4b6477242161637b05d74a23067`
+
+TODO: visualization previews: https://github.com/dchaley/deepcell-imaging/issues/84
 
 ## Note: naming convention
 
