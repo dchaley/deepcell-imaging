@@ -4,7 +4,6 @@ from collections import deque
 import logging
 import numpy as np
 import timeit
-from skimage.morphology import disk
 
 cimport cython
 from libc.stdint cimport uint8_t
@@ -335,7 +334,7 @@ def process_queue(
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def fast_hybrid_reconstruct(
-    my_type[:, ::1] marker, my_type[:, ::1] mask, radius = 2
+    my_type[:, ::1] marker, my_type[:, ::1] mask, uint8_t[:, ::1] footprint
 ):
     """Perform grayscale reconstruction using the 'Fast-Hybrid' algorithm.
 
@@ -365,7 +364,7 @@ def fast_hybrid_reconstruct(
     Args:
         marker (my_type[][]): the marker image
         mask (my_type[][]): the mask image
-        radius (int): the radius of the neighborhood to use for reconstruction
+        footprint (uint8_t[][]): the neighborhood footprint aka N(G)
 
     Returns:
         my_type[][]: the reconstructed marker image, modified in place
@@ -378,9 +377,6 @@ def fast_hybrid_reconstruct(
     cdef Py_ssize_t neighbor_col
     cdef my_type border_value
     cdef my_type neighborhood_max
-
-    # N(G), the pixels in our neighborhood.
-    footprint = disk(radius)
 
     footprint_rows = footprint.shape[0]
     footprint_center_row = footprint_rows // 2
