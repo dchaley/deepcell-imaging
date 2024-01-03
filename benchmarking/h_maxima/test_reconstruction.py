@@ -49,12 +49,7 @@ def test_one_image_peak():
 @pytest.mark.parametrize(
     "dtype",
     [
-        pytest.param(
-            np.uint8,
-            marks=xfail(
-                reason="uint8 dtype, https://github.com/dchaley/deepcell-imaging/issues/101"
-            ),
-        ),
+        np.uint8,
         np.float32,
     ],
 )
