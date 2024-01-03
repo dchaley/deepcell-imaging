@@ -25,7 +25,7 @@ def test_image_equals_mask():
     assert_array_almost_equal(reconstruction(np.ones((7, 5)), np.ones((7, 5))), 1)
 
 
-@xfail(reason="footprint, https://github.com/dchaley/deepcell-imaging/issues/30")
+@xfail(reason="not sure, https://github.com/dchaley/deepcell-imaging/issues/104")
 def test_image_less_than_mask():
     """Test reconstruction where the image is uniform and less than mask"""
     image = np.ones((5, 5))
@@ -33,7 +33,7 @@ def test_image_less_than_mask():
     assert_array_almost_equal(reconstruction(image, mask), 1)
 
 
-@xfail(reason="footprint, https://github.com/dchaley/deepcell-imaging/issues/30")
+@xfail(reason="not sure, https://github.com/dchaley/deepcell-imaging/issues/104")
 def test_one_image_peak():
     """Test reconstruction with one peak pixel"""
     image = np.ones((5, 5))
@@ -44,7 +44,7 @@ def test_one_image_peak():
 
 # minsize chosen to test sizes covering use of 8, 16 and 32-bit integers
 # internally
-@xfail(reason="footprint, https://github.com/dchaley/deepcell-imaging/issues/30")
+@xfail(reason="not sure, https://github.com/dchaley/deepcell-imaging/issues/104")
 @pytest.mark.parametrize("minsize", [None, 200, 20000, 40000, 80000])
 @pytest.mark.parametrize(
     "dtype",
@@ -151,7 +151,6 @@ def test_invalid_seed():
         reconstruction(seed * 0.5, mask, method="erosion")
 
 
-@xfail(reason="footprint, https://github.com/dchaley/deepcell-imaging/issues/30")
 def test_invalid_footprint():
     seed = np.ones((5, 5))
     mask = np.ones((5, 5))
@@ -170,7 +169,6 @@ def test_invalid_method():
         reconstruction(seed, mask, method="foo")
 
 
-@xfail(reason="footprint, https://github.com/dchaley/deepcell-imaging/issues/30")
 @xfail(reason="offset, https://github.com/dchaley/deepcell-imaging/issues/100")
 def test_invalid_offset_not_none():
     """Test reconstruction with invalid not None offset parameter"""
@@ -205,7 +203,6 @@ def test_invalid_offset_not_none():
 
 
 @xfail(reason="method, https://github.com/dchaley/deepcell-imaging/issues/99")
-@xfail(reason="footprint, https://github.com/dchaley/deepcell-imaging/issues/30")
 @xfail(reason="offset, https://github.com/dchaley/deepcell-imaging/issues/100")
 def test_offset_not_none():
     """Test reconstruction with valid offset parameter"""
