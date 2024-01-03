@@ -11,6 +11,7 @@ from libc.stdint cimport uint8_t
 # This fast-hybrid reconstruction algorithm supports the following data types.
 # Adding more should be a simple matter of adding them to this list.
 ctypedef fused my_type:
+    uint8_t
     int
     float
     double
