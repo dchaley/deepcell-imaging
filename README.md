@@ -17,6 +17,13 @@ Also note that DeepCell performs its own pre- and post-processing around the Ten
   - KEY LINK #2: our support/testing [notebooks](notebooks).
   - KEY LINK #3: our [project board](https://github.com/users/dchaley/projects/1) & work areas for this project.
 
+## Findings
+
+GPU makes a dramatic difference in model inference time.
+
+![Pixels vs inference time](images/pixels-vs-inference-time.png)
+
+![Pixels vs inference time](images/pixels-vs-postprocess-time.png)
 
 ## Optimization opportunities
 
