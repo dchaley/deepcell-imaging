@@ -4,7 +4,7 @@ This working Repo contains our notes / utilities / info for our cloud [DeepCell]
 
 Here is the high level workflow for using DeepCell:
 
-<img src="https://github.com/dchaley/deepcell-imaging/blob/main/images/deepcell-imaging-highlevel.png" width=1000>
+<img src="https://github.com/dchaley/deepcell-imaging/blob/main/images/deepcell-imaging-highlevel.png"><sub><a href="https://lucid.app/lucidchart/67c3f550-b2aa-4194-b527-56e3592829a3/edit?viewport_loc=-310%2C-595%2C3416%2C1848%2C0_0&invitationId=inv_447a9b8a-7711-43cf-a91f-e978075fc132">lucidchart source</a></sub>
 
 Note that DeepCell itself does not process TIFF files. The TIFF channels must be extracted into Numpy arrays first.
 
