@@ -25,6 +25,10 @@ GPU makes a dramatic difference in model inference time.
 
 ![Pixels vs inference time](images/pixels-vs-postprocess-time.png)
 
+Memory usage increases linearly with number of pixels.
+
+![Pixels vs mem usage](images/pixels-vs-mem-usage.png)
+
 ## Optimization opportunities
 
 Here are some areas we've identified:
