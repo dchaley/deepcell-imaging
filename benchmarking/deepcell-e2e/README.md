@@ -32,7 +32,9 @@ See also: [sample data README](https://github.com/dchaley/deepcell-imaging/tree/
 ## Running the benchmark
 - adjust the machine type as needed
 - adjust the input_channels_path parameter to the location of the input image
-- Adjust the parameter: `notebook_runtime_id`. Use the "Notebook name" from the workbench list. <img width="538" alt="Screenshot 2023-12-06 at 9 53 37 AM" src="https://github.com/dchaley/deepcell-imaging/assets/352005/07ed4f96-5dc7-44e8-ae5f-ec6e12d3c244">
+- adjust the batch size if desired. For GPU, batch size 8 seems better. It doesn't seem to affect CPU.
+- Adjust the parameter: `notebook_runtime_id`. Use the "Notebook name" from the workbench list.<br> <img width="538" alt="Screenshot 2023-12-06 at 9 53 37 AM" src="https://github.com/dchaley/deepcell-imaging/assets/352005/07ed4f96-5dc7-44e8-ae5f-ec6e12d3c244"><br>Or, in the top left title of the notebook screen.<br> ![Screenshot 2024-01-12 at 10 51 13 AM](https://github.com/dchaley/deepcell-imaging/assets/352005/36e576ba-db72-4dd1-9418-ed89115d7785)
+
 
 - run the whole part.
 - cp & paste the output to the csv file that records the benchmark
