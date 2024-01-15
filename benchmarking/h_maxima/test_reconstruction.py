@@ -25,7 +25,6 @@ def test_image_equals_mask():
     assert_array_almost_equal(reconstruction(np.ones((7, 5)), np.ones((7, 5))), 1)
 
 
-@xfail(reason="not sure, https://github.com/dchaley/deepcell-imaging/issues/104")
 def test_image_less_than_mask():
     """Test reconstruction where the image is uniform and less than mask"""
     image = np.ones((5, 5))
@@ -33,7 +32,6 @@ def test_image_less_than_mask():
     assert_array_almost_equal(reconstruction(image, mask), 1)
 
 
-@xfail(reason="not sure, https://github.com/dchaley/deepcell-imaging/issues/104")
 def test_one_image_peak():
     """Test reconstruction with one peak pixel"""
     image = np.ones((5, 5))
@@ -102,7 +100,6 @@ def test_two_image_peaks(minsize, dtype):
     assert_array_almost_equal(out, expected)
 
 
-@xfail(reason="edge case? https://github.com/dchaley/deepcell-imaging/issues/102")
 def test_zero_image_one_mask():
     """Test reconstruction with an image of all zeros and a mask that's not"""
     result = reconstruction(np.zeros((10, 10)), np.ones((10, 10)))

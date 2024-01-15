@@ -3,7 +3,7 @@ from fasthybridreconstruct import fast_hybrid_reconstruct
 
 
 def cython_reconstruct_wrapper(marker, mask, footprint=None):
-    mask = np.copy(mask)
+    marker = np.copy(marker)
 
     if footprint is None:
         footprint = np.ones((3, 3), dtype=bool)
@@ -11,4 +11,4 @@ def cython_reconstruct_wrapper(marker, mask, footprint=None):
         footprint = footprint.astype(bool, copy=True)
 
     fast_hybrid_reconstruct(marker, mask, footprint)
-    return mask
+    return marker
