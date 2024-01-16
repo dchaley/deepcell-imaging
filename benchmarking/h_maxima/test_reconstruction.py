@@ -42,7 +42,6 @@ def test_one_image_peak():
 
 # minsize chosen to test sizes covering use of 8, 16 and 32-bit integers
 # internally
-@xfail(reason="not sure, https://github.com/dchaley/deepcell-imaging/issues/104")
 @pytest.mark.parametrize("minsize", [None, 200, 20000, 40000, 80000])
 @pytest.mark.parametrize(
     "dtype",

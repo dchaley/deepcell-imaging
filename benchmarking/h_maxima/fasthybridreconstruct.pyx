@@ -10,7 +10,13 @@ from libc.stdint cimport uint8_t
 
 # This fast-hybrid reconstruction algorithm supports the following data types.
 # Adding more should be a simple matter of adding them to this list.
-ctypedef fused my_type:
+ctypedef fused marker_dtype:
+    uint8_t
+    int
+    float
+    double
+    long long
+ctypedef fused mask_dtype:
     uint8_t
     int
     float
@@ -19,12 +25,12 @@ ctypedef fused my_type:
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef my_type get_neighborhood_max(
-    my_type[:, ::1] image,
+cdef marker_dtype get_neighborhood_max(
+    marker_dtype[:, ::1] image,
     Py_ssize_t point_row,
     Py_ssize_t point_col,
     uint8_t[:, ::1] footprint,
-    my_type border_value,
+    marker_dtype border_value,
 ):
     """Get the neighborhood maximum around a point.
 
@@ -45,9 +51,9 @@ cdef my_type get_neighborhood_max(
     Returns:
         my_type: the maximum in the point's neighborhood, greater than or equal to border_value.
     """
-    cdef my_type pixel_value
+    cdef marker_dtype pixel_value
     # OOB values get the border value
-    cdef my_type neighborhood_max = border_value
+    cdef marker_dtype neighborhood_max = border_value
     cdef Py_ssize_t neighbor_row, neighbor_col
     cdef Py_ssize_t footprint_x, footprint_y
     cdef Py_ssize_t footprint_row_offset, footprint_col_offset
@@ -87,11 +93,11 @@ cdef my_type get_neighborhood_max(
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef uint8_t should_propagate(
-    my_type[:, ::1] image,
-    my_type[:, ::1] mask,
+    marker_dtype[:, ::1] image,
+    mask_dtype[:, ::1] mask,
     Py_ssize_t point_row,
     Py_ssize_t point_col,
-    my_type point_value,
+    marker_dtype point_value,
     uint8_t[:, ::1] footprint,
 ):
     """Determine if a point should be propagated to its neighbors.
@@ -118,7 +124,7 @@ cdef uint8_t should_propagate(
     """
     cdef Py_ssize_t footprint_row_offset, footprint_col_offset
     cdef Py_ssize_t neighbor_row, neighbor_col
-    cdef my_type neighbor_value
+    cdef marker_dtype neighbor_value
     cdef Py_ssize_t footprint_x, footprint_y
     cdef Py_ssize_t image_rows = image.shape[0]
     cdef Py_ssize_t image_cols = image.shape[1]
@@ -160,12 +166,12 @@ cdef uint8_t should_propagate(
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def fast_hybrid_raster_scans(
-    my_type[:, ::1] marker,
-    my_type[:, ::1] mask,
+    marker_dtype[:, ::1] marker,
+    mask_dtype[:, ::1] mask,
     uint8_t[:, ::1] footprint_raster_before,
     uint8_t[:, ::1] footprint_raster_after,
     uint8_t[:, ::1] footprint_propagation_test,
-    my_type border_value,
+    marker_dtype border_value,
     queue,
 ):
     """Apply a maximum filter in raster order, then in reverse-raster order.
@@ -193,7 +199,8 @@ def fast_hybrid_raster_scans(
     cdef Py_ssize_t marker_rows, marker_cols
     cdef Py_ssize_t footprint_rows, footprint_cols
     cdef Py_ssize_t footprint_center_row, footprint_center_col
-    cdef my_type neighborhood_max, point_value, point_mask
+    cdef marker_dtype neighborhood_max, point_value
+    cdef mask_dtype point_mask
 
     marker_rows = marker.shape[0]
     marker_cols = marker.shape[1]
@@ -220,7 +227,7 @@ def fast_hybrid_raster_scans(
                 footprint_raster_before,
                 border_value,
             )
-            marker[row, col] = min(neighborhood_max, point_mask)
+            marker[row, col] = <marker_dtype> min(neighborhood_max, point_mask)
 
     logging.debug("Raster scan time: %s", timeit.default_timer() - t)
 
@@ -239,7 +246,7 @@ def fast_hybrid_raster_scans(
                     border_value,
                 )
                 point_mask = mask[row, col]
-                point_value = min(neighborhood_max, point_mask)
+                point_value = <marker_dtype> min(neighborhood_max, point_mask)
                 marker[row, col] = point_value
 
             if should_propagate(
@@ -258,8 +265,8 @@ def fast_hybrid_raster_scans(
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def process_queue(
-   my_type[:, ::1] marker,
-   my_type[:, ::1] mask,
+   marker_dtype[:, ::1] marker,
+   mask_dtype[:, ::1] mask,
    uint8_t[:, ::1] footprint,
    queue,
 ):
@@ -283,7 +290,8 @@ def process_queue(
     cdef Py_ssize_t row, col
     cdef Py_ssize_t footprint_row_offset, footprint_col_offset
     cdef Py_ssize_t neighbor_row, neighbor_col
-    cdef my_type neighbor_mask, neighbor_value, point_value
+    cdef mask_dtype neighbor_mask
+    cdef marker_dtype neighbor_value, point_value
     cdef Py_ssize_t footprint_center_row = footprint.shape[0] // 2
     cdef Py_ssize_t footprint_center_col = footprint.shape[1] // 2
 
@@ -327,7 +335,7 @@ def process_queue(
                         row + footprint_row_offset,
                         col + footprint_col_offset,
                     )
-                    marker[neighbor_row, neighbor_col] = min(point_value, neighbor_mask)
+                    marker[neighbor_row, neighbor_col] = <marker_dtype> min(point_value, neighbor_mask)
                     queue.append(neighbor_coord)
 
     logging.debug("Queue processing time: %s", timeit.default_timer() - t)
@@ -335,7 +343,7 @@ def process_queue(
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def fast_hybrid_reconstruct(
-    my_type[:, ::1] marker, my_type[:, ::1] mask, uint8_t[:, ::1] footprint
+    marker_dtype[:, ::1] marker, mask_dtype[:, ::1] mask, uint8_t[:, ::1] footprint
 ):
     """Perform grayscale reconstruction using the 'Fast-Hybrid' algorithm.
 
@@ -376,8 +384,8 @@ def fast_hybrid_reconstruct(
     cdef Py_ssize_t footprint_row_offset, footprint_col_offset
     cdef Py_ssize_t neighbor_row
     cdef Py_ssize_t neighbor_col
-    cdef my_type border_value
-    cdef my_type neighborhood_max
+    cdef marker_dtype border_value
+    cdef marker_dtype neighborhood_max
 
     footprint_rows = footprint.shape[0]
     footprint_center_row = footprint_rows // 2
