@@ -105,7 +105,6 @@ def test_zero_image_one_mask():
     assert_array_almost_equal(result, 0)
 
 
-@xfail(reason="method, https://github.com/dchaley/deepcell-imaging/issues/99")
 @pytest.mark.parametrize(
     "dtype",
     [
@@ -117,12 +116,39 @@ def test_zero_image_one_mask():
         np.uint32,
         np.int64,
         np.uint64,
-        np.float16,
+        # np.float16,
         np.float32,
         np.float64,
     ],
 )
 def test_fill_hole(dtype):
+    """Test reconstruction by erosion, which should fill holes in mask."""
+    seed = np.array([[0, 8, 8, 8, 8, 8, 8, 8, 8, 0]], dtype=dtype)
+    mask = np.array([[0, 3, 6, 2, 1, 1, 1, 4, 2, 0]], dtype=dtype)
+    result = reconstruction(seed, mask, method="erosion")
+    assert result.dtype == _supported_float_type(mask.dtype)
+    expected = np.array([[0, 3, 6, 4, 4, 4, 4, 4, 2, 0]], dtype=dtype)
+    assert_array_almost_equal(result, expected)
+
+
+@xfail(reason="n dimensions, https://github.com/dchaley/deepcell-imaging/issues/118")
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        np.int8,
+        np.uint8,
+        np.int16,
+        np.uint16,
+        np.int32,
+        np.uint32,
+        np.int64,
+        np.uint64,
+        # np.float16,
+        np.float32,
+        np.float64,
+    ],
+)
+def test_fill_hole_1d(dtype):
     """Test reconstruction by erosion, which should fill holes in mask."""
     seed = np.array([0, 8, 8, 8, 8, 8, 8, 8, 8, 0], dtype=dtype)
     mask = np.array([0, 3, 6, 2, 1, 1, 1, 4, 2, 0], dtype=dtype)
@@ -132,7 +158,6 @@ def test_fill_hole(dtype):
     assert_array_almost_equal(result, expected)
 
 
-@xfail(reason="method, https://github.com/dchaley/deepcell-imaging/issues/99")
 def test_invalid_seed():
     seed = np.ones((5, 5))
     mask = np.ones((5, 5))
