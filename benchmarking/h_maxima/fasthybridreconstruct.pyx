@@ -6,33 +6,50 @@ import numpy as np
 import timeit
 
 cimport cython
-from libc.stdint cimport uint8_t
+from libc.stdint cimport uint8_t, int8_t, uint16_t, int16_t, uint32_t, int32_t, uint64_t, int64_t
 
 # This fast-hybrid reconstruction algorithm supports the following data types.
 # Adding more should be a simple matter of adding them to this list.
 ctypedef fused marker_dtype:
+    int8_t
     uint8_t
-    int
+    int16_t
+    uint16_t
+    int32_t
+    uint32_t
+    int64_t
+    uint64_t
     float
     double
-    long long
 ctypedef fused mask_dtype:
+    int8_t
     uint8_t
-    int
+    int16_t
+    uint16_t
+    int32_t
+    uint32_t
+    int64_t
+    uint64_t
     float
     double
-    long long
+
+cpdef enum:
+    METHOD_DILATION = 0
+    METHOD_EROSION = 1
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef marker_dtype get_neighborhood_max(
+cdef marker_dtype get_neighborhood_peak(
     marker_dtype[:, ::1] image,
     Py_ssize_t point_row,
     Py_ssize_t point_col,
     uint8_t[:, ::1] footprint,
     marker_dtype border_value,
+    uint8_t method,
 ):
-    """Get the neighborhood maximum around a point.
+    """Get the neighborhood peak around a point.
+
+    For dilation, this is the maximum in the neighborhood. For erosion, the minimum.
 
     The neighborhood is defined by a footprint. Points are excluded if
     the footprint is 0, and included otherwise. The footprint must have
@@ -47,13 +64,14 @@ cdef marker_dtype get_neighborhood_max(
       point_col (Py_ssize_t): the column of the point to scan
       footprint (uint8_t[][]): the neighborhood footprint
       border_value (my_type): the value to use for out-of-bound points
+      method (uint8_t): METHOD_DILATION or METHOD_EROSION
 
     Returns:
         my_type: the maximum in the point's neighborhood, greater than or equal to border_value.
     """
     cdef marker_dtype pixel_value
     # OOB values get the border value
-    cdef marker_dtype neighborhood_max = border_value
+    cdef marker_dtype neighborhood_peak = border_value
     cdef Py_ssize_t neighbor_row, neighbor_col
     cdef Py_ssize_t footprint_x, footprint_y
     cdef Py_ssize_t footprint_row_offset, footprint_col_offset
@@ -85,9 +103,12 @@ cdef marker_dtype get_neighborhood_max(
                 continue
             else:
                 pixel_value = image[neighbor_row, neighbor_col]
-                neighborhood_max = max(neighborhood_max, pixel_value)
+                if method == METHOD_DILATION:
+                    neighborhood_peak = max(neighborhood_peak, pixel_value)
+                elif method == METHOD_EROSION:
+                    neighborhood_peak = min(neighborhood_peak, pixel_value)
 
-    return neighborhood_max
+    return neighborhood_peak
 
 
 @cython.boundscheck(False)
@@ -99,6 +120,7 @@ cdef uint8_t should_propagate(
     Py_ssize_t point_col,
     marker_dtype point_value,
     uint8_t[:, ::1] footprint,
+    uint8_t method,
 ):
     """Determine if a point should be propagated to its neighbors.
 
@@ -112,12 +134,13 @@ cdef uint8_t should_propagate(
     footprint is the raster footprint but excluding the center point.
 
     Args:
-        image (my_type[][]): the image to scan
-        mask (my_type[][]): the mask to scan
+        image (marker_dtype[][]): the image to scan
+        mask (mask_dtype[][]): the mask to scan
         point_row (Py_ssize_t): the row of the point to scan
         point_col (Py_ssize_t): the column of the point to scan
-        point_value (my_type): the value of the point to scan
+        point_value (marker_dtype): the value of the point to scan
         footprint (uint8_t[][]): the neighborhood footprint
+        method (uint8_t): METHOD_DILATION or METHOD_EROSION
 
     Returns:
         uint8_t: 1 if the point should be propagated, 0 otherwise.
@@ -154,9 +177,14 @@ cdef uint8_t should_propagate(
                 continue
 
             neighbor_value = image[neighbor_row, neighbor_col]
-            if (
+            if method == METHOD_DILATION and (
                 neighbor_value < point_value
-                and neighbor_value < mask[neighbor_row, neighbor_col]
+                and neighbor_value < <marker_dtype> mask[neighbor_row, neighbor_col]
+            ):
+                return 1
+            elif method == METHOD_EROSION and (
+                neighbor_value > point_value
+                and neighbor_value > <marker_dtype> mask[neighbor_row, neighbor_col]
             ):
                 return 1
 
@@ -173,6 +201,7 @@ def fast_hybrid_raster_scans(
     uint8_t[:, ::1] footprint_propagation_test,
     marker_dtype border_value,
     queue,
+    uint8_t method,
 ):
     """Apply a maximum filter in raster order, then in reverse-raster order.
 
@@ -194,13 +223,13 @@ def fast_hybrid_raster_scans(
         footprint_propagation_test (uint8_t[][]): the raster footprint after the center point, excluding the center point
         border_value (my_type): the value to use for out-of-bound points
         queue (deque): the queue of points to process
+        method (uint8_t): METHOD_DILATION or METHOD_EROSION
     """
     cdef Py_ssize_t row, col
     cdef Py_ssize_t marker_rows, marker_cols
     cdef Py_ssize_t footprint_rows, footprint_cols
     cdef Py_ssize_t footprint_center_row, footprint_center_col
-    cdef marker_dtype neighborhood_max, point_value
-    cdef mask_dtype point_mask
+    cdef marker_dtype neighborhood_peak, point_value, point_mask
 
     marker_rows = marker.shape[0]
     marker_cols = marker.shape[1]
@@ -213,21 +242,25 @@ def fast_hybrid_raster_scans(
     t = timeit.default_timer()
     for row in range(marker_rows):
         for col in range(marker_cols):
-            point_value = marker[row, col]
-            point_mask = mask[row, col]
+            point_mask = <marker_dtype> mask[row, col]
 
-            # If the marker is already at the maximum mask value, skip this pixel.
-            if point_value == point_mask:
+            # If the marker is already at the limiting mask value, skip this pixel.
+            if marker[row, col] == point_mask:
                 continue
 
-            neighborhood_max = get_neighborhood_max(
+            neighborhood_peak = get_neighborhood_peak(
                 marker,
                 row,
                 col,
                 footprint_raster_before,
                 border_value,
+                method,
             )
-            marker[row, col] = <marker_dtype> min(neighborhood_max, point_mask)
+
+            if method == METHOD_DILATION:
+                marker[row, col] = min(neighborhood_peak, point_mask)
+            elif method == METHOD_EROSION:
+                marker[row, col] = max(neighborhood_peak, point_mask)
 
     logging.debug("Raster scan time: %s", timeit.default_timer() - t)
 
@@ -235,19 +268,23 @@ def fast_hybrid_raster_scans(
     t = timeit.default_timer()
     for row in range(marker_rows - 1, -1, -1):
         for col in range(marker_cols - 1, -1, -1):
+            point_mask = <marker_dtype> mask[row, col]
+
             # If we're already at the mask, skip the neighbor test.
             # But note: we still need to test for propagation (below).
-            if marker[row, col] != mask[row, col]:
-                neighborhood_max = get_neighborhood_max(
+            if marker[row, col] != point_mask:
+                neighborhood_peak = get_neighborhood_peak(
                     marker,
                     row,
                     col,
                     footprint_raster_after,
                     border_value,
+                    method,
                 )
-                point_mask = mask[row, col]
-                point_value = <marker_dtype> min(neighborhood_max, point_mask)
-                marker[row, col] = point_value
+                if method == METHOD_DILATION:
+                    marker[row, col] = min(neighborhood_peak, point_mask)
+                elif method == METHOD_EROSION:
+                    marker[row, col] = max(neighborhood_peak, point_mask)
 
             if should_propagate(
                     marker,
@@ -256,6 +293,7 @@ def fast_hybrid_raster_scans(
                     col,
                     marker[row, col],
                     footprint_propagation_test,
+                    method,
             ):
                 queue.append((row, col))
 
@@ -269,6 +307,7 @@ def process_queue(
    mask_dtype[:, ::1] mask,
    uint8_t[:, ::1] footprint,
    queue,
+   uint8_t method,
 ):
     """Process the queue of pixels to propagate through a marker image.
 
@@ -284,13 +323,14 @@ def process_queue(
         mask (mytype[][]): the image mask (ceiling on image values)
         footprint (uint8_t[][]): the neighborhood footprint
         queue (deque): the queue of points to process
+        method (uint8_t): METHOD_DILATION or METHOD_EROSION
     """
     cdef Py_ssize_t marker_rows = marker.shape[0]
     cdef Py_ssize_t marker_cols = marker.shape[1]
     cdef Py_ssize_t row, col
     cdef Py_ssize_t footprint_row_offset, footprint_col_offset
     cdef Py_ssize_t neighbor_row, neighbor_col
-    cdef mask_dtype neighbor_mask
+    cdef marker_dtype neighbor_mask
     cdef marker_dtype neighbor_value, point_value
     cdef Py_ssize_t footprint_center_row = footprint.shape[0] // 2
     cdef Py_ssize_t footprint_center_col = footprint.shape[1] // 2
@@ -328,27 +368,26 @@ def process_queue(
                     continue
 
                 neighbor_value = marker[neighbor_row, neighbor_col]
-                neighbor_mask = mask[neighbor_row, neighbor_col]
+                neighbor_mask = <marker_dtype> mask[neighbor_row, neighbor_col]
 
-                if point_value > neighbor_value != neighbor_mask:
-                    neighbor_coord = (
-                        row + footprint_row_offset,
-                        col + footprint_col_offset,
-                    )
-                    marker[neighbor_row, neighbor_col] = <marker_dtype> min(point_value, neighbor_mask)
-                    queue.append(neighbor_coord)
+                if method == METHOD_DILATION and (point_value > neighbor_value != neighbor_mask):
+                    marker[neighbor_row, neighbor_col] = min(point_value, neighbor_mask)
+                    queue.append((neighbor_row, neighbor_col))
+                elif method == METHOD_EROSION and (point_value < neighbor_value != neighbor_mask):
+                    marker[neighbor_row, neighbor_col] = max(point_value, neighbor_mask)
+                    queue.append((neighbor_row, neighbor_col))
 
     logging.debug("Queue processing time: %s", timeit.default_timer() - t)
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def fast_hybrid_reconstruct(
-    marker_dtype[:, ::1] marker, mask_dtype[:, ::1] mask, uint8_t[:, ::1] footprint
+    marker_dtype[:, ::1] marker, mask_dtype[:, ::1] mask, uint8_t[:, ::1] footprint, uint8_t method
 ):
     """Perform grayscale reconstruction using the 'Fast-Hybrid' algorithm.
 
-    Functionally equivalent to scikit-image's grayreconstruct run in
-    dilation mode. That implementation uses the Downhill Filter algorithm.
+    Functionally equivalent to scikit-image's grayreconstruct. That
+    implementation uses the Downhill Filter algorithm.
 
     This implements the fast-hybrid grayscale reconstruction algorithm as
     described by Luc Vincent (1993). That paper isn't publicly available
@@ -374,6 +413,7 @@ def fast_hybrid_reconstruct(
         marker (my_type[][]): the marker image
         mask (my_type[][]): the mask image
         footprint (uint8_t[][]): the neighborhood footprint aka N(G)
+        method (uint8_t): METHOD_DILATION or METHOD_EROSION
 
     Returns:
         my_type[][]: the reconstructed marker image, modified in place
@@ -385,7 +425,7 @@ def fast_hybrid_reconstruct(
     cdef Py_ssize_t neighbor_row
     cdef Py_ssize_t neighbor_col
     cdef marker_dtype border_value
-    cdef marker_dtype neighborhood_max
+    cdef marker_dtype neighborhood_peak
 
     footprint_rows = footprint.shape[0]
     footprint_center_row = footprint_rows // 2
@@ -415,7 +455,10 @@ def fast_hybrid_reconstruct(
     footprint_propagation_test[footprint_center_row, footprint_center_col] = False
 
     # .item() converts the numpy scalar to a python scalar
-    border_value = np.min(marker).item()
+    if method == METHOD_DILATION:
+        border_value = np.min(marker).item()
+    elif method == METHOD_EROSION:
+        border_value = np.max(marker).item()
 
     marker_rows = marker.shape[0]
     marker_cols = marker.shape[1]
@@ -433,6 +476,7 @@ def fast_hybrid_reconstruct(
         footprint_propagation_test,
         border_value,
         queue,
+        method,
     )
 
     # Propagate points as necessary.
@@ -443,6 +487,7 @@ def fast_hybrid_reconstruct(
         mask,
         footprint,
         queue,
+        method,
     )
 
     # All done. Return marker (which was modified in place).
