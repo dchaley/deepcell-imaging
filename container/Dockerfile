@@ -6,6 +6,9 @@ FROM us-docker.pkg.dev/deeplearning-platform-release/gcr.io/tf2-gpu.2-8.py37
 # See also:
 # https://cloud.google.com/vertex-ai/docs/predictions/optimized-tensorflow-runtime#available_container_images
 
+
+ADD https://api.github.com/repos/dchaley/deepcell-imaging/git/refs/heads/main version.json
+
 RUN git clone https://github.com/dchaley/deepcell-imaging.git
 
 WORKDIR "/deepcell-imaging"
