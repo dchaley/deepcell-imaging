@@ -1,4 +1,5 @@
 deepcell==0.12.9
+google-cloud-aiplatform
 google-cloud-notebooks
 imagecodecs
 numpy
