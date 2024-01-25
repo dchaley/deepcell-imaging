@@ -11,3 +11,5 @@ RUN git clone https://github.com/dchaley/deepcell-imaging.git
 WORKDIR "/deepcell-imaging"
 
 RUN pip install --user --upgrade --quiet -r requirements.txt
+
+ENTRYPOINT ["python", "benchmark/deepcell-e2e/benchmark.py"]
