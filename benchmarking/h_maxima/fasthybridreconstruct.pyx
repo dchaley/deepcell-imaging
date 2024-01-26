@@ -382,7 +382,11 @@ def process_queue(
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def fast_hybrid_reconstruct(
-    marker_dtype[:, ::1] marker, mask_dtype[:, ::1] mask, uint8_t[:, ::1] footprint, uint8_t method
+    marker_dtype[:, ::1] marker,
+        mask_dtype[:, ::1] mask,
+        uint8_t[:, ::1] footprint,
+        uint8_t method,
+        uint8_t* offset
 ):
     """Perform grayscale reconstruction using the 'Fast-Hybrid' algorithm.
 
@@ -414,12 +418,13 @@ def fast_hybrid_reconstruct(
         mask (my_type[][]): the mask image
         footprint (uint8_t[][]): the neighborhood footprint aka N(G)
         method (uint8_t): METHOD_DILATION or METHOD_EROSION
+        offset (uint8_t*): the offset of the footprint center. Pointer to a contiguous array.
 
     Returns:
         my_type[][]: the reconstructed marker image, modified in place
     """
     cdef Py_ssize_t row, col
-    cdef Py_ssize_t marker_rows, marker_cols
+    cdef Py_ssize_t footprint_rows, footprint_cols
     cdef Py_ssize_t footprint_center_row, footprint_center_col
     cdef Py_ssize_t footprint_row_offset, footprint_col_offset
     cdef Py_ssize_t neighbor_row
@@ -428,40 +433,40 @@ def fast_hybrid_reconstruct(
     cdef marker_dtype neighborhood_peak
 
     footprint_rows = footprint.shape[0]
-    footprint_center_row = footprint_rows // 2
+    footprint_center_row = offset[0]
     footprint_cols = footprint.shape[1]
-    footprint_center_col = footprint_cols // 2
+    footprint_center_col = offset[1]
+    # The center point, in 1d linear order.
+    cdef Py_ssize_t linear_center = footprint_center_row * footprint_cols + footprint_center_col
 
-    # N+(G), the pixels *before* in a raster scan.
-    # This is all footprint points before the center.
+    cdef Py_ssize_t num_before = linear_center
+    cdef Py_ssize_t num_after = footprint_rows * footprint_cols - linear_center - 1
+    # N+(G), the pixels *before* & including the center in a raster scan.
     ones_before = np.concatenate(
         [
-            np.ones((footprint_rows * footprint_cols) // 2 + 1, dtype=bool),
-            np.zeros((footprint_rows * footprint_cols) // 2, dtype=bool),
+            np.ones(num_before + 1, dtype=np.uint8),
+            np.zeros(num_after, dtype=np.uint8),
         ]
     ).reshape((footprint_rows, footprint_cols))
     footprint_raster_before = (footprint * ones_before).astype(np.uint8)
-    # N-(G), the pixels *after* in a raster scan.
+    # N-(G), the pixels *after* & including the center in a raster scan.
     ones_after = np.concatenate(
         [
-            np.zeros((footprint_rows * footprint_cols) // 2, dtype=bool),
-            np.ones((footprint_rows * footprint_cols) // 2 + 1, dtype=bool),
+            np.zeros(num_before, dtype=bool),
+            np.ones(num_after + 1, dtype=bool),
         ]
     ).reshape((footprint_rows, footprint_cols))
     footprint_raster_after = (footprint * ones_after).astype(np.uint8)
 
     # The propagation test is N-(G), but without the center point.
     footprint_propagation_test = np.copy(footprint_raster_after)
-    footprint_propagation_test[footprint_center_row, footprint_center_col] = False
+    footprint_propagation_test[footprint_center_row, footprint_center_col] = 0
 
     # .item() converts the numpy scalar to a python scalar
     if method == METHOD_DILATION:
         border_value = np.min(marker).item()
     elif method == METHOD_EROSION:
         border_value = np.max(marker).item()
-
-    marker_rows = marker.shape[0]
-    marker_cols = marker.shape[1]
 
     # The propagation queue for after the raster scans.
     queue = deque()
