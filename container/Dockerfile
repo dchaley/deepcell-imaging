@@ -15,4 +15,4 @@ WORKDIR "/deepcell-imaging"
 
 RUN pip install --user --upgrade --quiet -r requirements.txt
 
-ENTRYPOINT ["python", "benchmark/deepcell-e2e/benchmark.py"]
+ENTRYPOINT ["python", "benchmarking/deepcell-e2e/benchmark.py"]

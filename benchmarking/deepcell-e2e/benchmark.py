@@ -49,14 +49,14 @@ from deepcell_imaging import cached_open
 
 parser = argparse.ArgumentParser("benchmark")
 parser.add_argument(
-    "--custom_job_id",
-    help="Vertex AI custom job ID",
+    "--custom_job_name",
+    help="Vertex AI custom job display name",
     type=str,
     required=True,
 )
 args = parser.parse_args()
 
-custom_job_id = args.custom_job_id
+custom_job_name = args.custom_job_name
 
 
 # This cell is a notebook 'parameters' cell.
@@ -320,18 +320,20 @@ elif len(gpu_names) == 1:
 else:
     raise "Dunno how to handle multiple gpu types"
 
-if custom_job_id:
+if custom_job_name:
     # For running on vertex AI:
     try:
         from google.cloud import aiplatform_v1
 
         client = aiplatform_v1.JobServiceClient()
-        request = aiplatform_v1.GetRuntimeRequest(
-            name="projects/{}/locations/{}/customJobs/{}".format(
-                project_id, location, custom_job_id
-            ),
+        parent = "projects/{}/locations/{}".format(project_id, location)
+        display_filter = "display_name={}".format(custom_job_name)
+        request = aiplatform_v1.ListCustomJobsRequest(
+            parent=parent,
+            filter=display_filter,
         )
-        response = client.get_runtime(request=request)
+        page_result = client.list_custom_jobs(request=request)
+        response = page_result[0]
         machine_type = response.job_spec.worker_pool_specs[0].machine_spec.machine_type
     except Exception as e:
         logging.warning("Error getting machine type: " + str(e))
