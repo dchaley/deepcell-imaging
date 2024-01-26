@@ -17,7 +17,13 @@ xfail = pytest.mark.xfail
 
 def test_zeros():
     """Test reconstruction with image and mask of zeros"""
+
+    # With & without explicit offset
     assert_array_almost_equal(reconstruction(np.zeros((5, 7)), np.zeros((5, 7))), 0)
+    assert_array_almost_equal(
+        reconstruction(np.zeros((5, 7)), np.zeros((5, 7)), offset=np.array([[1], [1]])),
+        0,
+    )
 
 
 def test_image_equals_mask():
@@ -177,7 +183,6 @@ def test_invalid_footprint():
     reconstruction(seed, mask, footprint=np.ones((3, 3)))
 
 
-@xfail(reason="method, https://github.com/dchaley/deepcell-imaging/issues/99")
 def test_invalid_method():
     seed = np.array([0, 8, 8, 8, 8, 8, 8, 8, 8, 0])
     mask = np.array([0, 3, 6, 2, 1, 1, 1, 4, 2, 0])
@@ -185,7 +190,6 @@ def test_invalid_method():
         reconstruction(seed, mask, method="foo")
 
 
-@xfail(reason="offset, https://github.com/dchaley/deepcell-imaging/issues/100")
 def test_invalid_offset_not_none():
     """Test reconstruction with invalid not None offset parameter"""
     image = np.array(
@@ -218,9 +222,8 @@ def test_invalid_offset_not_none():
         )
 
 
-@xfail(reason="method, https://github.com/dchaley/deepcell-imaging/issues/99")
-@xfail(reason="offset, https://github.com/dchaley/deepcell-imaging/issues/100")
-def test_offset_not_none():
+@xfail(reason="n dimensions, https://github.com/dchaley/deepcell-imaging/issues/118")
+def test_offset_not_none_1d():
     """Test reconstruction with valid offset parameter"""
     seed = np.array([0, 3, 6, 2, 1, 1, 1, 4, 2, 0])
     mask = np.array([0, 8, 6, 8, 8, 8, 8, 4, 4, 0])
@@ -229,6 +232,24 @@ def test_offset_not_none():
     assert_array_almost_equal(
         reconstruction(
             seed, mask, method="dilation", footprint=np.ones(3), offset=np.array([0])
+        ),
+        expected,
+    )
+
+
+def test_offset_not_none():
+    """Test reconstruction with valid offset parameter"""
+    seed = np.array([[0, 3, 6, 2, 1, 1, 1, 4, 2, 0]])
+    mask = np.array([[0, 8, 6, 8, 8, 8, 8, 4, 4, 0]])
+    expected = np.array([[0, 3, 6, 6, 6, 6, 6, 4, 4, 0]])
+
+    assert_array_almost_equal(
+        reconstruction(
+            seed,
+            mask,
+            method="dilation",
+            footprint=np.array([[1, 1, 1]]),
+            offset=np.array([[0], [0]]),
         ),
         expected,
     )
