@@ -237,7 +237,6 @@ def test_offset_not_none_1d():
     )
 
 
-@xfail(reason="offset, https://github.com/dchaley/deepcell-imaging/issues/100")
 def test_offset_not_none():
     """Test reconstruction with valid offset parameter"""
     seed = np.array([[0, 3, 6, 2, 1, 1, 1, 4, 2, 0]])

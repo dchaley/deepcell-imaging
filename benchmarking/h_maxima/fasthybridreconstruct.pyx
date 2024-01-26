@@ -10,6 +10,8 @@ from libc.stdint cimport uint8_t, int8_t, uint16_t, int16_t, uint32_t, int32_t, 
 
 # This fast-hybrid reconstruction algorithm supports the following data types.
 # Adding more should be a simple matter of adding them to this list.
+
+# Production mode types
 ctypedef fused marker_dtype:
     int8_t
     uint8_t
@@ -33,6 +35,16 @@ ctypedef fused mask_dtype:
     float
     double
 
+# Dev mode types
+# ctypedef fused marker_dtype:
+#     uint8_t
+#     int64_t
+#     double
+# ctypedef fused mask_dtype:
+#     uint8_t
+#     int64_t
+#     double
+
 cpdef enum:
     METHOD_DILATION = 0
     METHOD_EROSION = 1
@@ -44,6 +56,7 @@ cdef marker_dtype get_neighborhood_peak(
     Py_ssize_t point_row,
     Py_ssize_t point_col,
     uint8_t[:, ::1] footprint,
+    uint8_t* offset,
     marker_dtype border_value,
     uint8_t method,
 ):
@@ -63,6 +76,7 @@ cdef marker_dtype get_neighborhood_peak(
       point_row (Py_ssize_t): the row of the point to scan
       point_col (Py_ssize_t): the column of the point to scan
       footprint (uint8_t[][]): the neighborhood footprint
+      offset (uint8_t*): the offset of the footprint center. Pointer to a contiguous array.
       border_value (my_type): the value to use for out-of-bound points
       method (uint8_t): METHOD_DILATION or METHOD_EROSION
 
@@ -78,8 +92,8 @@ cdef marker_dtype get_neighborhood_peak(
     cdef Py_ssize_t image_rows = image.shape[0]
     cdef Py_ssize_t image_cols = image.shape[1]
 
-    cdef Py_ssize_t footprint_center_row = footprint.shape[0] // 2
-    cdef Py_ssize_t footprint_center_col = footprint.shape[1] // 2
+    cdef Py_ssize_t footprint_center_row = offset[0]
+    cdef Py_ssize_t footprint_center_col = offset[1]
 
     for footprint_row_offset in range(-footprint_center_row, footprint_center_row + 1):
         for footprint_col_offset in range(
@@ -199,6 +213,7 @@ def fast_hybrid_raster_scans(
     uint8_t[:, ::1] footprint_raster_before,
     uint8_t[:, ::1] footprint_raster_after,
     uint8_t[:, ::1] footprint_propagation_test,
+    uint8_t* offset,
     marker_dtype border_value,
     queue,
     uint8_t method,
@@ -221,6 +236,7 @@ def fast_hybrid_raster_scans(
         footprint_raster_before (uint8_t[][]): the raster footprint before the center point
         footprint_raster_after (uint8_t[][]): the raster footprint after the center point
         footprint_propagation_test (uint8_t[][]): the raster footprint after the center point, excluding the center point
+        offset (uint8_t*): the offset of the footprint center. Pointer to a contiguous array.
         border_value (my_type): the value to use for out-of-bound points
         queue (deque): the queue of points to process
         method (uint8_t): METHOD_DILATION or METHOD_EROSION
@@ -253,6 +269,7 @@ def fast_hybrid_raster_scans(
                 row,
                 col,
                 footprint_raster_before,
+                offset,
                 border_value,
                 method,
             )
@@ -278,6 +295,7 @@ def fast_hybrid_raster_scans(
                     row,
                     col,
                     footprint_raster_after,
+                    offset,
                     border_value,
                     method,
                 )
@@ -479,6 +497,7 @@ def fast_hybrid_reconstruct(
         footprint_raster_before,
         footprint_raster_after,
         footprint_propagation_test,
+        offset,
         border_value,
         queue,
         method,
