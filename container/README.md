@@ -13,6 +13,8 @@ export PROJECT=$(gcloud config list project --format "value(core.project)")
 export IMAGE_NAME="${LOCATION}-docker.pkg.dev/${PROJECT}/${REPOSITORY_NAME}/benchmarking:v3"
 ```
 
+We need to change the image name version tag each build/push.
+
 # Command to build * push docker image
 
 ```
@@ -24,8 +26,6 @@ gcloud auth configure-docker ${LOCATION}-docker.pkg.dev
 docker build . -t $IMAGE_NAME
 docker push $IMAGE_NAME
 ```
-
-We need to change the image name version tag each build/push.
 
 # Command to create Vertex AI custom job w/ container
 
