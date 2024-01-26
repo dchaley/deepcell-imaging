@@ -1,7 +1,9 @@
 import numpy as np
-import pytest
 from numpy.testing import assert_array_almost_equal
+import pytest
+import random
 import skimage.morphology.grayreconstruct
+import time
 
 from fast_reconstruct_wrapper import cython_reconstruct_wrapper
 
@@ -54,8 +56,20 @@ from fast_reconstruct_wrapper import cython_reconstruct_wrapper
         "erosion",
     ],
 )
-def test_random_data(dtype, rows, cols, method):
+@pytest.mark.parametrize(
+    "random_seed",
+    [
+        123,
+        54321,
+        422442,
+        # While non-deterministic, this should still *never* fail
+        int(time.time()),
+    ],
+)
+def test_random_data(dtype, rows, cols, method, random_seed):
     """Test reconstruction on a random 100x100 image."""
+
+    random.seed(random_seed)
 
     shape = (rows, cols)
 
