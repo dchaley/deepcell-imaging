@@ -14,9 +14,9 @@ def scikit_h_maxima(image, h=0.075, radius=2):
 
 
 # Note that this modifies the marker image in place
-def opencv_reconstruct(marker: np.ndarray, mask: np.ndarray, radius: int = 2):
-    kernel = disk(radius)
-
+def opencv_reconstruct(
+    marker: np.ndarray, mask: np.ndarray, kernel: np.ndarray, anchor: tuple = (-1, -1)
+):
     # .item() converts the numpy scalar to a python scalar
     pad_value = np.min(marker).item()
 
@@ -30,6 +30,7 @@ def opencv_reconstruct(marker: np.ndarray, mask: np.ndarray, radius: int = 2):
             kernel=kernel,
             borderType=cv2.BORDER_CONSTANT,
             borderValue=pad_value,
+            anchor=anchor,
         )
         expanded = np.fmin(expanded, mask)
 
