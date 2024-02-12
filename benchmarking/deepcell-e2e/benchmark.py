@@ -28,6 +28,7 @@ import resource
 import smart_open
 import sys
 import tensorflow as tf
+import traceback
 import timeit
 import urllib.parse
 
@@ -329,15 +330,19 @@ if custom_job_name:
         client = aiplatform_v1.JobServiceClient()
         parent = "projects/{}/locations/{}".format(project_id, location)
         display_filter = "display_name={}".format(custom_job_name)
+        print("parent '%s', display_filter '%s'" % (parent, display_filter))
         request = aiplatform_v1.ListCustomJobsRequest(
             parent=parent,
             filter=display_filter,
         )
         page_result = client.list_custom_jobs(request=request)
+        print("Got page result: %s" % page_result)
         response = page_result[0]
+        print("Got response: %s" % response)
         machine_type = response.job_spec.worker_pool_specs[0].machine_spec.machine_type
     except Exception as e:
-        logging.warning("Error getting machine type: " + str(e))
+        exception_string = traceback.format_exc()
+        logging.warning("Error getting machine type: " + exception_string)
         machine_type = "error"
 else:
     # assume a generic python environment
