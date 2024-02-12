@@ -13,6 +13,7 @@ import csv
 from datetime import datetime, timezone
 import deepcell
 from deepcell.applications import Mesmer
+from google.cloud import bigquery
 from functools import reduce
 import io
 from itertools import groupby
@@ -404,5 +405,21 @@ writer.writerow(
         deepcell_version,
     ]
 )
+
+print("Appending benchmark result to bigquery")
+# Construct a BigQuery client object.
+bq_client = bigquery.Client()
+
+job_config = bigquery.LoadJobConfig(
+    write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
+    source_format=bigquery.SourceFormat.CSV,
+    skip_leading_rows=0,
+)
+csv_file = io.StringIO(output.getvalue())
+table_id = 'benchmarking.results'
+load_job = bq_client.load_table_from_file(csv_file, table_id, job_config=job_config)
+load_job.result()  # Waits for the job to complete.
+
+print("Appended result row to bigquery:")
 
 print(output.getvalue())
