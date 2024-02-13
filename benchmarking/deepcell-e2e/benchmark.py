@@ -325,21 +325,14 @@ else:
 if custom_job_name:
     # For running on vertex AI:
     try:
-        from google.cloud import aiplatform_v1
+        from google.cloud import aiplatform
+        aiplatform.init(project=project_id, location=location)
+        display_filter = "display_name=\"{}\"".format(custom_job_name)
 
-        client = aiplatform_v1.JobServiceClient()
-        parent = "projects/{}/locations/{}".format(project_id, location)
-        display_filter = "display_name={}".format(custom_job_name)
-        print("parent '%s', display_filter '%s'" % (parent, display_filter))
-        request = aiplatform_v1.ListCustomJobsRequest(
-            parent=parent,
-            filter=display_filter,
-        )
-        page_result = client.list_custom_jobs(request=request)
-        print("Got page result: %s" % page_result)
-        response = page_result[0]
-        print("Got response: %s" % response)
-        machine_type = response.job_spec.worker_pool_specs[0].machine_spec.machine_type
+        matching_jobs = aiplatform.CustomJob.list(filter=display_filter)
+
+        job = matching_jobs[0]
+        machine_type = job.job_spec.worker_pool_specs[0].machine_spec.machine_type
     except Exception as e:
         exception_string = traceback.format_exc()
         logging.warning("Error getting machine type: " + exception_string)
