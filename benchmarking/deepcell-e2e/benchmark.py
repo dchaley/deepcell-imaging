@@ -414,7 +414,7 @@ job_config = bigquery.LoadJobConfig(
     skip_leading_rows=0,
 )
 csv_file = io.StringIO(output.getvalue())
-table_id = 'benchmarking.results'
+table_id = '{}.benchmarking.results'.format(project_id)
 load_job = bq_client.load_table_from_file(csv_file, table_id, job_config=job_config)
 load_job.result()  # Waits for the job to complete.
 
