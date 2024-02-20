@@ -322,6 +322,9 @@ elif len(gpu_names) == 1:
 else:
     raise "Dunno how to handle multiple gpu types"
 
+import subprocess
+print(subprocess.check_output(['gcloud', 'auth', 'list']))
+
 if custom_job_name:
     # For running on vertex AI:
     try:
