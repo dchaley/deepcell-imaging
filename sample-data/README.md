@@ -30,5 +30,5 @@ Samples from the Angelo Lab's Ark-Example data set. All 512x512.
 [[Main readme](hubmap/README.md)]
 
 - Our largest samples.
-- 904M pixel image
+- 451M pixel image & 904M pixel image
 - Two synthetic images at 2.6B & 2B pixels
