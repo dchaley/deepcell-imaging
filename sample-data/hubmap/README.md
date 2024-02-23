@@ -6,6 +6,31 @@ Data is shared according to [HuBMAP external data sharing policy](https://hubmap
 
 ⚠️ note: many apps and/or devices struggle with multi-hundred megabyte TIFF images. You may need specialized software such as [QuPath](https://qupath.github.io/) to visualize the input TIFFs. May the force be with you. 🫡
 
+## hbm458.nffx.729_451Mpx
+
+HuBMAP data page
+
+> Channels:
+>
+> * DAPI (excitation: 335-383 nm/emission: 420-470 nm)
+> * eGFP (excitation: 450-490 nm/emission: 500-550 nm)
+> * dsRed (excitation: 538-562 nm/emission: 570-640 nm)
+>
+> Resolution: 0.65 x 0.65 um
+
+Input image:
+
+- 4432 × 4067, 8-bit grayscale, 3 channels, 2 GB
+- `gs://davids-genomics-data-public/cellular-segmentation/hubmap/hbm458.nffx.729_451Mpx/VAN0048-LK-1-32-preAF-registered.ome.tiff`
+
+TIFF file processed by [notebook](../../notebooks/Extract-Sample_hbm458.nffx.729_451Mpx.ipynb) into input_channels.tgz file: `gs://davids-genomics-data-public/cellular-segmentation/hubmap/hbm458.nffx.729_451Mpx/input_channels.npz`
+
+Preview of nucleus channel:
+
+![preview](input_nuclear_hbm458.nffx.729_451Mpx.small.png)
+
+[full-size input image, nuclear channel](input_nuclear_hbm458.nffx.729_451Mpx.png)
+
 ## hbm873.pcpz.247.904M-px
 
 [HuBMAP data page](https://portal.hubmapconsortium.org/browse/dataset/beb1b65624fe85b527ee2ce80ef208b2)
