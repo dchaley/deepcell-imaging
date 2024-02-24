@@ -284,3 +284,54 @@ def test_offset_not_none_vs_opencv():
         offset=np.array([[0], [0]], dtype=np.uint8),
     )
     assert_array_almost_equal(scikit_result, expected)
+
+
+def test_arbitrary_2x2():
+    seed = np.array(
+        [
+            [49, -1],
+            [-18, 56],
+        ],
+        dtype=np.int16,
+    )
+    mask = np.array(
+        [
+            [49, -1],
+            [37, 57],
+        ],
+        dtype=np.int16,
+    )
+    footprint = np.array(
+        [
+            [1, 0, 0],
+            [0, 0, 0],
+            [1, 0, 1],
+        ],
+        dtype=np.uint8,
+    )
+    # Proof of work following iterations of parallel method:
+    # (repeat point-wise maximum filtered min-wise with mask, until convergence)
+    #   0, 0: min(max( 49,  56), 49) =  49
+    #   0, 1: min(max( -1, -18), -1) =  -1
+    #   1, 0: min(max(-18)     , 37) = -18
+    #   1, 1: min(max( 56,  49), 57) =  56
+    # Immediate convergence.
+    expected = np.array(
+        [
+            [49, -1],
+            [-18, 56],
+        ],
+        dtype=np.int16,
+    )
+
+    fast_hybrid_result = reconstruction(
+        np.ndarray.copy(seed),
+        np.ndarray.copy(mask),
+        method="dilation",
+        footprint=np.ndarray.copy(footprint),
+    )
+
+    assert_array_almost_equal(
+        fast_hybrid_result,
+        expected,
+    )
