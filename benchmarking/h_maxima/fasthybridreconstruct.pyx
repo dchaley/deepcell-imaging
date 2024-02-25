@@ -425,8 +425,6 @@ def fast_hybrid_reconstruct(
 
     Note that this modifies the marker image in place.
 
-    TODO: accept a footprint not a radius. https://github.com/dchaley/deepcell-imaging/issues/30
-
     Args:
         marker (my_type[][]): the marker image
         mask (my_type[][]): the mask image
