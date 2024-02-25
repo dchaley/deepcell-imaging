@@ -13,20 +13,20 @@ def scikit_h_maxima(image, h=0.075, radius=2):
     return h_maxima(image=image, h=h, footprint=disk(radius))
 
 
-# Note that this modifies the marker image in place
 def opencv_reconstruct(
     marker: np.ndarray, mask: np.ndarray, kernel: np.ndarray, anchor: tuple = (-1, -1)
 ):
     # .item() converts the numpy scalar to a python scalar
     pad_value = np.min(marker).item()
 
-    # Create an output buffer
-    expanded = np.ndarray.copy(marker)
+    if anchor == (-1, -1):
+        anchor = (kernel.shape[1] // 2, kernel.shape[0] // 2)
+    # The center is "by definition"(?) included in the kernel
+    kernel[anchor] = True
 
     while True:
         expanded = cv2.dilate(
             src=marker,
-            dst=expanded,
             kernel=kernel,
             borderType=cv2.BORDER_CONSTANT,
             borderValue=pad_value,
@@ -38,7 +38,7 @@ def opencv_reconstruct(
         if (marker == expanded).all():
             return expanded
 
-        np.copyto(dst=marker, src=expanded)
+        marker = expanded
 
 
 def get_neighborhood_max(
