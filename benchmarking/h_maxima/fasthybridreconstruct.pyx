@@ -38,10 +38,12 @@ ctypedef fused mask_dtype:
 # Dev mode types
 # ctypedef fused marker_dtype:
 #     uint8_t
+#     int16_t
 #     int64_t
 #     double
 # ctypedef fused mask_dtype:
 #     uint8_t
+#     int16_t
 #     int64_t
 #     double
 
@@ -243,16 +245,10 @@ def fast_hybrid_raster_scans(
     """
     cdef Py_ssize_t row, col
     cdef Py_ssize_t marker_rows, marker_cols
-    cdef Py_ssize_t footprint_rows, footprint_cols
-    cdef Py_ssize_t footprint_center_row, footprint_center_col
     cdef marker_dtype neighborhood_peak, point_value, point_mask
 
     marker_rows = marker.shape[0]
     marker_cols = marker.shape[1]
-    footprint_rows = footprint_raster_before.shape[0]
-    footprint_center_row = footprint_rows // 2
-    footprint_cols = footprint_raster_before.shape[1]
-    footprint_center_col = footprint_cols // 2
 
     # Scan in raster order.
     t = timeit.default_timer()
