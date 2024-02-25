@@ -257,6 +257,7 @@ def test_offset_not_none():
     )
 
 
+@xfail(reason="n dimensions, https://github.com/dchaley/deepcell-imaging/issues/118")
 @xfail(reason="scikit bug? https://github.com/scikit-image/scikit-image/issues/7315")
 def test_offset_not_none_vs_opencv():
     """Test reconstruction with valid offset parameter"""
