@@ -386,3 +386,59 @@ def test_arbitrary_3x3():
         fast_hybrid_result,
         expected,
     )
+
+
+def test_arbitrary_5x5():
+    seed = np.array(
+        [
+            [184, 83, 30, 47, 184],
+            [180, 80, 108, 57, 230],
+            [251, 225, 86, 50, 105],
+            [216, 102, 148, 126, 90],
+            [35, 73, 208, 97, 100],
+        ],
+        dtype=np.int16,
+    )
+    mask = np.array(
+        [
+            [184, 195, 177, 180, 184],
+            [180, 111, 108, 57, 230],
+            [251, 225, 218, 50, 136],
+            [216, 104, 162, 189, 90],
+            [217, 135, 208, 249, 125],
+        ],
+        dtype=np.int16,
+    )
+    footprint = np.array(
+        [
+            [1, 1, 1],
+            [0, 1, 0],
+            [1, 1, 0],
+        ],
+        dtype=np.uint8,
+    )
+    # Proof of work following iterations of parallel method:
+    # (repeat point-wise maximum filtered min-wise with mask, until convergence)
+    # https://docs.google.com/spreadsheets/d/15TntEi694OUy3ZjAdAdY2Ax6FTdCsCXiqGfpxpV7-iY/edit#gid=1552646482
+    expected = np.array(
+        [
+            [184, 180, 111, 108, 184],
+            [180, 111, 108, 57, 230],
+            [251, 225, 162, 50, 136],
+            [216, 104, 162, 189, 90],
+            [216, 135, 208, 189, 125],
+        ],
+        dtype=np.int16,
+    )
+
+    fast_hybrid_result = reconstruction(
+        np.ndarray.copy(seed),
+        np.ndarray.copy(mask),
+        method="dilation",
+        footprint=np.ndarray.copy(footprint),
+    )
+
+    assert_array_almost_equal(
+        fast_hybrid_result,
+        expected,
+    )
