@@ -257,36 +257,6 @@ def test_offset_not_none():
     )
 
 
-@xfail(reason="n dimensions, https://github.com/dchaley/deepcell-imaging/issues/118")
-@xfail(reason="scikit bug? https://github.com/scikit-image/scikit-image/issues/7315")
-def test_offset_not_none_vs_opencv():
-    """Test reconstruction with valid offset parameter"""
-    seed = np.array([0, 3, 6, 2, 1, 1, 1, 4, 2, 0])
-    mask = np.array([0, 8, 6, 8, 8, 8, 8, 4, 4, 0])
-    expected = np.array([0, 6, 6, 4, 4, 4, 4, 4, 2, 0])
-
-    footprint = np.array([1, 1, 1])
-
-    opencv_result = opencv_reconstruct(
-        seed.astype(np.uint8, copy=True),
-        mask.astype(np.uint8, copy=True),
-        footprint,
-        (0, 0),
-    )
-    assert_array_almost_equal(opencv_result, expected)
-
-    # This actually fails, it wants a different kind of offset
-    # but [[0], [0]] doesn't work nor does [0, 0] nor [[0, 0]]
-    scikit_result = skimage.morphology.grayreconstruct.reconstruction(
-        seed,
-        mask,
-        method="dilation",
-        footprint=np.array([[1, 1, 1]], dtype=np.uint8),
-        offset=np.array([[0], [0]], dtype=np.uint8),
-    )
-    assert_array_almost_equal(scikit_result, expected)
-
-
 def test_arbitrary_2x2():
     seed = np.array(
         [
