@@ -38,10 +38,12 @@ ctypedef fused mask_dtype:
 # Dev mode types
 # ctypedef fused marker_dtype:
 #     uint8_t
+#     int16_t
 #     int64_t
 #     double
 # ctypedef fused mask_dtype:
 #     uint8_t
+#     int16_t
 #     int64_t
 #     double
 
@@ -88,25 +90,22 @@ cdef marker_dtype get_neighborhood_peak(
     cdef marker_dtype neighborhood_peak = border_value
     cdef Py_ssize_t neighbor_row, neighbor_col
     cdef Py_ssize_t footprint_x, footprint_y
-    cdef Py_ssize_t footprint_row_offset, footprint_col_offset
+    cdef Py_ssize_t offset_row, offset_col
     cdef Py_ssize_t image_rows = image.shape[0]
     cdef Py_ssize_t image_cols = image.shape[1]
 
     cdef Py_ssize_t footprint_center_row = offset[0]
     cdef Py_ssize_t footprint_center_col = offset[1]
 
-    for footprint_row_offset in range(-footprint_center_row, footprint_center_row + 1):
-        for footprint_col_offset in range(
-            -footprint_center_col, footprint_center_col + 1
-        ):
-            # Skip this point if not in the footprint.
-            footprint_x = footprint_center_row + footprint_row_offset
-            footprint_y = footprint_center_col + footprint_col_offset
-            if not footprint[footprint_x, footprint_y]:
+    for offset_row in range(-footprint_center_row, footprint.shape[0] - footprint_center_row):
+        for offset_col in range(-footprint_center_col, footprint.shape[1] - footprint_center_col):
+            # Skip this point if not in the footprint, and not the center point.
+            if (not footprint[footprint_center_row + offset_row, footprint_center_col + offset_col]
+                    and not (offset_row == 0 and offset_col == 0)):
                 continue
 
-            neighbor_row = point_row + footprint_row_offset
-            neighbor_col = point_col + footprint_col_offset
+            neighbor_row = point_row + offset_row
+            neighbor_col = point_col + offset_col
 
             if (
                 neighbor_row < 0
@@ -134,6 +133,7 @@ cdef uint8_t should_propagate(
     Py_ssize_t point_col,
     marker_dtype point_value,
     uint8_t[:, ::1] footprint,
+    uint8_t* offset,
     uint8_t method,
 ):
     """Determine if a point should be propagated to its neighbors.
@@ -143,9 +143,8 @@ cdef uint8_t should_propagate(
     through the image.
 
     The image and mask must be of the same type and shape. The footprint
-    must have an odd number of rows and columns, and is anchored at the
-    center point. In the fast-hybrid-reconstruct algorithm, the
-    footprint is the raster footprint but excluding the center point.
+    is anchored at the offset point. In the fast-hybrid-reconstruct
+    algorithm, the footprint is the raster footprint without the center point.
 
     Args:
         image (marker_dtype[][]): the image to scan
@@ -154,6 +153,7 @@ cdef uint8_t should_propagate(
         point_col (Py_ssize_t): the column of the point to scan
         point_value (marker_dtype): the value of the point to scan
         footprint (uint8_t[][]): the neighborhood footprint
+        offset (uint8_t*): the offset of the footprint center. Pointer to a contiguous array.
         method (uint8_t): METHOD_DILATION or METHOD_EROSION
 
     Returns:
@@ -162,24 +162,25 @@ cdef uint8_t should_propagate(
     cdef Py_ssize_t footprint_row_offset, footprint_col_offset
     cdef Py_ssize_t neighbor_row, neighbor_col
     cdef marker_dtype neighbor_value
-    cdef Py_ssize_t footprint_x, footprint_y
     cdef Py_ssize_t image_rows = image.shape[0]
     cdef Py_ssize_t image_cols = image.shape[1]
-    cdef Py_ssize_t footprint_center_row = footprint.shape[0] // 2
-    cdef Py_ssize_t footprint_center_col = footprint.shape[1] // 2
+    cdef Py_ssize_t footprint_center_row = offset[0]
+    cdef Py_ssize_t footprint_center_col = offset[1]
+    cdef Py_ssize_t offset_row, offset_col
 
-    for footprint_row_offset in range(-footprint_center_row, footprint_center_row + 1):
-        for footprint_col_offset in range(
-            -footprint_center_col, footprint_center_col + 1
-        ):
-            # Skip this point if not in the footprint.
-            footprint_x = footprint_center_row + footprint_row_offset
-            footprint_y = footprint_center_col + footprint_col_offset
-            if not footprint[footprint_x, footprint_y]:
+    for offset_row in range(-footprint_center_row, footprint.shape[0] - footprint_center_row):
+        for offset_col in range(-footprint_center_col, footprint.shape[1] - footprint_center_col):
+            # The center point is always skipped.
+            # Also skip if not in footprint.
+            # Note: we are testing *reverse neighbors* (see minus sign).
+            # Because we want to see if we are a neighbor of that point,
+            # to know if that point might "pull in" our value.
+            if ((offset_row == 0 and offset_col == 0)
+                    or not footprint[footprint_center_row - offset_row, footprint_center_col - offset_col]):
                 continue
 
-            neighbor_row = point_row + footprint_row_offset
-            neighbor_col = point_col + footprint_col_offset
+            neighbor_row = point_row + offset_row
+            neighbor_col = point_col + offset_col
 
             # Skip out of bounds
             if (
@@ -243,16 +244,10 @@ def fast_hybrid_raster_scans(
     """
     cdef Py_ssize_t row, col
     cdef Py_ssize_t marker_rows, marker_cols
-    cdef Py_ssize_t footprint_rows, footprint_cols
-    cdef Py_ssize_t footprint_center_row, footprint_center_col
     cdef marker_dtype neighborhood_peak, point_value, point_mask
 
     marker_rows = marker.shape[0]
     marker_cols = marker.shape[1]
-    footprint_rows = footprint_raster_before.shape[0]
-    footprint_center_row = footprint_rows // 2
-    footprint_cols = footprint_raster_before.shape[1]
-    footprint_center_col = footprint_cols // 2
 
     # Scan in raster order.
     t = timeit.default_timer()
@@ -311,6 +306,7 @@ def fast_hybrid_raster_scans(
                     col,
                     marker[row, col],
                     footprint_propagation_test,
+                    offset,
                     method,
             ):
                 queue.append((row, col))
@@ -324,6 +320,7 @@ def process_queue(
    marker_dtype[:, ::1] marker,
    mask_dtype[:, ::1] mask,
    uint8_t[:, ::1] footprint,
+   uint8_t* offset,
    queue,
    uint8_t method,
 ):
@@ -340,18 +337,19 @@ def process_queue(
         marker (mytype[][]): the marker image to scan
         mask (mytype[][]): the image mask (ceiling on image values)
         footprint (uint8_t[][]): the neighborhood footprint
+        offset (uint8_t*): the offset of the footprint center. Pointer to a contiguous array.
         queue (deque): the queue of points to process
         method (uint8_t): METHOD_DILATION or METHOD_EROSION
     """
     cdef Py_ssize_t marker_rows = marker.shape[0]
     cdef Py_ssize_t marker_cols = marker.shape[1]
     cdef Py_ssize_t row, col
-    cdef Py_ssize_t footprint_row_offset, footprint_col_offset
+    cdef Py_ssize_t offset_row, offset_col
     cdef Py_ssize_t neighbor_row, neighbor_col
     cdef marker_dtype neighbor_mask
     cdef marker_dtype neighbor_value, point_value
-    cdef Py_ssize_t footprint_center_row = footprint.shape[0] // 2
-    cdef Py_ssize_t footprint_center_col = footprint.shape[1] // 2
+    cdef Py_ssize_t footprint_center_row = offset[0]
+    cdef Py_ssize_t footprint_center_col = offset[1]
 
     # Process the queue of pixels that need to be updated.
     logging.debug("Queue size: %s", len(queue))
@@ -362,20 +360,20 @@ def process_queue(
         col = point[1]
         point_value = marker[row, col]
 
-        for footprint_row_offset in range(
-                -footprint_center_row, footprint_center_row + 1
-        ):
-            for footprint_col_offset in range(
-                    -footprint_center_col, footprint_center_col + 1
-            ):
-                if not footprint[
-                    footprint_center_row + footprint_row_offset,
-                    footprint_center_col + footprint_col_offset,
-                ]:
+        for offset_row in range(-footprint_center_row, footprint.shape[0] - footprint_center_row):
+            for offset_col in range(-footprint_center_col, footprint.shape[1] - footprint_center_col):
+                # The center point is always skipped.
+                # Also skip if not in footprint.
+                # Note: we are testing *reverse neighbors* (see minus sign).
+                # Because we want to see if we are a neighbor of that point,
+                # to know if that point might "pull in" our value.
+                if ((offset_row == 0 and offset_col == 0)
+                        or not footprint[footprint_center_row - offset_row, footprint_center_col - offset_col]):
                     continue
 
-                neighbor_row = row + footprint_row_offset
-                neighbor_col = col + footprint_col_offset
+                neighbor_row = row + offset_row
+                neighbor_col = col + offset_col
+
                 if (
                         neighbor_row < 0
                         or neighbor_row >= marker_rows
@@ -429,8 +427,6 @@ def fast_hybrid_reconstruct(
 
     Note that this modifies the marker image in place.
 
-    TODO: accept a footprint not a radius. https://github.com/dchaley/deepcell-imaging/issues/30
-
     Args:
         marker (my_type[][]): the marker image
         mask (my_type[][]): the mask image
@@ -476,8 +472,19 @@ def fast_hybrid_reconstruct(
     ).reshape((footprint_rows, footprint_cols))
     footprint_raster_after = (footprint * ones_after).astype(np.uint8)
 
-    # The propagation test is N-(G), but without the center point.
-    footprint_propagation_test = np.copy(footprint_raster_after)
+    # Vincent '93 uses N- as the propagation test.
+    # In other words, it checks all q ∈ N-(p) : the points after.
+    # The idea is, in our anti-raster scan, do we need to propagate
+    # "back" in raster direction. Updating p could affect points
+    # which have p as a neighbor.
+    # For a symmetric footprint, if q ∈ N-(p) then, by symmetry, p ∈ N+(q).
+    # So checking N-(p) is equivalent to checking N+(q).
+    #
+    # However, an asymmetric footprint doesn't have this property.
+    # TODO: I think we only need to check N- because we're scanning back to N+ anyhow
+    #
+    # Also, the center point isn't considered its own neighbor.
+    footprint_propagation_test = np.copy(footprint)
     footprint_propagation_test[footprint_center_row, footprint_center_col] = 0
 
     # .item() converts the numpy scalar to a python scalar
@@ -504,12 +511,11 @@ def fast_hybrid_reconstruct(
     )
 
     # Propagate points as necessary.
-    # The center pixel is excluded from the neighborhood test.
-    footprint[footprint_center_row, footprint_center_col] = False
     process_queue(
         marker,
         mask,
         footprint,
+        offset,
         queue,
         method,
     )

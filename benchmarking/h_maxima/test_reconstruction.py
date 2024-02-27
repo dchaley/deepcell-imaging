@@ -8,8 +8,10 @@ import pytest
 from numpy.testing import assert_array_almost_equal
 
 from skimage._shared.utils import _supported_float_type
+import skimage.morphology.grayreconstruct
 
 # from skimage.morphology.grayreconstruct import reconstruction
+from benchmark_utils import opencv_reconstruct
 from fast_reconstruct_wrapper import cython_reconstruct_wrapper as reconstruction
 
 xfail = pytest.mark.xfail
@@ -241,7 +243,7 @@ def test_offset_not_none():
     """Test reconstruction with valid offset parameter"""
     seed = np.array([[0, 3, 6, 2, 1, 1, 1, 4, 2, 0]])
     mask = np.array([[0, 8, 6, 8, 8, 8, 8, 4, 4, 0]])
-    expected = np.array([[0, 3, 6, 6, 6, 6, 6, 4, 4, 0]])
+    expected = np.array([[0, 6, 6, 4, 4, 4, 4, 4, 2, 0]])
 
     assert_array_almost_equal(
         reconstruction(
@@ -251,5 +253,162 @@ def test_offset_not_none():
             footprint=np.array([[1, 1, 1]]),
             offset=np.array([[0], [0]]),
         ),
+        expected,
+    )
+
+
+def test_arbitrary_2x2():
+    seed = np.array(
+        [
+            [49, -1],
+            [-18, 56],
+        ],
+        dtype=np.int16,
+    )
+    mask = np.array(
+        [
+            [49, -1],
+            [37, 57],
+        ],
+        dtype=np.int16,
+    )
+    footprint = np.array(
+        [
+            [1, 0, 0],
+            [0, 0, 0],
+            [1, 0, 1],
+        ],
+        dtype=np.uint8,
+    )
+    # Proof of work following iterations of parallel method:
+    # (repeat point-wise maximum filtered min-wise with mask, until convergence)
+    #   0, 0: min(max( 49,  56), 49) =  49
+    #   0, 1: min(max( -1, -18), -1) =  -1
+    #   1, 0: min(max(-18)     , 37) = -18
+    #   1, 1: min(max( 56,  49), 57) =  56
+    # Immediate convergence.
+    expected = np.array(
+        [
+            [49, -1],
+            [-18, 56],
+        ],
+        dtype=np.int16,
+    )
+
+    fast_hybrid_result = reconstruction(
+        np.ndarray.copy(seed),
+        np.ndarray.copy(mask),
+        method="dilation",
+        footprint=np.ndarray.copy(footprint),
+    )
+
+    assert_array_almost_equal(
+        fast_hybrid_result,
+        expected,
+    )
+
+
+def test_arbitrary_3x3():
+    seed = np.array(
+        [
+            [80, 108, 57],
+            [225, 86, 50],
+            [102, 148, 126],
+        ],
+        dtype=np.int16,
+    )
+    mask = np.array(
+        [
+            [111, 108, 57],
+            [225, 218, 50],
+            [104, 162, 189],
+        ],
+        dtype=np.int16,
+    )
+    footprint = np.array(
+        [
+            [1, 1, 1],
+            [0, 1, 0],
+            [1, 1, 0],
+        ],
+        dtype=np.uint8,
+    )
+    # Proof of work following iterations of parallel method:
+    # (repeat point-wise maximum filtered min-wise with mask, until convergence)
+    # https://docs.google.com/spreadsheets/d/15TntEi694OUy3ZjAdAdY2Ax6FTdCsCXiqGfpxpV7-iY/edit#gid=1682049169
+    expected = np.array(
+        [
+            [111, 108, 57],
+            [225, 162, 50],
+            [104, 162, 162],
+        ],
+        dtype=np.int16,
+    )
+
+    fast_hybrid_result = reconstruction(
+        np.ndarray.copy(seed),
+        np.ndarray.copy(mask),
+        method="dilation",
+        footprint=np.ndarray.copy(footprint),
+    )
+
+    assert_array_almost_equal(
+        fast_hybrid_result,
+        expected,
+    )
+
+
+def test_arbitrary_5x5():
+    seed = np.array(
+        [
+            [184, 83, 30, 47, 184],
+            [180, 80, 108, 57, 230],
+            [251, 225, 86, 50, 105],
+            [216, 102, 148, 126, 90],
+            [35, 73, 208, 97, 100],
+        ],
+        dtype=np.int16,
+    )
+    mask = np.array(
+        [
+            [184, 195, 177, 180, 184],
+            [180, 111, 108, 57, 230],
+            [251, 225, 218, 50, 136],
+            [216, 104, 162, 189, 90],
+            [217, 135, 208, 249, 125],
+        ],
+        dtype=np.int16,
+    )
+    footprint = np.array(
+        [
+            [1, 1, 1],
+            [0, 1, 0],
+            [1, 1, 0],
+        ],
+        dtype=np.uint8,
+    )
+    # Proof of work following iterations of parallel method:
+    # (repeat point-wise maximum filtered min-wise with mask, until convergence)
+    # https://docs.google.com/spreadsheets/d/15TntEi694OUy3ZjAdAdY2Ax6FTdCsCXiqGfpxpV7-iY/edit#gid=1552646482
+    expected = np.array(
+        [
+            [184, 180, 111, 108, 184],
+            [180, 111, 108, 57, 230],
+            [251, 225, 162, 50, 136],
+            [216, 104, 162, 189, 90],
+            [216, 135, 208, 189, 125],
+        ],
+        dtype=np.int16,
+    )
+
+    fast_hybrid_result = reconstruction(
+        np.ndarray.copy(seed),
+        np.ndarray.copy(mask),
+        method="dilation",
+        footprint=np.ndarray.copy(footprint),
+    )
+
+    assert_array_almost_equal(
+        fast_hybrid_result,
         expected,
     )
