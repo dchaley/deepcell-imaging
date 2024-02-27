@@ -170,15 +170,17 @@ cdef uint8_t should_propagate(
 
     for offset_row in range(-footprint_center_row, footprint.shape[0] - footprint_center_row):
         for offset_col in range(-footprint_center_col, footprint.shape[1] - footprint_center_col):
-            if not footprint[footprint_center_row + offset_row, footprint_center_col + offset_col]:
+            # The center point is always skipped.
+            # Also skip if not in footprint.
+            # Note: we are testing *reverse neighbors* (see minus sign).
+            # Because we want to see if we are a neighbor of that point,
+            # to know if that point might "pull in" our value.
+            if ((offset_row == 0 and offset_col == 0)
+                    or not footprint[footprint_center_row - offset_row, footprint_center_col - offset_col]):
                 continue
 
-            # Note: we are testing *reverse neighborship* (minus sign).
-            # We are looking for points q such that point p is a neighbor of q.
-            # For symmetric neighborhoods, these are equivalent.
-            # Not so for asymmetric…
-            neighbor_row = point_row - offset_row
-            neighbor_col = point_col - offset_row
+            neighbor_row = point_row + offset_row
+            neighbor_col = point_col + offset_col
 
             # Skip out of bounds
             if (
@@ -360,18 +362,17 @@ def process_queue(
 
         for offset_row in range(-footprint_center_row, footprint.shape[0] - footprint_center_row):
             for offset_col in range(-footprint_center_col, footprint.shape[1] - footprint_center_col):
-                # The current point is always skipped.
+                # The center point is always skipped.
                 # Also skip if not in footprint.
+                # Note: we are testing *reverse neighbors* (see minus sign).
+                # Because we want to see if we are a neighbor of that point,
+                # to know if that point might "pull in" our value.
                 if ((offset_row == 0 and offset_col == 0)
-                        or not footprint[footprint_center_row + offset_row, footprint_center_col + offset_col]):
+                        or not footprint[footprint_center_row - offset_row, footprint_center_col - offset_col]):
                     continue
 
-                # Note: we are testing *reverse neighborship* (minus sign).
-                # We are looking for points q such that point p is a neighbor of q.
-                # For symmetric neighborhoods, these are equivalent.
-                # Not so for asymmetric…
-                neighbor_row = row - offset_row
-                neighbor_col = col - offset_row
+                neighbor_row = row + offset_row
+                neighbor_col = col + offset_col
 
                 if (
                         neighbor_row < 0
