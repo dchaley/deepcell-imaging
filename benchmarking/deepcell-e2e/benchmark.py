@@ -323,14 +323,50 @@ else:
     raise "Dunno how to handle multiple gpu types"
 
 import subprocess
-print(subprocess.check_output(['gcloud', 'auth', 'list']))
+
+print("-----Starting auth check")
+print(subprocess.check_output(["gcloud", "auth", "list"]))
+print("-----Ending auth check")
+
+
+def get_project_id():
+    import json
+
+    # In python 3.7, this works
+    env_project_id = os.getenv("GCP_PROJECT")
+
+    if not env_project_id:  # > python37
+        # Only works on runtime.
+        import urllib.request
+
+        url = "http://metadata.google.internal/computeMetadata/v1/project/project-id"
+        req = urllib.request.Request(url)
+        req.add_header("Metadata-Flavor", "Google")
+        env_project_id = urllib.request.urlopen(req).read().decode()
+
+    if not env_project_id:  # Running locally
+        with open(os.environ["GOOGLE_APPLICATION_CREDENTIALS"], "r") as fp:
+            credentials = json.load(fp)
+        env_project_id = credentials["project_id"]
+
+    if not env_project_id:
+        raise ValueError("Could not get a value for PROJECT_ID")
+
+    return env_project_id
+
+
+try:
+    print("Project id: %s" % get_project_id())
+except Exception as e:
+    print("Error getting project id: %s" % e)
 
 if custom_job_name:
     # For running on vertex AI:
     try:
         from google.cloud import aiplatform
+
         aiplatform.init(project=project_id, location=location)
-        display_filter = "display_name=\"{}\"".format(custom_job_name)
+        display_filter = 'display_name="{}"'.format(custom_job_name)
 
         matching_jobs = aiplatform.CustomJob.list(filter=display_filter)
 
@@ -417,7 +453,7 @@ job_config = bigquery.LoadJobConfig(
     skip_leading_rows=0,
 )
 csv_file = io.StringIO(output.getvalue())
-table_id = '{}.benchmarking.results'.format(project_id)
+table_id = "{}.benchmarking.results".format(project_id)
 load_job = bq_client.load_table_from_file(csv_file, table_id, job_config=job_config)
 load_job.result()  # Waits for the job to complete.
 
