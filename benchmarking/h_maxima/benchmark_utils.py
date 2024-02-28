@@ -19,10 +19,8 @@ def opencv_reconstruct(
     # .item() converts the numpy scalar to a python scalar
     pad_value = np.min(marker).item()
 
-    if anchor == (-1, -1):
-        anchor = (kernel.shape[1] // 2, kernel.shape[0] // 2)
-    # The center is "by definition"(?) included in the kernel
-    kernel[anchor] = True
+    if not kernel[kernel.shape[0] // 2, kernel.shape[1] // 2]:
+        raise ValueError("The center of the kernel must be True")
 
     while True:
         expanded = cv2.dilate(
