@@ -36,7 +36,7 @@ Available accelerator types: [docs](https://cloud.google.com/vertex-ai/docs/refe
 Use this for t4 gpu: `export GPU_TYPE="NVIDIA_TESLA_T4"`
 
 ```
-export JOB_NAME="Benchmark n1-highmem-4"
+export JOB_NAME="Benchmark n1-highmem-4 yyyymmddhhmmss"
 export MACHINE_TYPE="n1-highmem-4"
 export GPU_COUNT=0
 export GPU_TYPE=""
@@ -44,7 +44,7 @@ export CONTAINER_URI="us-west1-docker.pkg.dev/deepcell-401920/deepcell-benchmark
 export REPLICA_COUNT=1
 
 gcloud ai custom-jobs create \
-  --region=$LOCATION \
-  --display-name=$JOB_NAME \
-  --worker-pool-spec=machine-type="$MACHINE_TYPE",accelerator-type="$GPU_TYPE",accelerator-count="$GPU_COUNT",replica-count="$REPLICA_COUNT",container-image-uri=$CONTAINER_URI
+  --region=$LOCATION --project=$PROJECT \
+  --display-name="$JOB_NAME" \
+  --worker-pool-spec=machine-type="$MACHINE_TYPE",accelerator-type="$GPU_TYPE",accelerator-count="$GPU_COUNT",replica-count="$REPLICA_COUNT",container-image-uri=$CONTAINER_URI --args="--custom_job_name='$JOB_NAME'"
 ```
