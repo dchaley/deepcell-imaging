@@ -27,43 +27,28 @@ xfail = pytest.mark.xfail
 # depends on: https://github.com/dchaley/deepcell-imaging/issues/118
 # @pytest.mark.parametrize(
 #     "dimensions",
-#     [
-#         1,
-#         2,
-#         3,
-#         4,
+#       [1, 2, 3, 4],
 #     ],
 # )
 @pytest.mark.parametrize(
     "rows",
-    [
-        10,
-        100,
-        1000,
-    ],
+    [10, 100, 1000],
 )
 @pytest.mark.parametrize(
     "cols",
-    [
-        10,
-        100,
-        1000,
-    ],
+    [10, 100, 1000],
 )
 @pytest.mark.parametrize(
     "method",
-    [
-        "dilation",
-    ],
+    ["dilation"],
 )
 @pytest.mark.parametrize(
-    "footprint_size",
-    [
-        3,
-        5,
-        7,
-        9,
-    ],
+    "footprint_rows",
+    [3, 5, 7, 9],
+)
+@pytest.mark.parametrize(
+    "footprint_cols",
+    [3, 5, 7, 9],
 )
 @pytest.mark.parametrize(
     "random_seed",
@@ -75,7 +60,9 @@ xfail = pytest.mark.xfail
         int(time.time()),
     ],
 )
-def test_random_data(dtype, rows, cols, method, footprint_size, random_seed):
+def test_random_data(
+    dtype, rows, cols, method, footprint_rows, footprint_cols, random_seed
+):
     """Test reconstruction on a random 100x100 image."""
 
     np.random.seed(random_seed)
@@ -103,11 +90,12 @@ def test_random_data(dtype, rows, cols, method, footprint_size, random_seed):
 
     # To finish https://github.com/dchaley/deepcell-imaging/issues/118,
     # make this n-dimensional not 2d.
-    footprint_size = min(footprint_size, rows - (rows % 2), cols - (cols % 2))
     footprint = np.random.randint(
-        0, 2, size=(footprint_size, footprint_size), dtype=np.uint8
+        0, 2, size=(footprint_rows, footprint_cols), dtype=np.uint8
     )
-    footprint[footprint_size // 2, footprint_size // 2] = 1
+    # Center point has to be true– the neighborhood always
+    # includes the center point.
+    footprint[footprint_rows // 2, footprint_cols // 2] = 1
 
     print("opencv")
 
