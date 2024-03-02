@@ -32,11 +32,11 @@ xfail = pytest.mark.xfail
 # )
 @pytest.mark.parametrize(
     "rows",
-    [10, 100, 1000],
+    [11, 96, 1023],
 )
 @pytest.mark.parametrize(
     "cols",
-    [10, 100, 1000],
+    [15, 130, 999],
 )
 @pytest.mark.parametrize(
     "method",
