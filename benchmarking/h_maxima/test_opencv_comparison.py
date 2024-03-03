@@ -1,11 +1,8 @@
-import logging
-
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 import pytest
-import random
-import skimage.morphology.grayreconstruct
 import time
+import timeit
 
 from benchmark_utils import opencv_reconstruct
 from fast_reconstruct_wrapper import cython_reconstruct_wrapper
@@ -51,6 +48,10 @@ xfail = pytest.mark.xfail
     [3, 5, 7, 9],
 )
 @pytest.mark.parametrize(
+    "footprint_offset",
+    [-5, -1, 0, 1, 4],
+)
+@pytest.mark.parametrize(
     "random_seed",
     [
         123,
@@ -61,7 +62,14 @@ xfail = pytest.mark.xfail
     ],
 )
 def test_random_data(
-    dtype, rows, cols, method, footprint_rows, footprint_cols, random_seed
+    dtype,
+    rows,
+    cols,
+    method,
+    footprint_rows,
+    footprint_cols,
+    footprint_offset,
+    random_seed,
 ):
     """Test reconstruction on a random 100x100 image."""
 
@@ -93,23 +101,36 @@ def test_random_data(
     footprint = np.random.randint(
         0, 2, size=(footprint_rows, footprint_cols), dtype=np.uint8
     )
+
+    center_point_linear = footprint_rows // 2 * footprint_cols + footprint_cols // 2
+    anchor_point_linear = (center_point_linear + footprint_offset) % (
+        footprint_rows * footprint_cols
+    )
+    anchor_row = anchor_point_linear // footprint_cols
+    anchor_col = anchor_point_linear % footprint_cols
     # Center point has to be true– the neighborhood always
     # includes the center point.
-    footprint[footprint_rows // 2, footprint_cols // 2] = 1
+    footprint[anchor_row, anchor_col] = 1
 
-    print("opencv")
-
+    print("OpenCV…")
+    t = timeit.default_timer()
     opencv_result = opencv_reconstruct(
         image.copy(),
         mask.copy(),
         footprint.copy(),
-        # (0, 0),
+        (anchor_col, anchor_row),  # OpenCV uses (x, y) not (row, col)
     )
+    print("OpenCV time:", timeit.default_timer() - t)
 
-    print("cython")
-
+    print("Cython…")
+    t = timeit.default_timer()
     cython_result = cython_reconstruct_wrapper(
-        image.copy(), mask.copy(), method=method, footprint=footprint.copy()
+        image.copy(),
+        mask.copy(),
+        method=method,
+        footprint=footprint.copy(),
+        offset=np.array([anchor_row, anchor_col]),
     )
+    print("Cython time:", timeit.default_timer() - t)
 
     assert_array_almost_equal(cython_result, opencv_result)
