@@ -506,7 +506,7 @@ def test_arbitrary_3x3_offset_5x3_footprint():
         dtype=np.uint8,
     )
 
-    offset = np.array([[2], [2]])
+    offset = np.array([[0], [2]])
 
     fast_hybrid_result = reconstruction(
         np.ndarray.copy(seed),
