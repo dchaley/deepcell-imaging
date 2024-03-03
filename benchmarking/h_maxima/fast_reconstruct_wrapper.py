@@ -42,7 +42,7 @@ def cython_reconstruct_wrapper(
     else:
         if offset.ndim != footprint.ndim:
             raise ValueError("Offset and footprint ndims must be equal.")
-        if not all([(0 <= o < d) for o, d in zip(offset, footprint.shape)]):
+        if not all([(0 <= o < d) for o, d in zip(offset[0], footprint.shape)]):
             raise ValueError("Offset must be included inside footprint")
 
     if inplace:

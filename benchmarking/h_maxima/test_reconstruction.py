@@ -412,3 +412,56 @@ def test_arbitrary_5x5():
         fast_hybrid_result,
         expected,
     )
+
+
+def test_arbitrary_3x3_offset():
+    seed = np.array(
+        [
+            [19966, 12875, -17043],
+            [13956, -4738, -14016],
+            [-15038, -4688, 28636],
+        ],
+        dtype=np.int16,
+    )
+    mask = np.array(
+        [
+            [21602, 12875, 30438],
+            [13956, -4738, 14362],
+            [-15038, 14383, 30826],
+        ],
+        dtype=np.int16,
+    )
+    footprint = np.array(
+        [
+            [1, 0, 0],
+            [0, 1, 0],
+            [1, 1, 1],
+        ],
+        dtype=np.uint8,
+    )
+    # Proof of work following iterations of parallel method:
+    # (repeat point-wise maximum filtered min-wise with mask, until convergence)
+    # https://docs.google.com/spreadsheets/d/15TntEi694OUy3ZjAdAdY2Ax6FTdCsCXiqGfpxpV7-iY/edit#gid=1863474562
+    expected = np.array(
+        [
+            [19966, 12875, 19966],
+            [13956, -4738, 13956],
+            [-15038, 13956, 28636],
+        ],
+        dtype=np.int16,
+    )
+
+    offset = np.array([[2], [2]])
+
+    fast_hybrid_result = reconstruction(
+        np.ndarray.copy(seed),
+        np.ndarray.copy(mask),
+        method="dilation",
+        footprint=np.ndarray.copy(footprint),
+        offset=offset,
+    )
+
+    assert_array_almost_equal(
+        fast_hybrid_result,
+        expected,
+    )
