@@ -19,7 +19,12 @@ def opencv_reconstruct(
     # .item() converts the numpy scalar to a python scalar
     pad_value = np.min(marker).item()
 
-    if not kernel[kernel.shape[0] // 2, kernel.shape[1] // 2]:
+    if anchor == (-1, -1):
+        # OpenCV uses (x, y) not (row, col) for the anchor
+        anchor = (kernel.shape[1] // 2, kernel.shape[0] // 2)
+
+    # The kernel however uses rows/cols not x/y…
+    if not kernel[anchor[1], anchor[0]]:
         raise ValueError("The center of the kernel must be True")
 
     while True:
