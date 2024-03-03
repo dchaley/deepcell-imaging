@@ -465,3 +465,58 @@ def test_arbitrary_3x3_offset():
         fast_hybrid_result,
         expected,
     )
+
+
+def test_arbitrary_3x3_offset_5x3_footprint():
+    seed = np.array(
+        [
+            [254, 205, 75],
+            [178, 109, 61],
+            [132, 182, 126],
+        ],
+        dtype=np.uint8,
+    )
+    mask = np.array(
+        [
+            [254, 205, 176],
+            [178, 220, 239],
+            [132, 182, 126],
+        ],
+        dtype=np.uint8,
+    )
+    footprint = np.array(
+        [
+            [0, 0, 1],
+            [1, 1, 0],
+            [0, 0, 1],
+            [0, 1, 0],
+            [0, 0, 1],
+        ],
+        dtype=np.uint8,
+    )
+    # Proof of work following iterations of parallel method:
+    # (repeat point-wise maximum filtered min-wise with mask, until convergence)
+    # https://docs.google.com/spreadsheets/d/15TntEi694OUy3ZjAdAdY2Ax6FTdCsCXiqGfpxpV7-iY/edit#gid=1552794151
+    expected = np.array(
+        [
+            [254, 205, 176],
+            [178, 132, 182],
+            [132, 182, 126],
+        ],
+        dtype=np.uint8,
+    )
+
+    offset = np.array([[2], [2]])
+
+    fast_hybrid_result = reconstruction(
+        np.ndarray.copy(seed),
+        np.ndarray.copy(mask),
+        method="dilation",
+        footprint=np.ndarray.copy(footprint),
+        offset=offset,
+    )
+
+    assert_array_almost_equal(
+        fast_hybrid_result,
+        expected,
+    )
