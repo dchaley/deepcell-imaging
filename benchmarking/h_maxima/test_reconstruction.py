@@ -23,7 +23,7 @@ def test_zeros():
     # With & without explicit offset
     assert_array_almost_equal(reconstruction(np.zeros((5, 7)), np.zeros((5, 7))), 0)
     assert_array_almost_equal(
-        reconstruction(np.zeros((5, 7)), np.zeros((5, 7)), offset=np.array([[1], [1]])),
+        reconstruction(np.zeros((5, 7)), np.zeros((5, 7)), offset=np.array([1, 1])),
         0,
     )
 
@@ -251,7 +251,7 @@ def test_offset_not_none():
             mask,
             method="dilation",
             footprint=np.array([[1, 1, 1]]),
-            offset=np.array([[0], [0]]),
+            offset=np.array([0, 0]),
         ),
         expected,
     )
@@ -451,13 +451,13 @@ def test_arbitrary_3x3_offset():
         dtype=np.int16,
     )
 
-    offset = np.array([[2], [2]])
+    offset = np.array([2, 2])
 
     fast_hybrid_result = reconstruction(
-        np.ndarray.copy(seed),
-        np.ndarray.copy(mask),
+        seed.copy(),
+        mask.copy(),
         method="dilation",
-        footprint=np.ndarray.copy(footprint),
+        footprint=footprint.copy(),
         offset=offset,
     )
 
@@ -506,7 +506,7 @@ def test_arbitrary_3x3_offset_5x3_footprint():
         dtype=np.uint8,
     )
 
-    offset = np.array([[0], [2]])
+    offset = np.array([0, 2])
 
     fast_hybrid_result = reconstruction(
         np.ndarray.copy(seed),
