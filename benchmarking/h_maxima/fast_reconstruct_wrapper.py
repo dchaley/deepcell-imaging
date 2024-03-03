@@ -40,8 +40,8 @@ def cython_reconstruct_wrapper(
             raise ValueError("Footprint dimensions must all be odd")
         offset = np.array([d // 2 for d in footprint.shape])
     else:
-        if offset.ndim != footprint.ndim:
-            raise ValueError("Offset and footprint ndims must be equal.")
+        if offset.shape[0] != footprint.ndim:
+            raise ValueError("Offset length and footprint ndims must be equal.")
         if not all([(0 <= o < d) for o, d in zip(offset, footprint.shape)]):
             raise ValueError("Offset must be included inside footprint")
 
@@ -62,13 +62,13 @@ def cython_reconstruct_wrapper(
     # Cython knows how to wire this into a pointer for the C function.
     # When we support n-dimensions and need to figure out pointers for
     # all types, remove this…
-    offset_bytes = bytes(offset.astype(np.uint8, copy=True))
+    offset = offset.astype(np.uint8, copy=True)
 
     fast_hybrid_reconstruct(
         marker=marker,
         mask=mask,
         footprint=footprint,
         method=method,
-        offset=offset_bytes,
+        offset=offset,
     )
     return marker
