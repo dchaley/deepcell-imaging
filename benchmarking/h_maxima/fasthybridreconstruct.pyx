@@ -59,7 +59,9 @@ cdef image_dtype get_neighborhood_peak(
     Py_ssize_t image_cols,
     Py_ssize_t point_row,
     Py_ssize_t point_col,
-    uint8_t[:, ::1] footprint,
+    uint8_t* footprint,
+    Py_ssize_t footprint_rows,
+    Py_ssize_t footprint_cols,
     uint8_t[::1] offset,
     image_dtype border_value,
     uint8_t method,
@@ -81,7 +83,9 @@ cdef image_dtype get_neighborhood_peak(
       image_cols (Py_ssize_t): the number of columns in the image
       point_row (Py_ssize_t): the row of the point to scan
       point_col (Py_ssize_t): the column of the point to scan
-      footprint (uint8_t[][]): the neighborhood footprint
+      footprint (uint8_t*): the neighborhood footprint
+      footprint_rows (Py_ssize_t): the number of rows in the footprint
+      footprint_cols (Py_ssize_t): the number of columns in the footprint
       offset (uint8_t[]): the offset of the footprint center.
       border_value (my_type): the value to use for out-of-bound points
       method (uint8_t): METHOD_DILATION or METHOD_EROSION
@@ -99,11 +103,11 @@ cdef image_dtype get_neighborhood_peak(
     cdef Py_ssize_t footprint_center_row = offset[0]
     cdef Py_ssize_t footprint_center_col = offset[1]
 
-    for offset_row in range(-footprint_center_row, footprint.shape[0] - footprint_center_row):
-        for offset_col in range(-footprint_center_col, footprint.shape[1] - footprint_center_col):
+    for offset_row in range(-footprint_center_row, footprint_rows - footprint_center_row):
+        for offset_col in range(-footprint_center_col, footprint_cols - footprint_center_col):
             # Skip this point if not in the footprint, and not the center point.
             # (The center point is always included in the neighborhood.)
-            if (not footprint[footprint_center_row + offset_row, footprint_center_col + offset_col]
+            if (not footprint[(footprint_center_row + offset_row) * footprint_cols + footprint_center_col + offset_col]
                     and not (offset_row == 0 and offset_col == 0)):
                 continue
 
@@ -269,7 +273,9 @@ def fast_hybrid_raster_scans(
                 image.shape[1],
                 row,
                 col,
-                footprint_raster_before,
+                &footprint_raster_before[0, 0],
+                footprint_raster_before.shape[0],
+                footprint_raster_before.shape[1],
                 offset,
                 border_value,
                 method,
@@ -297,7 +303,9 @@ def fast_hybrid_raster_scans(
                     image.shape[1],
                     row,
                     col,
-                    footprint_raster_after,
+                    &footprint_raster_after[0, 0],
+                    footprint_raster_after.shape[0],
+                    footprint_raster_after.shape[1],
                     offset,
                     border_value,
                     method,
