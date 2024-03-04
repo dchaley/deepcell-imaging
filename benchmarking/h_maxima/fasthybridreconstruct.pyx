@@ -54,7 +54,9 @@ cpdef enum:
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef marker_dtype get_neighborhood_peak(
-    marker_dtype[:, ::1] image,
+    marker_dtype* image,
+    Py_ssize_t image_rows,
+    Py_ssize_t image_cols,
     Py_ssize_t point_row,
     Py_ssize_t point_col,
     uint8_t[:, ::1] footprint,
@@ -74,7 +76,9 @@ cdef marker_dtype get_neighborhood_peak(
     this is the minimum image value.
 
     Args:
-      image (mytype[][]): the image to scan
+      image (marker_dtype*): the image to scan
+      image_rows (Py_ssize_t): the number of rows in the image
+      image_cols (Py_ssize_t): the number of columns in the image
       point_row (Py_ssize_t): the row of the point to scan
       point_col (Py_ssize_t): the column of the point to scan
       footprint (uint8_t[][]): the neighborhood footprint
@@ -91,8 +95,6 @@ cdef marker_dtype get_neighborhood_peak(
     cdef Py_ssize_t neighbor_row, neighbor_col
     cdef Py_ssize_t footprint_x, footprint_y
     cdef Py_ssize_t offset_row, offset_col
-    cdef Py_ssize_t image_rows = image.shape[0]
-    cdef Py_ssize_t image_cols = image.shape[1]
 
     cdef Py_ssize_t footprint_center_row = offset[0]
     cdef Py_ssize_t footprint_center_col = offset[1]
@@ -116,7 +118,7 @@ cdef marker_dtype get_neighborhood_peak(
             ):
                 continue
             else:
-                pixel_value = image[neighbor_row, neighbor_col]
+                pixel_value = image[neighbor_row * image_cols + neighbor_col]
                 if method == METHOD_DILATION:
                     neighborhood_peak = max(neighborhood_peak, pixel_value)
                 elif method == METHOD_EROSION:
@@ -262,7 +264,9 @@ def fast_hybrid_raster_scans(
                 continue
 
             neighborhood_peak = get_neighborhood_peak(
-                marker,
+                &marker[0, 0],
+                marker.shape[0],
+                marker.shape[1],
                 row,
                 col,
                 footprint_raster_before,
@@ -288,7 +292,9 @@ def fast_hybrid_raster_scans(
             # But note: we still need to test for propagation (below).
             if marker[row, col] != point_mask:
                 neighborhood_peak = get_neighborhood_peak(
-                    marker,
+                    &marker[0,0],
+                    marker.shape[0],
+                    marker.shape[1],
                     row,
                     col,
                     footprint_raster_after,
