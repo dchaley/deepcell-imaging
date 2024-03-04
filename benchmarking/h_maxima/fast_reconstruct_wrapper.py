@@ -8,7 +8,7 @@ from skimage._shared.utils import _supported_float_type
 
 
 def cython_reconstruct_wrapper(
-    marker, mask, method="dilation", footprint=None, offset=None, inplace=False
+    image, mask, method="dilation", footprint=None, offset=None, inplace=False
 ):
     if method == "dilation":
         method = METHOD_DILATION
@@ -19,19 +19,19 @@ def cython_reconstruct_wrapper(
             "Reconstruction method can be 'dilation' or 'erosion', not '%s'." % method
         )
 
-    if method == METHOD_DILATION and np.any(marker > mask):
+    if method == METHOD_DILATION and np.any(image > mask):
         raise ValueError(
             "Intensity of seed image must be less than that "
             "of the mask image for reconstruction by dilation."
         )
-    elif method == METHOD_EROSION and np.any(marker < mask):
+    elif method == METHOD_EROSION and np.any(image < mask):
         raise ValueError(
             "Intensity of seed image must be greater than that "
             "of the mask image for reconstruction by erosion."
         )
 
     if footprint is None:
-        footprint = np.ones([3] * marker.ndim, dtype=np.uint8)
+        footprint = np.ones([3] * image.ndim, dtype=np.uint8)
     else:
         footprint = footprint.astype(np.uint8, copy=True)
 
@@ -46,9 +46,9 @@ def cython_reconstruct_wrapper(
             raise ValueError("Offset must be included inside footprint")
 
     if inplace:
-        marker = marker
+        image = image
     else:
-        marker = marker.astype(_supported_float_type(mask.dtype), copy=True)
+        image = image.astype(_supported_float_type(mask.dtype), copy=True)
 
     # The existing skimage code is inconsistent in how it creates the offset.
     # See the offset is None block: it creates offsets of different shapes.
@@ -65,10 +65,10 @@ def cython_reconstruct_wrapper(
     offset = offset.astype(np.uint8, copy=True)
 
     fast_hybrid_reconstruct(
-        marker=marker,
+        image=image,
         mask=mask,
         footprint=footprint,
         method=method,
         offset=offset,
     )
-    return marker
+    return image
