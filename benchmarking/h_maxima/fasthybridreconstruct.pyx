@@ -62,7 +62,7 @@ cdef image_dtype get_neighborhood_peak(
     uint8_t* footprint,
     Py_ssize_t footprint_rows,
     Py_ssize_t footprint_cols,
-    uint8_t[::1] offset,
+    uint8_t* offset,
     image_dtype border_value,
     uint8_t method,
 ):
@@ -86,7 +86,7 @@ cdef image_dtype get_neighborhood_peak(
       footprint (uint8_t*): the neighborhood footprint
       footprint_rows (Py_ssize_t): the number of rows in the footprint
       footprint_cols (Py_ssize_t): the number of columns in the footprint
-      offset (uint8_t[]): the offset of the footprint center.
+      offset (uint8_t*): the offset of the footprint center.
       border_value (my_type): the value to use for out-of-bound points
       method (uint8_t): METHOD_DILATION or METHOD_EROSION
 
@@ -276,7 +276,7 @@ def fast_hybrid_raster_scans(
                 &footprint_raster_before[0, 0],
                 footprint_raster_before.shape[0],
                 footprint_raster_before.shape[1],
-                offset,
+                &offset[0],
                 border_value,
                 method,
             )
@@ -306,7 +306,7 @@ def fast_hybrid_raster_scans(
                     &footprint_raster_after[0, 0],
                     footprint_raster_after.shape[0],
                     footprint_raster_after.shape[1],
-                    offset,
+                    &offset[0],
                     border_value,
                     method,
                 )
