@@ -429,6 +429,7 @@ def fast_hybrid_reconstruct(
         mask_dtype[:, ::1] mask,
         uint8_t[:, ::1] footprint,
         uint8_t method,
+        # FIXME(171): offset should be a Py_ssize_t
         uint8_t[::1] offset
 ):
     """Perform grayscale reconstruction using the 'Fast-Hybrid' algorithm.
