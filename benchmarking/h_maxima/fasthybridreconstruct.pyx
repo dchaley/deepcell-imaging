@@ -134,13 +134,17 @@ cdef image_dtype get_neighborhood_peak(
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef uint8_t should_propagate(
-    image_dtype[:, ::1] image,
-    mask_dtype[:, ::1] mask,
+    image_dtype* image,
+    Py_ssize_t image_rows,
+    Py_ssize_t image_cols,
+    mask_dtype* mask,
     Py_ssize_t point_row,
     Py_ssize_t point_col,
     image_dtype point_value,
-    uint8_t[:, ::1] footprint,
-    uint8_t[::1] offset,
+    uint8_t* footprint,
+    Py_ssize_t footprint_rows,
+    Py_ssize_t footprint_cols,
+    uint8_t* offset,
     uint8_t method,
 ):
     """Determine if a point should be propagated to its neighbors.
@@ -154,13 +158,17 @@ cdef uint8_t should_propagate(
     algorithm, the footprint is the raster footprint without the center point.
 
     Args:
-        image (image_dtype[][]): the image to scan
-        mask (mask_dtype[][]): the mask to scan
+        image (image_dtype*): the image to scan
+        image_rows (Py_ssize_t): the number of rows in the image
+        image_cols (Py_ssize_t): the number of columns in the image
+        mask (mask_dtype*): the mask to apply
         point_row (Py_ssize_t): the row of the point to scan
         point_col (Py_ssize_t): the column of the point to scan
         point_value (image_dtype): the value of the point to scan
-        footprint (uint8_t[][]): the neighborhood footprint
-        offset (uint8_t[]): the offset of the footprint center.
+        footprint (uint8_t*): the neighborhood footprint
+        footprint_rows (Py_ssize_t): the number of rows in the footprint
+        footprint_cols (Py_ssize_t): the number of columns in the footprint
+        offset (uint8_t*): the offset of the footprint center.
         method (uint8_t): METHOD_DILATION or METHOD_EROSION
 
     Returns:
@@ -169,8 +177,6 @@ cdef uint8_t should_propagate(
     cdef Py_ssize_t footprint_row_offset, footprint_col_offset
     cdef Py_ssize_t neighbor_row, neighbor_col
     cdef image_dtype neighbor_value
-    cdef Py_ssize_t image_rows = image.shape[0]
-    cdef Py_ssize_t image_cols = image.shape[1]
     cdef Py_ssize_t footprint_center_row = offset[0]
     cdef Py_ssize_t footprint_center_col = offset[1]
     cdef Py_ssize_t footprint_row, footprint_col
@@ -178,12 +184,12 @@ cdef uint8_t should_propagate(
     # Place the current point at each position of the footprint.
     # If that footprint position is true, then, the current point
     # is a neighbor of the footprint center.
-    for footprint_row in range(0, footprint.shape[0]):
-        for footprint_col in range(0, footprint.shape[1]):
+    for footprint_row in range(0, footprint_rows):
+        for footprint_col in range(0, footprint_cols):
             # The center point is always skipped.
             # Also skip if not in footprint.
             if ((footprint_row == offset[0] and footprint_col == offset[1])
-                    or not footprint[footprint_row, footprint_col]):
+                    or not footprint[footprint_row * footprint_cols + footprint_col]):
                 continue
 
             # The center point is the current point, offset by the footprint center.
@@ -199,15 +205,15 @@ cdef uint8_t should_propagate(
             ):
                 continue
 
-            neighbor_value = image[neighbor_row, neighbor_col]
+            neighbor_value = image[neighbor_row * image_cols + neighbor_col]
             if method == METHOD_DILATION and (
                 neighbor_value < point_value
-                and neighbor_value < <image_dtype> mask[neighbor_row, neighbor_col]
+                and neighbor_value < <image_dtype> mask[neighbor_row * image_cols + neighbor_col]
             ):
                 return 1
             elif method == METHOD_EROSION and (
                 neighbor_value > point_value
-                and neighbor_value > <image_dtype> mask[neighbor_row, neighbor_col]
+                and neighbor_value > <image_dtype> mask[neighbor_row * image_cols + neighbor_col]
             ):
                 return 1
 
@@ -240,8 +246,8 @@ def fast_hybrid_raster_scans(
     Note that this modifies the image in place.
 
     Args:
-        image (my_type[][]): the image to scan
-        mask (my_type[][]): the mask to scan
+        image (image_dtype[][]): the image to scan
+        mask (mask_dtype[][]): the mask to apply
         footprint_raster_before (uint8_t[][]): the raster footprint before the center point
         footprint_raster_after (uint8_t[][]): the raster footprint after the center point
         footprint_propagation_test (uint8_t[][]): the raster footprint after the center point, excluding the center point
@@ -316,13 +322,17 @@ def fast_hybrid_raster_scans(
                     image[row, col] = max(neighborhood_peak, point_mask)
 
             if should_propagate(
-                    image,
-                    mask,
+                    &image[0, 0],
+                    image.shape[0],
+                    image.shape[1],
+                    &mask[0, 0],
                     row,
                     col,
                     image[row, col],
-                    footprint_propagation_test,
-                    offset,
+                    &footprint_propagation_test[0, 0],
+                    footprint_propagation_test.shape[0],
+                    footprint_propagation_test.shape[1],
+                    &offset[0],
                     method,
             ):
                 queue.append((row, col))
