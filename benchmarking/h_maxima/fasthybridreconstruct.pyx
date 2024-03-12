@@ -265,6 +265,65 @@ cdef void perform_raster_scan(
                 image[row * image_cols + col] = max(neighborhood_peak, point_mask)
 
 
+cdef void perform_reverse_raster_scan(
+    image_dtype* image,
+    Py_ssize_t image_rows,
+    Py_ssize_t image_cols,
+    mask_dtype* mask,
+    uint8_t* footprint,
+    uint8_t* propagation_footprint,
+    Py_ssize_t footprint_rows,
+    Py_ssize_t footprint_cols,
+    uint8_t* offset,
+    image_dtype border_value,
+    uint8_t method,
+    queue,
+):
+    cdef image_dtype neighborhood_peak, point_mask
+    cdef Py_ssize_t row, col
+
+    for row in range(image_rows - 1, -1, -1):
+        for col in range(image_cols - 1, -1, -1):
+            point_mask = <image_dtype> mask[row * image_cols + col]
+
+            # If we're already at the mask, skip the neighbor test.
+            # But note: we still need to test for propagation (below).
+            if image[row * image_cols + col] != point_mask:
+                neighborhood_peak = get_neighborhood_peak(
+                    image,
+                    image_rows,
+                    image_cols,
+                    row,
+                    col,
+                    footprint,
+                    footprint_rows,
+                    footprint_cols,
+                    offset,
+                    border_value,
+                    method,
+                )
+                if method == METHOD_DILATION:
+                    image[row * image_cols + col] = min(neighborhood_peak, point_mask)
+                elif method == METHOD_EROSION:
+                    image[row * image_cols + col] = max(neighborhood_peak, point_mask)
+
+            if should_propagate(
+                    image,
+                    image_rows,
+                    image_cols,
+                    mask,
+                    row,
+                    col,
+                    image[row * image_cols + col],
+                    propagation_footprint,
+                    footprint_rows,
+                    footprint_cols,
+                    offset,
+                    method,
+            ):
+                queue.append((row, col))
+
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def fast_hybrid_raster_scans(
@@ -326,47 +385,20 @@ def fast_hybrid_raster_scans(
 
     # Scan in reverse-raster order.
     t = timeit.default_timer()
-    for row in range(image_rows - 1, -1, -1):
-        for col in range(image_cols - 1, -1, -1):
-            point_mask = <image_dtype> mask[row, col]
-
-            # If we're already at the mask, skip the neighbor test.
-            # But note: we still need to test for propagation (below).
-            if image[row, col] != point_mask:
-                neighborhood_peak = get_neighborhood_peak(
-                    &image[0,0],
-                    image.shape[0],
-                    image.shape[1],
-                    row,
-                    col,
-                    &footprint_raster_after[0, 0],
-                    footprint_raster_after.shape[0],
-                    footprint_raster_after.shape[1],
-                    &offset[0],
-                    border_value,
-                    method,
-                )
-                if method == METHOD_DILATION:
-                    image[row, col] = min(neighborhood_peak, point_mask)
-                elif method == METHOD_EROSION:
-                    image[row, col] = max(neighborhood_peak, point_mask)
-
-            if should_propagate(
-                    &image[0, 0],
-                    image.shape[0],
-                    image.shape[1],
-                    &mask[0, 0],
-                    row,
-                    col,
-                    image[row, col],
-                    &footprint_propagation_test[0, 0],
-                    footprint_propagation_test.shape[0],
-                    footprint_propagation_test.shape[1],
-                    &offset[0],
-                    method,
-            ):
-                queue.append((row, col))
-
+    perform_reverse_raster_scan(
+        &image[0, 0],
+        image_rows,
+        image_cols,
+        &mask[0, 0],
+        &footprint_raster_after[0, 0],
+        &footprint_propagation_test[0, 0],
+        footprint_raster_after.shape[0],
+        footprint_raster_after.shape[1],
+        &offset[0],
+        border_value,
+        method,
+        queue,
+    )
     logging.debug("Raster anti-scan time: %s", timeit.default_timer() - t)
 
 
