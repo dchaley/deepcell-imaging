@@ -222,6 +222,51 @@ cdef uint8_t should_propagate(
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
+cdef void perform_raster_scan(
+    image_dtype* image,
+    Py_ssize_t image_rows,
+    Py_ssize_t image_cols,
+    mask_dtype* mask,
+    uint8_t* footprint,
+    Py_ssize_t footprint_rows,
+    Py_ssize_t footprint_cols,
+    uint8_t* offset,
+    image_dtype border_value,
+    uint8_t method,
+):
+    cdef image_dtype neighborhood_peak, point_mask
+    cdef Py_ssize_t row, col
+
+    for row in range(image_rows):
+        for col in range(image_cols):
+            point_mask = <image_dtype> mask[row * image_cols + col]
+
+            # If the image is already at the limiting mask value, skip this pixel.
+            if image[row * image_cols + col] == point_mask:
+                continue
+
+            neighborhood_peak = get_neighborhood_peak(
+                image,
+                image_rows,
+                image_cols,
+                row,
+                col,
+                footprint,
+                footprint_rows,
+                footprint_cols,
+                offset,
+                border_value,
+                method,
+            )
+
+            if method == METHOD_DILATION:
+                image[row * image_cols + col] = min(neighborhood_peak, point_mask)
+            elif method == METHOD_EROSION:
+                image[row * image_cols + col] = max(neighborhood_peak, point_mask)
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def fast_hybrid_raster_scans(
     image_dtype[:, ::1] image,
     mask_dtype[:, ::1] mask,
@@ -265,33 +310,18 @@ def fast_hybrid_raster_scans(
 
     # Scan in raster order.
     t = timeit.default_timer()
-    for row in range(image_rows):
-        for col in range(image_cols):
-            point_mask = <image_dtype> mask[row, col]
-
-            # If the image is already at the limiting mask value, skip this pixel.
-            if image[row, col] == point_mask:
-                continue
-
-            neighborhood_peak = get_neighborhood_peak(
-                &image[0, 0],
-                image.shape[0],
-                image.shape[1],
-                row,
-                col,
-                &footprint_raster_before[0, 0],
-                footprint_raster_before.shape[0],
-                footprint_raster_before.shape[1],
-                &offset[0],
-                border_value,
-                method,
-            )
-
-            if method == METHOD_DILATION:
-                image[row, col] = min(neighborhood_peak, point_mask)
-            elif method == METHOD_EROSION:
-                image[row, col] = max(neighborhood_peak, point_mask)
-
+    perform_raster_scan(
+        &image[0, 0],
+        image_rows,
+        image_cols,
+        &mask[0, 0],
+        &footprint_raster_before[0, 0],
+        footprint_raster_before.shape[0],
+        footprint_raster_before.shape[1],
+        &offset[0],
+        border_value,
+        method,
+    )
     logging.debug("Raster scan time: %s", timeit.default_timer() - t)
 
     # Scan in reverse-raster order.
