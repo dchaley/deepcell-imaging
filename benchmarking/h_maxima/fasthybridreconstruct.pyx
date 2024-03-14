@@ -326,84 +326,6 @@ cdef void perform_reverse_raster_scan(
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef fast_hybrid_raster_scans(
-    image_dtype* image,
-    Py_ssize_t image_rows,
-    Py_ssize_t image_cols,
-    mask_dtype* mask,
-    uint8_t* footprint_raster_before,
-    uint8_t* footprint_raster_after,
-    uint8_t* footprint_propagation_test,
-    Py_ssize_t footprint_rows,
-    Py_ssize_t footprint_cols,
-    uint8_t* offset,
-    image_dtype border_value,
-    queue,
-    uint8_t method,
-):
-    """Apply a maximum filter in raster order, then in reverse-raster order.
-
-    This implements the raster scan and anti-scan portions of the fast
-    hybrid reconstruct algorithm. The scan applies a maximum filter to
-    each point, using the pixels before or after the point depending on
-    the scan order.
-
-    After being scanned in both orders, each point is tested for further
-    propagation. If so, the point is added to the provided queue.
-
-    Note that this modifies the image in place.
-
-    Args:
-        image (image_dtype[][]): the image to scan
-        mask (mask_dtype[][]): the mask to apply
-        footprint_raster_before (uint8_t[][]): the raster footprint before the center point
-        footprint_raster_after (uint8_t[][]): the raster footprint after the center point
-        footprint_propagation_test (uint8_t[][]): the raster footprint after the center point, excluding the center point
-        offset (uint8_t[]): the offset of the footprint center.
-        border_value (my_type): the value to use for out-of-bound points
-        queue (deque): the queue of points to process
-        method (uint8_t): METHOD_DILATION or METHOD_EROSION
-    """
-    cdef Py_ssize_t row, col
-    cdef image_dtype neighborhood_peak, point_value, point_mask
-
-    # Scan in raster order.
-    t = timeit.default_timer()
-    perform_raster_scan(
-        image,
-        image_rows,
-        image_cols,
-        mask,
-        footprint_raster_before,
-        footprint_rows,
-        footprint_cols,
-        offset,
-        border_value,
-        method,
-    )
-    logging.debug("Raster scan time: %s", timeit.default_timer() - t)
-
-    # Scan in reverse-raster order.
-    t = timeit.default_timer()
-    perform_reverse_raster_scan(
-        image,
-        image_rows,
-        image_cols,
-        mask,
-        footprint_raster_after,
-        footprint_propagation_test,
-        footprint_rows,
-        footprint_cols,
-        offset,
-        border_value,
-        method,
-        queue,
-    )
-    logging.debug("Raster anti-scan time: %s", timeit.default_timer() - t)
-
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
 def process_queue(
    image_dtype[:, ::1] image,
    mask_dtype[:, ::1] mask,
@@ -588,21 +510,40 @@ def fast_hybrid_reconstruct(
     cdef uint8_t* footprint_after_ptr = <uint8_t*> <Py_ssize_t> footprint_raster_after.ctypes.data
     cdef uint8_t* footprint_propagation_ptr = <uint8_t*> <Py_ssize_t> footprint_propagation_test.ctypes.data
 
-    fast_hybrid_raster_scans(
+    cdef Py_ssize_t image_rows = image.shape[0]
+    cdef Py_ssize_t image_cols = image.shape[1]
+
+    t = timeit.default_timer()
+    perform_raster_scan(
         &image[0, 0],
-        image.shape[0],
-        image.shape[1],
+        image_rows,
+        image_cols,
         &mask[0, 0],
         footprint_before_ptr,
+        footprint_rows,
+        footprint_cols,
+        offset_ptr,
+        border_value,
+        method,
+    )
+    logging.debug("Raster scan time: %s", timeit.default_timer() - t)
+
+    t = timeit.default_timer()
+    perform_reverse_raster_scan(
+        &image[0, 0],
+        image_rows,
+        image_cols,
+        &mask[0, 0],
         footprint_after_ptr,
         footprint_propagation_ptr,
         footprint_rows,
         footprint_cols,
         offset_ptr,
         border_value,
-        queue,
         method,
+        queue,
     )
+    logging.debug("Reverse raster scan time: %s", timeit.default_timer() - t)
 
     # Propagate points as necessary.
     process_queue(
