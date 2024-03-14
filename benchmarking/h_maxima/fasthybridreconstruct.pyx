@@ -326,13 +326,17 @@ cdef void perform_reverse_raster_scan(
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def process_queue(
-   image_dtype[:, ::1] image,
-   mask_dtype[:, ::1] mask,
-   uint8_t[:, ::1] footprint,
-   uint8_t[::1] offset,
-   queue,
-   uint8_t method,
+cdef process_queue(
+    image_dtype* image,
+    Py_ssize_t image_rows,
+    Py_ssize_t image_cols,
+    mask_dtype* mask,
+    uint8_t* footprint,
+    Py_ssize_t footprint_rows,
+    Py_ssize_t footprint_cols,
+    uint8_t* offset,
+    queue,
+    uint8_t method,
 ):
     """Process the queue of pixels to propagate through a image.
 
@@ -345,14 +349,16 @@ def process_queue(
 
     Args:
         image (image_type[][]): the image to scan
-        mask (mytype[][]): the image mask (ceiling on image values)
-        footprint (uint8_t[][]): the neighborhood footprint
-        offset (uint8_t[]): the offset of the footprint center.
+        image_rows (Py_ssize_t): the number of rows in the image
+        image_cols (Py_ssize_t): the number of columns in the image
+        mask (mask_dtype*): the image mask (ceiling on image values)
+        footprint (uint8_t*): the neighborhood footprint
+        footprint_rows (Py_ssize_t): the number of rows in the footprint
+        footprint_cols (Py_ssize_t): the number of columns in the footprint
+        offset (uint8_t*): the offset of the footprint center.
         queue (deque): the queue of points to process
         method (uint8_t): METHOD_DILATION or METHOD_EROSION
     """
-    cdef Py_ssize_t image_rows = image.shape[0]
-    cdef Py_ssize_t image_cols = image.shape[1]
     cdef Py_ssize_t row, col
     cdef Py_ssize_t footprint_row, footprint_col
     cdef Py_ssize_t neighbor_row, neighbor_col
@@ -368,17 +374,17 @@ def process_queue(
         point = queue.popleft()
         row = point[0]
         col = point[1]
-        point_value = image[row, col]
+        point_value = image[row * image_cols + col]
 
         # Place the current point at each position of the footprint.
         # If that footprint position is true, then, the current point
         # is a neighbor of the footprint center.
-        for footprint_row in range(0, footprint.shape[0]):
-            for footprint_col in range(0, footprint.shape[1]):
+        for footprint_row in range(0, footprint_rows):
+            for footprint_col in range(0, footprint_cols):
                 # The center point is always skipped.
                 # Also skip if not in footprint.
                 if ((footprint_row == offset[0] and footprint_col == offset[1])
-                        or not footprint[footprint_row, footprint_col]):
+                        or not footprint[footprint_row * footprint_cols + footprint_col]):
                     continue
 
                 # The center point is the current point, offset by the footprint center.
@@ -394,14 +400,14 @@ def process_queue(
                     # Skip out of bounds
                     continue
 
-                neighbor_value = image[neighbor_row, neighbor_col]
-                neighbor_mask = <image_dtype> mask[neighbor_row, neighbor_col]
+                neighbor_value = image[neighbor_row * image_cols + neighbor_col]
+                neighbor_mask = <image_dtype> mask[neighbor_row * image_cols + neighbor_col]
 
                 if method == METHOD_DILATION and (point_value > neighbor_value != neighbor_mask):
-                    image[neighbor_row, neighbor_col] = min(point_value, neighbor_mask)
+                    image[neighbor_row * image_cols + neighbor_col] = min(point_value, neighbor_mask)
                     queue.append((neighbor_row, neighbor_col))
                 elif method == METHOD_EROSION and (point_value < neighbor_value != neighbor_mask):
-                    image[neighbor_row, neighbor_col] = max(point_value, neighbor_mask)
+                    image[neighbor_row * image_cols + neighbor_col] = max(point_value, neighbor_mask)
                     queue.append((neighbor_row, neighbor_col))
 
     logging.debug("Queue processing time: %s", timeit.default_timer() - t)
@@ -547,10 +553,14 @@ def fast_hybrid_reconstruct(
 
     # Propagate points as necessary.
     process_queue(
-        image,
-        mask,
-        footprint,
-        offset,
+        &image[0, 0],
+        image_rows,
+        image_cols,
+        &mask[0, 0],
+        &footprint[0, 0],
+        footprint_rows,
+        footprint_cols,
+        offset_ptr,
         queue,
         method,
     )
