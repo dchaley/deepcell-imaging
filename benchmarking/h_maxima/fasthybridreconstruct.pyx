@@ -326,13 +326,17 @@ cdef void perform_reverse_raster_scan(
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def fast_hybrid_raster_scans(
-    image_dtype[:, ::1] image,
-    mask_dtype[:, ::1] mask,
-    uint8_t[:, ::1] footprint_raster_before,
-    uint8_t[:, ::1] footprint_raster_after,
-    uint8_t[:, ::1] footprint_propagation_test,
-    uint8_t[::1] offset,
+cdef fast_hybrid_raster_scans(
+    image_dtype* image,
+    Py_ssize_t image_rows,
+    Py_ssize_t image_cols,
+    mask_dtype* mask,
+    uint8_t* footprint_raster_before,
+    uint8_t* footprint_raster_after,
+    uint8_t* footprint_propagation_test,
+    Py_ssize_t footprint_rows,
+    Py_ssize_t footprint_cols,
+    uint8_t* offset,
     image_dtype border_value,
     queue,
     uint8_t method,
@@ -361,23 +365,19 @@ def fast_hybrid_raster_scans(
         method (uint8_t): METHOD_DILATION or METHOD_EROSION
     """
     cdef Py_ssize_t row, col
-    cdef Py_ssize_t image_rows, image_cols
     cdef image_dtype neighborhood_peak, point_value, point_mask
-
-    image_rows = image.shape[0]
-    image_cols = image.shape[1]
 
     # Scan in raster order.
     t = timeit.default_timer()
     perform_raster_scan(
-        &image[0, 0],
+        image,
         image_rows,
         image_cols,
-        &mask[0, 0],
-        &footprint_raster_before[0, 0],
-        footprint_raster_before.shape[0],
-        footprint_raster_before.shape[1],
-        &offset[0],
+        mask,
+        footprint_raster_before,
+        footprint_rows,
+        footprint_cols,
+        offset,
         border_value,
         method,
     )
@@ -386,15 +386,15 @@ def fast_hybrid_raster_scans(
     # Scan in reverse-raster order.
     t = timeit.default_timer()
     perform_reverse_raster_scan(
-        &image[0, 0],
+        image,
         image_rows,
         image_cols,
-        &mask[0, 0],
-        &footprint_raster_after[0, 0],
-        &footprint_propagation_test[0, 0],
-        footprint_raster_after.shape[0],
-        footprint_raster_after.shape[1],
-        &offset[0],
+        mask,
+        footprint_raster_after,
+        footprint_propagation_test,
+        footprint_rows,
+        footprint_cols,
+        offset,
         border_value,
         method,
         queue,
@@ -583,15 +583,22 @@ def fast_hybrid_reconstruct(
     # The propagation queue for after the raster scans.
     queue = deque()
 
-    # Apply the maximum filter in raster order, then in reverse-raster order.
-    # The center pixel is included in both of these tests.
+    cdef uint8_t* offset_ptr = &offset[0]
+    cdef uint8_t* footprint_before_ptr = <uint8_t*> <Py_ssize_t> footprint_raster_before.ctypes.data
+    cdef uint8_t* footprint_after_ptr = <uint8_t*> <Py_ssize_t> footprint_raster_after.ctypes.data
+    cdef uint8_t* footprint_propagation_ptr = <uint8_t*> <Py_ssize_t> footprint_propagation_test.ctypes.data
+
     fast_hybrid_raster_scans(
-        image,
-        mask,
-        footprint_raster_before,
-        footprint_raster_after,
-        footprint_propagation_test,
-        offset,
+        &image[0, 0],
+        image.shape[0],
+        image.shape[1],
+        &mask[0, 0],
+        footprint_before_ptr,
+        footprint_after_ptr,
+        footprint_propagation_ptr,
+        footprint_rows,
+        footprint_cols,
+        offset_ptr,
         border_value,
         queue,
         method,
