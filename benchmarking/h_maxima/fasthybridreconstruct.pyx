@@ -39,8 +39,8 @@ cpdef enum:
 @cython.wraparound(False)
 cdef image_dtype get_neighborhood_peak(
     image_dtype* image,
-    Py_ssize_t image_rows,
-    Py_ssize_t image_cols,
+    Py_ssize_t* image_dimensions,
+    Py_ssize_t num_dimensions,
     Py_ssize_t point_row,
     Py_ssize_t point_col,
     uint8_t* footprint,
@@ -63,8 +63,8 @@ cdef image_dtype get_neighborhood_peak(
 
     Args:
       image (image_dtype*): the image to scan
-      image_rows (Py_ssize_t): the number of rows in the image
-      image_cols (Py_ssize_t): the number of columns in the image
+      image_dimensions (Py_ssize_t*): the size of each dimension
+      num_dimensions (Py_ssize_t): the number of image dimensions
       point_row (Py_ssize_t): the row of the point to scan
       point_col (Py_ssize_t): the column of the point to scan
       footprint (uint8_t*): the neighborhood footprint
@@ -84,6 +84,8 @@ cdef image_dtype get_neighborhood_peak(
     cdef Py_ssize_t footprint_x, footprint_y
     cdef Py_ssize_t offset_row, offset_col
 
+    cdef Py_ssize_t image_rows = image_dimensions[0]
+    cdef Py_ssize_t image_cols = image_dimensions[1]
     cdef Py_ssize_t footprint_center_row = offset[0]
     cdef Py_ssize_t footprint_center_col = offset[1]
 
@@ -119,8 +121,8 @@ cdef image_dtype get_neighborhood_peak(
 @cython.wraparound(False)
 cdef uint8_t should_propagate(
     image_dtype* image,
-    Py_ssize_t image_rows,
-    Py_ssize_t image_cols,
+    Py_ssize_t* image_dimensions,
+    Py_ssize_t num_dimensions,
     image_dtype* mask,
     Py_ssize_t point_row,
     Py_ssize_t point_col,
@@ -143,8 +145,8 @@ cdef uint8_t should_propagate(
 
     Args:
         image (image_dtype*): the image to scan
-        image_rows (Py_ssize_t): the number of rows in the image
-        image_cols (Py_ssize_t): the number of columns in the image
+        image_dimensions (Py_ssize_t*): the size of each dimension
+        num_dimensions (Py_ssize_t): the number of image dimensions
         mask (image_dtype*): the mask to apply
         point_row (Py_ssize_t): the row of the point to scan
         point_col (Py_ssize_t): the column of the point to scan
@@ -164,6 +166,8 @@ cdef uint8_t should_propagate(
     cdef Py_ssize_t footprint_center_row = offset[0]
     cdef Py_ssize_t footprint_center_col = offset[1]
     cdef Py_ssize_t footprint_row, footprint_col
+    cdef Py_ssize_t image_rows = image_dimensions[0]
+    cdef Py_ssize_t image_cols = image_dimensions[1]
 
     # Place the current point at each position of the footprint.
     # If that footprint position is true, then, the current point
@@ -208,8 +212,8 @@ cdef uint8_t should_propagate(
 @cython.wraparound(False)
 cdef void perform_raster_scan(
     image_dtype* image,
-    Py_ssize_t image_rows,
-    Py_ssize_t image_cols,
+    Py_ssize_t* image_dimensions,
+    Py_ssize_t num_dimensions,
     image_dtype* mask,
     uint8_t* footprint,
     Py_ssize_t footprint_rows,
@@ -221,6 +225,9 @@ cdef void perform_raster_scan(
     cdef image_dtype neighborhood_peak, point_mask
     cdef Py_ssize_t row, col
 
+    cdef Py_ssize_t image_rows = image_dimensions[0]
+    cdef Py_ssize_t image_cols = image_dimensions[1]
+
     for row in range(image_rows):
         for col in range(image_cols):
             point_mask = <image_dtype> mask[row * image_cols + col]
@@ -231,8 +238,8 @@ cdef void perform_raster_scan(
 
             neighborhood_peak = get_neighborhood_peak(
                 image,
-                image_rows,
-                image_cols,
+                image_dimensions,
+                num_dimensions,
                 row,
                 col,
                 footprint,
@@ -249,10 +256,12 @@ cdef void perform_raster_scan(
                 image[row * image_cols + col] = max(neighborhood_peak, point_mask)
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 cdef void perform_reverse_raster_scan(
     image_dtype* image,
-    Py_ssize_t image_rows,
-    Py_ssize_t image_cols,
+    Py_ssize_t* image_dimensions,
+    Py_ssize_t num_dimensions,
     image_dtype* mask,
     uint8_t* footprint,
     uint8_t* propagation_footprint,
@@ -266,6 +275,9 @@ cdef void perform_reverse_raster_scan(
     cdef image_dtype neighborhood_peak, point_mask
     cdef Py_ssize_t row, col
 
+    cdef Py_ssize_t image_rows = image_dimensions[0]
+    cdef Py_ssize_t image_cols = image_dimensions[1]
+
     for row in range(image_rows - 1, -1, -1):
         for col in range(image_cols - 1, -1, -1):
             point_mask = <image_dtype> mask[row * image_cols + col]
@@ -275,8 +287,8 @@ cdef void perform_reverse_raster_scan(
             if image[row * image_cols + col] != point_mask:
                 neighborhood_peak = get_neighborhood_peak(
                     image,
-                    image_rows,
-                    image_cols,
+                    image_dimensions,
+                    num_dimensions,
                     row,
                     col,
                     footprint,
@@ -293,8 +305,8 @@ cdef void perform_reverse_raster_scan(
 
             if should_propagate(
                     image,
-                    image_rows,
-                    image_cols,
+                    image_dimensions,
+                    num_dimensions,
                     mask,
                     row,
                     col,
@@ -312,8 +324,8 @@ cdef void perform_reverse_raster_scan(
 @cython.wraparound(False)
 cdef process_queue(
     image_dtype* image,
-    Py_ssize_t image_rows,
-    Py_ssize_t image_cols,
+    Py_ssize_t* image_dimensions,
+    Py_ssize_t num_dimensions,
     image_dtype* mask,
     uint8_t* footprint,
     Py_ssize_t footprint_rows,
@@ -333,8 +345,8 @@ cdef process_queue(
 
     Args:
         image (image_type[][]): the image to scan
-        image_rows (Py_ssize_t): the number of rows in the image
-        image_cols (Py_ssize_t): the number of columns in the image
+        image_dimensions (Py_ssize_t*): the size of each dimension
+        num_dimensions (Py_ssize_t): the number of image dimensions
         mask (image_dtype*): the image mask (ceiling on image values)
         footprint (uint8_t*): the neighborhood footprint
         footprint_rows (Py_ssize_t): the number of rows in the footprint
@@ -350,6 +362,8 @@ cdef process_queue(
     cdef image_dtype neighbor_value, point_value
     cdef Py_ssize_t footprint_center_row = offset[0]
     cdef Py_ssize_t footprint_center_col = offset[1]
+    cdef Py_ssize_t image_rows = image_dimensions[0]
+    cdef Py_ssize_t image_cols = image_dimensions[1]
 
     # Process the queue of pixels that need to be updated.
     logging.debug("Queue size: %s", len(queue))
@@ -503,11 +517,15 @@ def fast_hybrid_reconstruct(
     cdef Py_ssize_t image_rows = image.shape[0]
     cdef Py_ssize_t image_cols = image.shape[1]
 
+    image_dimensions = np.array(image.shape, dtype=np.uint64)
+    cdef Py_ssize_t* image_dimensions_ptr = <Py_ssize_t*> <Py_ssize_t> image_dimensions.ctypes.data
+    cdef Py_ssize_t num_dimensions = image.ndim
+
     t = timeit.default_timer()
     perform_raster_scan(
         &image[0, 0],
-        image_rows,
-        image_cols,
+        image_dimensions_ptr,
+        num_dimensions,
         &mask[0, 0],
         footprint_before_ptr,
         footprint_rows,
@@ -521,8 +539,8 @@ def fast_hybrid_reconstruct(
     t = timeit.default_timer()
     perform_reverse_raster_scan(
         &image[0, 0],
-        image_rows,
-        image_cols,
+        image_dimensions_ptr,
+        num_dimensions,
         &mask[0, 0],
         footprint_after_ptr,
         footprint_propagation_ptr,
@@ -538,8 +556,8 @@ def fast_hybrid_reconstruct(
     # Propagate points as necessary.
     process_queue(
         &image[0, 0],
-        image_rows,
-        image_cols,
+        image_dimensions_ptr,
+        num_dimensions,
         &mask[0, 0],
         &footprint[0, 0],
         footprint_rows,
