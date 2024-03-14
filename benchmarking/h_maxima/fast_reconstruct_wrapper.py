@@ -52,9 +52,18 @@ def cython_reconstruct_wrapper(
             raise ValueError("Offset must be included inside footprint")
 
     if inplace:
-        image = image
+        if image.dtype != mask.dtype:
+            raise ValueError("in-place reconstruct requires same type for image & mask")
     else:
-        image = image.astype(_supported_float_type(mask.dtype), copy=True)
+        # I'm not sure that we need to do this. Why add floating
+        # point precision that wasn't there in the first place?
+        normalized_type = _supported_float_type(mask.dtype)
+        # Always copy the image, so we're not changing in-place.
+        image = image.astype(normalized_type, copy=True)
+        # Only copy the mask if it's not the right type.
+        # We don't write to the mask.
+        if mask.dtype != normalized_type:
+            mask = mask.astype(normalized_type, copy=True)
 
     offset = offset.astype(np.uint8, copy=True)
 

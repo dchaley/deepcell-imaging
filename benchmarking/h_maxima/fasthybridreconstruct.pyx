@@ -23,25 +23,9 @@ ctypedef fused image_dtype:
     uint64_t
     float
     double
-ctypedef fused mask_dtype:
-    int8_t
-    uint8_t
-    int16_t
-    uint16_t
-    int32_t
-    uint32_t
-    int64_t
-    uint64_t
-    float
-    double
 
 # Dev mode types
 # ctypedef fused image_dtype:
-#     uint8_t
-#     int16_t
-#     int64_t
-#     double
-# ctypedef fused mask_dtype:
 #     uint8_t
 #     int16_t
 #     int64_t
@@ -137,7 +121,7 @@ cdef uint8_t should_propagate(
     image_dtype* image,
     Py_ssize_t image_rows,
     Py_ssize_t image_cols,
-    mask_dtype* mask,
+    image_dtype* mask,
     Py_ssize_t point_row,
     Py_ssize_t point_col,
     image_dtype point_value,
@@ -161,7 +145,7 @@ cdef uint8_t should_propagate(
         image (image_dtype*): the image to scan
         image_rows (Py_ssize_t): the number of rows in the image
         image_cols (Py_ssize_t): the number of columns in the image
-        mask (mask_dtype*): the mask to apply
+        mask (image_dtype*): the mask to apply
         point_row (Py_ssize_t): the row of the point to scan
         point_col (Py_ssize_t): the column of the point to scan
         point_value (image_dtype): the value of the point to scan
@@ -226,7 +210,7 @@ cdef void perform_raster_scan(
     image_dtype* image,
     Py_ssize_t image_rows,
     Py_ssize_t image_cols,
-    mask_dtype* mask,
+    image_dtype* mask,
     uint8_t* footprint,
     Py_ssize_t footprint_rows,
     Py_ssize_t footprint_cols,
@@ -269,7 +253,7 @@ cdef void perform_reverse_raster_scan(
     image_dtype* image,
     Py_ssize_t image_rows,
     Py_ssize_t image_cols,
-    mask_dtype* mask,
+    image_dtype* mask,
     uint8_t* footprint,
     uint8_t* propagation_footprint,
     Py_ssize_t footprint_rows,
@@ -330,7 +314,7 @@ cdef process_queue(
     image_dtype* image,
     Py_ssize_t image_rows,
     Py_ssize_t image_cols,
-    mask_dtype* mask,
+    image_dtype* mask,
     uint8_t* footprint,
     Py_ssize_t footprint_rows,
     Py_ssize_t footprint_cols,
@@ -351,7 +335,7 @@ cdef process_queue(
         image (image_type[][]): the image to scan
         image_rows (Py_ssize_t): the number of rows in the image
         image_cols (Py_ssize_t): the number of columns in the image
-        mask (mask_dtype*): the image mask (ceiling on image values)
+        mask (image_dtype*): the image mask (ceiling on image values)
         footprint (uint8_t*): the neighborhood footprint
         footprint_rows (Py_ssize_t): the number of rows in the footprint
         footprint_cols (Py_ssize_t): the number of columns in the footprint
@@ -416,7 +400,7 @@ cdef process_queue(
 @cython.wraparound(False)
 def fast_hybrid_reconstruct(
     image_dtype[:, ::1] image,
-        mask_dtype[:, ::1] mask,
+        image_dtype[:, ::1] mask,
         uint8_t[:, ::1] footprint,
         uint8_t method,
         # FIXME(171): offset should be a Py_ssize_t
