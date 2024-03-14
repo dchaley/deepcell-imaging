@@ -71,11 +71,11 @@ cdef image_dtype get_neighborhood_peak(
       footprint_rows (Py_ssize_t): the number of rows in the footprint
       footprint_cols (Py_ssize_t): the number of columns in the footprint
       offset (uint8_t*): the offset of the footprint center.
-      border_value (my_type): the value to use for out-of-bound points
+      border_value (image_dtype): the value to use for out-of-bound points
       method (uint8_t): METHOD_DILATION or METHOD_EROSION
 
     Returns:
-        my_type: the maximum in the point's neighborhood, greater than or equal to border_value.
+        image_dtype: the maximum in the point's neighborhood, greater than or equal to border_value.
     """
     cdef image_dtype pixel_value
     # OOB values get the border value
@@ -430,14 +430,14 @@ def fast_hybrid_reconstruct(
     Note that this modifies the image in place.
 
     Args:
-        image (my_type[][]): the image
-        mask (my_type[][]): the mask image
+        image (image_dtype[][]): the image
+        mask (image_dtype[][]): the mask image
         footprint (uint8_t[][]): the neighborhood footprint aka N(G)
         method (uint8_t): METHOD_DILATION or METHOD_EROSION
         offset (uint8_t[]): the offset of the footprint center.
 
     Returns:
-        my_type[][]: the reconstructed image, modified in place
+        image_dtype[][]: the reconstructed image, modified in place
     """
     cdef Py_ssize_t row, col
     cdef Py_ssize_t footprint_rows, footprint_cols
