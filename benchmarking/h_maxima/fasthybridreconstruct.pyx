@@ -35,6 +35,66 @@ cpdef enum:
     METHOD_DILATION = 0
     METHOD_EROSION = 1
 
+cdef Py_ssize_t point_to_linear(
+    Py_ssize_t* point,
+    Py_ssize_t* dimensions,
+    Py_ssize_t num_dimensions,
+):
+    """Convert a point in N dimensions to a linear index.
+
+    Args:
+        point (Py_ssize_t*): the point to convert
+        dimensions (Py_ssize_t*): the size of each dimension
+        num_dimensions (Py_ssize_t): the number of dimensions
+
+    Returns:
+        Py_ssize_t: the linear index
+    """
+    cdef Py_ssize_t linear = 0
+    cdef Py_ssize_t multiplier = 1
+    cdef Py_ssize_t i
+    for i in range(num_dimensions - 1, -1, -1):
+        linear += point[i] * multiplier
+        multiplier *= dimensions[i]
+    return linear
+
+# for testing; test_fast_hybrid.py
+def point_to_linear_python(point, dimensions, num_dimensions):
+    cdef Py_ssize_t* point_ptr = <Py_ssize_t*> <Py_ssize_t> point.ctypes.data
+    cdef Py_ssize_t* dimensions_ptr = <Py_ssize_t*> <Py_ssize_t> dimensions.ctypes.data
+    cdef Py_ssize_t num_dims = <Py_ssize_t> num_dimensions
+    return <long> point_to_linear(point_ptr, dimensions_ptr, num_dims)
+
+cdef Py_ssize_t* linear_to_point(
+    Py_ssize_t linear,
+    Py_ssize_t* point_output,
+    Py_ssize_t* dimensions,
+    Py_ssize_t num_dimensions,
+):
+    """Convert a linear index to a point in N dimensions.
+
+    Args:
+        linear (Py_ssize_t): the linear index
+        dimensions (Py_ssize_t*): the size of each dimension
+        num_dimensions (Py_ssize_t): the number of dimensions
+
+    Returns:
+        Py_ssize_t*: the point
+    """
+    cdef Py_ssize_t i
+    for i in range(num_dimensions - 1, -1, -1):
+        point_output[i] = cython.cmod(linear, dimensions[i])
+        linear = cython.cdiv(linear, dimensions[i])
+
+# for testing; test_fast_hybrid.py
+def linear_to_point_python(linear, dimensions, num_dimensions):
+    point = np.zeros(num_dimensions, dtype=np.int64)
+    cdef Py_ssize_t* point_output_ptr = <Py_ssize_t*> <Py_ssize_t> point.ctypes.data
+    cdef Py_ssize_t* dimensions_ptr = <Py_ssize_t*> <Py_ssize_t> dimensions.ctypes.data
+    cdef Py_ssize_t num_dims = <Py_ssize_t> num_dimensions
+    linear_to_point(linear, point_output_ptr, dimensions_ptr, num_dims)
+    return point
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef image_dtype get_neighborhood_peak(
