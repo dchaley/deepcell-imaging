@@ -154,16 +154,16 @@ cdef image_dtype get_neighborhood_peak(
     cdef Py_ssize_t footprint_rows = footprint_dimensions[0]
     cdef Py_ssize_t footprint_cols = footprint_dimensions[1]
 
-    for offset_row in range(-footprint_center_row, footprint_rows - footprint_center_row):
-        for offset_col in range(-footprint_center_col, footprint_cols - footprint_center_col):
+    for offset_row in range(footprint_rows):
+        for offset_col in range(footprint_cols):
             # Skip this point if not in the footprint, and not the center point.
             # (The center point is always included in the neighborhood.)
-            if (not footprint[(footprint_center_row + offset_row) * footprint_cols + footprint_center_col + offset_col]
-                    and not (offset_row == 0 and offset_col == 0)):
+            if (not footprint[offset_row * footprint_cols + offset_col]
+                    and not (offset_row == footprint_center_row and offset_col == footprint_center_col)):
                 continue
 
-            neighbor_row = point_row + offset_row
-            neighbor_col = point_col + offset_col
+            neighbor_row = point_row + offset_row - footprint_center_row
+            neighbor_col = point_col + offset_col - footprint_center_col
 
             if (
                 neighbor_row < 0
