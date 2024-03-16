@@ -44,8 +44,7 @@ cdef image_dtype get_neighborhood_peak(
     Py_ssize_t point_row,
     Py_ssize_t point_col,
     uint8_t* footprint,
-    Py_ssize_t footprint_rows,
-    Py_ssize_t footprint_cols,
+    Py_ssize_t* footprint_dimensions,
     uint8_t* offset,
     image_dtype border_value,
     uint8_t method,
@@ -68,8 +67,7 @@ cdef image_dtype get_neighborhood_peak(
       point_row (Py_ssize_t): the row of the point to scan
       point_col (Py_ssize_t): the column of the point to scan
       footprint (uint8_t*): the neighborhood footprint
-      footprint_rows (Py_ssize_t): the number of rows in the footprint
-      footprint_cols (Py_ssize_t): the number of columns in the footprint
+      footprint_dimensions (Py_ssize_t*): the size of each dimension of the footprint
       offset (uint8_t*): the offset of the footprint center.
       border_value (image_dtype): the value to use for out-of-bound points
       method (uint8_t): METHOD_DILATION or METHOD_EROSION
@@ -88,6 +86,9 @@ cdef image_dtype get_neighborhood_peak(
     cdef Py_ssize_t image_cols = image_dimensions[1]
     cdef Py_ssize_t footprint_center_row = offset[0]
     cdef Py_ssize_t footprint_center_col = offset[1]
+
+    cdef Py_ssize_t footprint_rows = footprint_dimensions[0]
+    cdef Py_ssize_t footprint_cols = footprint_dimensions[1]
 
     for offset_row in range(-footprint_center_row, footprint_rows - footprint_center_row):
         for offset_col in range(-footprint_center_col, footprint_cols - footprint_center_col):
@@ -128,8 +129,7 @@ cdef uint8_t should_propagate(
     Py_ssize_t point_col,
     image_dtype point_value,
     uint8_t* footprint,
-    Py_ssize_t footprint_rows,
-    Py_ssize_t footprint_cols,
+    Py_ssize_t* footprint_dimensions,
     uint8_t* offset,
     uint8_t method,
 ):
@@ -152,8 +152,7 @@ cdef uint8_t should_propagate(
         point_col (Py_ssize_t): the column of the point to scan
         point_value (image_dtype): the value of the point to scan
         footprint (uint8_t*): the neighborhood footprint
-        footprint_rows (Py_ssize_t): the number of rows in the footprint
-        footprint_cols (Py_ssize_t): the number of columns in the footprint
+        footprint_dimensions (Py_ssize_t*): the size of each dimension of the footprint
         offset (uint8_t*): the offset of the footprint center.
         method (uint8_t): METHOD_DILATION or METHOD_EROSION
 
@@ -168,6 +167,8 @@ cdef uint8_t should_propagate(
     cdef Py_ssize_t footprint_row, footprint_col
     cdef Py_ssize_t image_rows = image_dimensions[0]
     cdef Py_ssize_t image_cols = image_dimensions[1]
+    cdef Py_ssize_t footprint_rows = footprint_dimensions[0]
+    cdef Py_ssize_t footprint_cols = footprint_dimensions[1]
 
     # Place the current point at each position of the footprint.
     # If that footprint position is true, then, the current point
@@ -216,8 +217,7 @@ cdef void perform_raster_scan(
     Py_ssize_t num_dimensions,
     image_dtype* mask,
     uint8_t* footprint,
-    Py_ssize_t footprint_rows,
-    Py_ssize_t footprint_cols,
+    Py_ssize_t* footprint_dimensions,
     uint8_t* offset,
     image_dtype border_value,
     uint8_t method,
@@ -243,8 +243,7 @@ cdef void perform_raster_scan(
                 row,
                 col,
                 footprint,
-                footprint_rows,
-                footprint_cols,
+                footprint_dimensions,
                 offset,
                 border_value,
                 method,
@@ -265,8 +264,7 @@ cdef void perform_reverse_raster_scan(
     image_dtype* mask,
     uint8_t* footprint,
     uint8_t* propagation_footprint,
-    Py_ssize_t footprint_rows,
-    Py_ssize_t footprint_cols,
+    Py_ssize_t* footprint_dimensions,
     uint8_t* offset,
     image_dtype border_value,
     uint8_t method,
@@ -292,8 +290,7 @@ cdef void perform_reverse_raster_scan(
                     row,
                     col,
                     footprint,
-                    footprint_rows,
-                    footprint_cols,
+                    footprint_dimensions,
                     offset,
                     border_value,
                     method,
@@ -312,8 +309,7 @@ cdef void perform_reverse_raster_scan(
                     col,
                     image[row * image_cols + col],
                     propagation_footprint,
-                    footprint_rows,
-                    footprint_cols,
+                    footprint_dimensions,
                     offset,
                     method,
             ):
@@ -328,8 +324,7 @@ cdef process_queue(
     Py_ssize_t num_dimensions,
     image_dtype* mask,
     uint8_t* footprint,
-    Py_ssize_t footprint_rows,
-    Py_ssize_t footprint_cols,
+    Py_ssize_t* footprint_dimensions,
     uint8_t* offset,
     queue,
     uint8_t method,
@@ -349,8 +344,7 @@ cdef process_queue(
         num_dimensions (Py_ssize_t): the number of image dimensions
         mask (image_dtype*): the image mask (ceiling on image values)
         footprint (uint8_t*): the neighborhood footprint
-        footprint_rows (Py_ssize_t): the number of rows in the footprint
-        footprint_cols (Py_ssize_t): the number of columns in the footprint
+        footprint_dimensions (Py_ssize_t*): the size of each dimension of the footprint
         offset (uint8_t*): the offset of the footprint center.
         queue (deque): the queue of points to process
         method (uint8_t): METHOD_DILATION or METHOD_EROSION
@@ -364,6 +358,8 @@ cdef process_queue(
     cdef Py_ssize_t footprint_center_col = offset[1]
     cdef Py_ssize_t image_rows = image_dimensions[0]
     cdef Py_ssize_t image_cols = image_dimensions[1]
+    cdef Py_ssize_t footprint_rows = footprint_dimensions[0]
+    cdef Py_ssize_t footprint_cols = footprint_dimensions[1]
 
     # Process the queue of pixels that need to be updated.
     logging.debug("Queue size: %s", len(queue))
@@ -521,6 +517,8 @@ def fast_hybrid_reconstruct(
     cdef Py_ssize_t* image_dimensions_ptr = <Py_ssize_t*> <Py_ssize_t> image_dimensions.ctypes.data
     cdef Py_ssize_t num_dimensions = image.ndim
 
+    cdef Py_ssize_t* footprint_dimensions_ptr = <Py_ssize_t*> <Py_ssize_t> footprint.shape
+
     t = timeit.default_timer()
     perform_raster_scan(
         &image[0, 0],
@@ -528,8 +526,7 @@ def fast_hybrid_reconstruct(
         num_dimensions,
         &mask[0, 0],
         footprint_before_ptr,
-        footprint_rows,
-        footprint_cols,
+        footprint_dimensions_ptr,
         offset_ptr,
         border_value,
         method,
@@ -544,8 +541,7 @@ def fast_hybrid_reconstruct(
         &mask[0, 0],
         footprint_after_ptr,
         footprint_propagation_ptr,
-        footprint_rows,
-        footprint_cols,
+        footprint_dimensions_ptr,
         offset_ptr,
         border_value,
         method,
@@ -560,8 +556,7 @@ def fast_hybrid_reconstruct(
         num_dimensions,
         &mask[0, 0],
         &footprint[0, 0],
-        footprint_rows,
-        footprint_cols,
+        footprint_dimensions_ptr,
         offset_ptr,
         queue,
         method,
