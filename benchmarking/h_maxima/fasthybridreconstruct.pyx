@@ -35,6 +35,31 @@ cpdef enum:
     METHOD_DILATION = 0
     METHOD_EROSION = 1
 
+cdef uint8_t increment_index(
+    Py_ssize_t* indices,
+    Py_ssize_t* dimensions,
+    Py_ssize_t num_dimensions,
+):
+    """Increment an index in N dimensions.
+
+    Args:
+        indices (Py_ssize_t*): the indices to increment
+        dimensions (Py_ssize_t*): the size of each dimension
+        num_dimensions (Py_ssize_t): the number of dimensions
+
+    Returns:
+        1 if the iteration is complete, 0 otherwise.
+    """
+    cdef Py_ssize_t i
+    for i in range(num_dimensions - 1, -1, -1):
+        if indices[i] < dimensions[i] - 1:
+            indices[i] += 1
+            return 0
+        else:
+            indices[i] = 0
+            if i == 0:
+                return 1
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef Py_ssize_t point_to_linear(
@@ -143,7 +168,6 @@ cdef image_dtype get_neighborhood_peak(
     # OOB values get the border value
     cdef image_dtype neighborhood_peak = border_value
     cdef Py_ssize_t neighbor_row, neighbor_col
-    cdef Py_ssize_t footprint_x, footprint_y
     cdef Py_ssize_t offset_row, offset_col
 
     cdef Py_ssize_t image_rows = image_dimensions[0]
@@ -154,30 +178,38 @@ cdef image_dtype get_neighborhood_peak(
     cdef Py_ssize_t footprint_rows = footprint_dimensions[0]
     cdef Py_ssize_t footprint_cols = footprint_dimensions[1]
 
-    for offset_row in range(footprint_rows):
-        for offset_col in range(footprint_cols):
-            # Skip this point if not in the footprint, and not the center point.
-            # (The center point is always included in the neighborhood.)
-            if (not footprint[offset_row * footprint_cols + offset_col]
-                    and not (offset_row == footprint_center_row and offset_col == footprint_center_col)):
-                continue
+    indices = np.array([0] * num_dimensions, dtype=np.int64)
+    cdef Py_ssize_t* indices_ptr = <Py_ssize_t*> <Py_ssize_t> indices.ctypes.data
 
-            neighbor_row = point_row + offset_row - footprint_center_row
-            neighbor_col = point_col + offset_col - footprint_center_col
+    cdef Py_ssize_t cur_dimension
+    cdef uint8_t end = 0
 
-            if (
+    while True:
+        # do the thing on this index…
+        offset_row = indices[0]
+        offset_col = indices[1]
+        neighbor_row = point_row + offset_row - footprint_center_row
+        neighbor_col = point_col + offset_col - footprint_center_col
+
+        if ((
+                not footprint[offset_row * footprint_cols + offset_col]
+                and not (offset_row == footprint_center_row and offset_col == footprint_center_col)
+        ) or (
                 neighbor_row < 0
                 or neighbor_row >= image_rows
                 or neighbor_col < 0
                 or neighbor_col >= image_cols
-            ):
-                continue
-            else:
-                pixel_value = image[neighbor_row * image_cols + neighbor_col]
-                if method == METHOD_DILATION:
-                    neighborhood_peak = max(neighborhood_peak, pixel_value)
-                elif method == METHOD_EROSION:
-                    neighborhood_peak = min(neighborhood_peak, pixel_value)
+        )):
+            pass
+        else:
+            pixel_value = image[neighbor_row * image_cols + neighbor_col]
+            if method == METHOD_DILATION:
+                neighborhood_peak = max(neighborhood_peak, pixel_value)
+            elif method == METHOD_EROSION:
+                neighborhood_peak = min(neighborhood_peak, pixel_value)
+
+        if increment_index(indices_ptr, footprint_dimensions, num_dimensions):
+            break
 
     return neighborhood_peak
 
