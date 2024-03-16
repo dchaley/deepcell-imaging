@@ -35,6 +35,8 @@ cpdef enum:
     METHOD_DILATION = 0
     METHOD_EROSION = 1
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 cdef Py_ssize_t point_to_linear(
     Py_ssize_t* point,
     Py_ssize_t* dimensions,
@@ -65,6 +67,8 @@ def point_to_linear_python(point, dimensions, num_dimensions):
     cdef Py_ssize_t num_dims = <Py_ssize_t> num_dimensions
     return <long> point_to_linear(point_ptr, dimensions_ptr, num_dims)
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 cdef Py_ssize_t* linear_to_point(
     Py_ssize_t linear,
     Py_ssize_t* point_output,
