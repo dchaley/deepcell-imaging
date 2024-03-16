@@ -313,7 +313,7 @@ cdef void perform_reverse_raster_scan(
                     offset,
                     method,
             ):
-                queue.append((row, col))
+                queue.append(row * image_cols + col)
 
 
 @cython.boundscheck(False)
@@ -349,6 +349,7 @@ cdef process_queue(
         queue (deque): the queue of points to process
         method (uint8_t): METHOD_DILATION or METHOD_EROSION
     """
+    cdef Py_ssize_t point_linear
     cdef Py_ssize_t row, col
     cdef Py_ssize_t footprint_row, footprint_col
     cdef Py_ssize_t neighbor_row, neighbor_col
@@ -365,9 +366,9 @@ cdef process_queue(
     logging.debug("Queue size: %s", len(queue))
     t = timeit.default_timer()
     while len(queue) > 0:
-        point = queue.popleft()
-        row = point[0]
-        col = point[1]
+        point_linear = queue.popleft()
+        row = cython.cdiv(point_linear, image_cols)
+        col = cython.cmod(point_linear, image_cols)
         point_value = image[row * image_cols + col]
 
         # Place the current point at each position of the footprint.
@@ -399,10 +400,10 @@ cdef process_queue(
 
                 if method == METHOD_DILATION and (point_value > neighbor_value != neighbor_mask):
                     image[neighbor_row * image_cols + neighbor_col] = min(point_value, neighbor_mask)
-                    queue.append((neighbor_row, neighbor_col))
+                    queue.append(neighbor_row * image_cols + neighbor_col)
                 elif method == METHOD_EROSION and (point_value < neighbor_value != neighbor_mask):
                     image[neighbor_row * image_cols + neighbor_col] = max(point_value, neighbor_mask)
-                    queue.append((neighbor_row, neighbor_col))
+                    queue.append(neighbor_row * image_cols + neighbor_col)
 
     logging.debug("Queue processing time: %s", timeit.default_timer() - t)
 
