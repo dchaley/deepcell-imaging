@@ -137,6 +137,8 @@ cdef image_dtype get_neighborhood_peak(
     uint8_t* offset,
     image_dtype border_value,
     uint8_t method,
+    Py_ssize_t* indices_ptr,
+    Py_ssize_t* neighbor_ptr,
 ):
     """Get the neighborhood peak around a point.
 
@@ -159,6 +161,8 @@ cdef image_dtype get_neighborhood_peak(
       offset (uint8_t*): the offset of the footprint center.
       border_value (image_dtype): the value to use for out-of-bound points
       method (uint8_t): METHOD_DILATION or METHOD_EROSION
+      indices_ptr (Py_ssize_t*): a scratch space for indices
+      neighbor_ptr (Py_ssize_t*): a scratch space for neighbor coordinates
 
     Returns:
         image_dtype: the maximum in the point's neighborhood, greater than or equal to border_value.
@@ -168,17 +172,7 @@ cdef image_dtype get_neighborhood_peak(
     cdef image_dtype neighborhood_peak = border_value
     cdef Py_ssize_t linear_coord
 
-    cdef Py_ssize_t image_rows = image_dimensions[0]
-    cdef Py_ssize_t image_cols = image_dimensions[1]
-
-    indices = np.array([0] * num_dimensions, dtype=np.int64)
-    cdef Py_ssize_t* indices_ptr = <Py_ssize_t*> <Py_ssize_t> indices.ctypes.data
-
-    neighbor_coord = np.array([0] * num_dimensions, dtype=np.int64)
-    cdef Py_ssize_t* neighbor_ptr = <Py_ssize_t*> <Py_ssize_t> neighbor_coord.ctypes.data
-
     cdef Py_ssize_t dim
-    cdef uint8_t end = 0
     cdef uint8_t oob
     cdef uint8_t at_center
     cdef uint8_t out_of_footprint
@@ -188,6 +182,8 @@ cdef image_dtype get_neighborhood_peak(
         oob = False
         # This gets set to false if necessary.
         at_center = True
+        # This gets set to true if necessary.
+        out_of_footprint = False
 
         for dim in range(num_dimensions):
             # Calculate the neighbor's coordinates
@@ -330,6 +326,12 @@ cdef void perform_raster_scan(
     coord_numpy = np.zeros(num_dimensions, dtype=np.int64)
     cdef Py_ssize_t* coord_ptr = <Py_ssize_t*> <Py_ssize_t> coord_numpy.ctypes.data
 
+    indices_numpy = np.array([0] * num_dimensions, dtype=np.int64)
+    cdef Py_ssize_t* indices_ptr = <Py_ssize_t*> <Py_ssize_t> indices_numpy.ctypes.data
+
+    neighbor_coord_numpy = np.array([0] * num_dimensions, dtype=np.int64)
+    cdef Py_ssize_t* neighbor_coord_ptr = <Py_ssize_t*> <Py_ssize_t> neighbor_coord_numpy.ctypes.data
+
     for row in range(image_rows):
         for col in range(image_cols):
             point_mask = <image_dtype> mask[row * image_cols + col]
@@ -351,6 +353,8 @@ cdef void perform_raster_scan(
                 offset,
                 border_value,
                 method,
+                indices_ptr,
+                neighbor_coord_ptr,
             )
 
             if method == METHOD_DILATION:
@@ -383,6 +387,12 @@ cdef void perform_reverse_raster_scan(
     coord_numpy = np.zeros(num_dimensions, dtype=np.int64)
     cdef Py_ssize_t* coord_ptr = <Py_ssize_t*> <Py_ssize_t> coord_numpy.ctypes.data
 
+    indices_numpy = np.array([0] * num_dimensions, dtype=np.int64)
+    cdef Py_ssize_t* indices_ptr = <Py_ssize_t*> <Py_ssize_t> indices_numpy.ctypes.data
+
+    neighbor_coord_numpy = np.array([0] * num_dimensions, dtype=np.int64)
+    cdef Py_ssize_t* neighbor_coord_ptr = <Py_ssize_t*> <Py_ssize_t> neighbor_coord_numpy.ctypes.data
+
     for row in range(image_rows - 1, -1, -1):
         for col in range(image_cols - 1, -1, -1):
             point_mask = <image_dtype> mask[row * image_cols + col]
@@ -403,6 +413,8 @@ cdef void perform_reverse_raster_scan(
                     offset,
                     border_value,
                     method,
+                    indices_ptr,
+                    neighbor_coord_ptr,
                 )
                 if method == METHOD_DILATION:
                     image[row * image_cols + col] = min(neighborhood_peak, point_mask)
