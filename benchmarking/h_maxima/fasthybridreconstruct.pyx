@@ -168,9 +168,7 @@ cdef image_dtype get_neighborhood_peak(
     cdef image_dtype neighborhood_peak = border_value
     cdef Py_ssize_t neighbor_row, neighbor_col
     cdef Py_ssize_t offset_row, offset_col
-
-    cdef Py_ssize_t point_row = point_coord[0]
-    cdef Py_ssize_t point_col = point_coord[1]
+    cdef Py_ssize_t linear_coord
 
     cdef Py_ssize_t image_rows = image_dimensions[0]
     cdef Py_ssize_t image_cols = image_dimensions[1]
@@ -183,28 +181,37 @@ cdef image_dtype get_neighborhood_peak(
     indices = np.array([0] * num_dimensions, dtype=np.int64)
     cdef Py_ssize_t* indices_ptr = <Py_ssize_t*> <Py_ssize_t> indices.ctypes.data
 
+    neighbor_coord = np.array([0] * num_dimensions, dtype=np.int64)
+    cdef Py_ssize_t* neighbor_ptr = <Py_ssize_t*> <Py_ssize_t> neighbor_coord.ctypes.data
+
     cdef Py_ssize_t cur_dimension
     cdef uint8_t end = 0
+    cdef uint8_t oob
 
     while True:
         # do the thing on this index…
         offset_row = indices[0]
         offset_col = indices[1]
-        neighbor_row = point_row + offset_row - footprint_center_row
-        neighbor_col = point_col + offset_col - footprint_center_col
+        for dim in range(num_dimensions):
+            neighbor_ptr[dim] = point_coord[dim] + indices_ptr[dim] - offset[dim]
+
+        # Check out of bounds
+        oob = False
+        for dim in range(num_dimensions):
+            if neighbor_ptr[dim] < 0 or neighbor_ptr[dim] >= image_dimensions[dim]:
+                oob = True
+                break
 
         if ((
                 not footprint[offset_row * footprint_cols + offset_col]
                 and not (offset_row == footprint_center_row and offset_col == footprint_center_col)
         ) or (
-                neighbor_row < 0
-                or neighbor_row >= image_rows
-                or neighbor_col < 0
-                or neighbor_col >= image_cols
+                oob
         )):
             pass
         else:
-            pixel_value = image[neighbor_row * image_cols + neighbor_col]
+            linear_coord = point_to_linear(neighbor_ptr, image_dimensions, num_dimensions)
+            pixel_value = image[linear_coord]
             if method == METHOD_DILATION:
                 neighborhood_peak = max(neighborhood_peak, pixel_value)
             elif method == METHOD_EROSION:
