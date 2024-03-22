@@ -171,8 +171,6 @@ cdef image_dtype get_neighborhood_peak(
 
     cdef Py_ssize_t image_rows = image_dimensions[0]
     cdef Py_ssize_t image_cols = image_dimensions[1]
-    cdef Py_ssize_t footprint_center_row = offset[0]
-    cdef Py_ssize_t footprint_center_col = offset[1]
 
     cdef Py_ssize_t footprint_rows = footprint_dimensions[0]
     cdef Py_ssize_t footprint_cols = footprint_dimensions[1]
@@ -186,6 +184,7 @@ cdef image_dtype get_neighborhood_peak(
     cdef Py_ssize_t cur_dimension
     cdef uint8_t end = 0
     cdef uint8_t oob
+    cdef uint8_t at_center
 
     while True:
         # do the thing on this index…
@@ -201,10 +200,16 @@ cdef image_dtype get_neighborhood_peak(
                 oob = True
                 break
 
+        at_center = True
+        for dim in range(num_dimensions):
+            if indices_ptr[dim] != offset[dim]:
+                at_center = False
+                break
+
         linear_coord = point_to_linear(indices_ptr, footprint_dimensions, num_dimensions)
         if ((
                 not footprint[linear_coord]
-                and not (indices_ptr[0] == footprint_center_row and indices_ptr[1] == footprint_center_col)
+                and not at_center
         ) or (
                 oob
         )):
