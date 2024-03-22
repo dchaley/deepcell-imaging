@@ -104,6 +104,7 @@ cdef Py_ssize_t* linear_to_point(
 
     Args:
         linear (Py_ssize_t): the linear index
+        point_output (Py_ssize_t*): the point to write to
         dimensions (Py_ssize_t*): the size of each dimension
         num_dimensions (Py_ssize_t): the number of dimensions
 
@@ -130,8 +131,7 @@ cdef image_dtype get_neighborhood_peak(
     image_dtype* image,
     Py_ssize_t* image_dimensions,
     Py_ssize_t num_dimensions,
-    Py_ssize_t point_row,
-    Py_ssize_t point_col,
+    Py_ssize_t* point_coord,
     uint8_t* footprint,
     Py_ssize_t* footprint_dimensions,
     uint8_t* offset,
@@ -153,8 +153,7 @@ cdef image_dtype get_neighborhood_peak(
       image (image_dtype*): the image to scan
       image_dimensions (Py_ssize_t*): the size of each dimension
       num_dimensions (Py_ssize_t): the number of image dimensions
-      point_row (Py_ssize_t): the row of the point to scan
-      point_col (Py_ssize_t): the column of the point to scan
+      point_coord (Py_ssize_t*): the coordinates of the point to scan
       footprint (uint8_t*): the neighborhood footprint
       footprint_dimensions (Py_ssize_t*): the size of each dimension of the footprint
       offset (uint8_t*): the offset of the footprint center.
@@ -169,6 +168,9 @@ cdef image_dtype get_neighborhood_peak(
     cdef image_dtype neighborhood_peak = border_value
     cdef Py_ssize_t neighbor_row, neighbor_col
     cdef Py_ssize_t offset_row, offset_col
+
+    cdef Py_ssize_t point_row = point_coord[0]
+    cdef Py_ssize_t point_col = point_coord[1]
 
     cdef Py_ssize_t image_rows = image_dimensions[0]
     cdef Py_ssize_t image_cols = image_dimensions[1]
@@ -324,6 +326,9 @@ cdef void perform_raster_scan(
     cdef Py_ssize_t image_rows = image_dimensions[0]
     cdef Py_ssize_t image_cols = image_dimensions[1]
 
+    coord_numpy = np.zeros(num_dimensions, dtype=np.int64)
+    cdef Py_ssize_t* coord_ptr = <Py_ssize_t*> <Py_ssize_t> coord_numpy.ctypes.data
+
     for row in range(image_rows):
         for col in range(image_cols):
             point_mask = <image_dtype> mask[row * image_cols + col]
@@ -332,12 +337,14 @@ cdef void perform_raster_scan(
             if image[row * image_cols + col] == point_mask:
                 continue
 
+            coord_ptr[0] = row
+            coord_ptr[1] = col
+
             neighborhood_peak = get_neighborhood_peak(
                 image,
                 image_dimensions,
                 num_dimensions,
-                row,
-                col,
+                coord_ptr,
                 footprint,
                 footprint_dimensions,
                 offset,
@@ -372,9 +379,15 @@ cdef void perform_reverse_raster_scan(
     cdef Py_ssize_t image_rows = image_dimensions[0]
     cdef Py_ssize_t image_cols = image_dimensions[1]
 
+    coord_numpy = np.zeros(num_dimensions, dtype=np.int64)
+    cdef Py_ssize_t* coord_ptr = <Py_ssize_t*> <Py_ssize_t> coord_numpy.ctypes.data
+
     for row in range(image_rows - 1, -1, -1):
         for col in range(image_cols - 1, -1, -1):
             point_mask = <image_dtype> mask[row * image_cols + col]
+
+            coord_ptr[0] = row
+            coord_ptr[1] = col
 
             # If we're already at the mask, skip the neighbor test.
             # But note: we still need to test for propagation (below).
@@ -383,8 +396,7 @@ cdef void perform_reverse_raster_scan(
                     image,
                     image_dimensions,
                     num_dimensions,
-                    row,
-                    col,
+                    coord_ptr,
                     footprint,
                     footprint_dimensions,
                     offset,
