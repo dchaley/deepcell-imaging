@@ -167,7 +167,6 @@ cdef image_dtype get_neighborhood_peak(
     # OOB values get the border value
     cdef image_dtype neighborhood_peak = border_value
     cdef Py_ssize_t neighbor_row, neighbor_col
-    cdef Py_ssize_t offset_row, offset_col
     cdef Py_ssize_t linear_coord
 
     cdef Py_ssize_t image_rows = image_dimensions[0]
@@ -190,8 +189,8 @@ cdef image_dtype get_neighborhood_peak(
 
     while True:
         # do the thing on this index…
-        offset_row = indices[0]
-        offset_col = indices[1]
+
+        # Calculate the neighbor's coordinates
         for dim in range(num_dimensions):
             neighbor_ptr[dim] = point_coord[dim] + indices_ptr[dim] - offset[dim]
 
@@ -202,9 +201,10 @@ cdef image_dtype get_neighborhood_peak(
                 oob = True
                 break
 
+        linear_coord = point_to_linear(indices_ptr, footprint_dimensions, num_dimensions)
         if ((
-                not footprint[offset_row * footprint_cols + offset_col]
-                and not (offset_row == footprint_center_row and offset_col == footprint_center_col)
+                not footprint[linear_coord]
+                and not (indices_ptr[0] == footprint_center_row and indices_ptr[1] == footprint_center_col)
         ) or (
                 oob
         )):
