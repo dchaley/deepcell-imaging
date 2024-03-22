@@ -166,14 +166,10 @@ cdef image_dtype get_neighborhood_peak(
     cdef image_dtype pixel_value
     # OOB values get the border value
     cdef image_dtype neighborhood_peak = border_value
-    cdef Py_ssize_t neighbor_row, neighbor_col
     cdef Py_ssize_t linear_coord
 
     cdef Py_ssize_t image_rows = image_dimensions[0]
     cdef Py_ssize_t image_cols = image_dimensions[1]
-
-    cdef Py_ssize_t footprint_rows = footprint_dimensions[0]
-    cdef Py_ssize_t footprint_cols = footprint_dimensions[1]
 
     indices = np.array([0] * num_dimensions, dtype=np.int64)
     cdef Py_ssize_t* indices_ptr = <Py_ssize_t*> <Py_ssize_t> indices.ctypes.data
@@ -181,40 +177,33 @@ cdef image_dtype get_neighborhood_peak(
     neighbor_coord = np.array([0] * num_dimensions, dtype=np.int64)
     cdef Py_ssize_t* neighbor_ptr = <Py_ssize_t*> <Py_ssize_t> neighbor_coord.ctypes.data
 
-    cdef Py_ssize_t cur_dimension
+    cdef Py_ssize_t dim
     cdef uint8_t end = 0
     cdef uint8_t oob
     cdef uint8_t at_center
+    cdef uint8_t out_of_footprint
 
     while True:
-        # do the thing on this index…
-
-        # Calculate the neighbor's coordinates
-        for dim in range(num_dimensions):
-            neighbor_ptr[dim] = point_coord[dim] + indices_ptr[dim] - offset[dim]
-
-        # Check out of bounds
+        # This gets set to true if necessary.
         oob = False
+        # This gets set to false if necessary.
+        at_center = True
+
         for dim in range(num_dimensions):
+            # Calculate the neighbor's coordinates
+            neighbor_ptr[dim] = point_coord[dim] + indices_ptr[dim] - offset[dim]
             if neighbor_ptr[dim] < 0 or neighbor_ptr[dim] >= image_dimensions[dim]:
                 oob = True
                 break
-
-        at_center = True
-        for dim in range(num_dimensions):
             if indices_ptr[dim] != offset[dim]:
                 at_center = False
-                break
 
-        linear_coord = point_to_linear(indices_ptr, footprint_dimensions, num_dimensions)
-        if ((
-                not footprint[linear_coord]
-                and not at_center
-        ) or (
-                oob
-        )):
-            pass
-        else:
+        if not oob and not at_center:
+            linear_coord = point_to_linear(indices_ptr, footprint_dimensions, num_dimensions)
+            if not footprint[linear_coord]:
+                out_of_footprint = True
+
+        if not oob and (not out_of_footprint or at_center):
             linear_coord = point_to_linear(neighbor_ptr, image_dimensions, num_dimensions)
             pixel_value = image[linear_coord]
             if method == METHOD_DILATION:
