@@ -220,8 +220,7 @@ cdef uint8_t should_propagate(
     Py_ssize_t* image_dimensions,
     Py_ssize_t num_dimensions,
     image_dtype* mask,
-    Py_ssize_t point_row,
-    Py_ssize_t point_col,
+    Py_ssize_t* point_coord,
     image_dtype point_value,
     uint8_t* footprint,
     Py_ssize_t* footprint_dimensions,
@@ -243,8 +242,7 @@ cdef uint8_t should_propagate(
         image_dimensions (Py_ssize_t*): the size of each dimension
         num_dimensions (Py_ssize_t): the number of image dimensions
         mask (image_dtype*): the mask to apply
-        point_row (Py_ssize_t): the row of the point to scan
-        point_col (Py_ssize_t): the column of the point to scan
+        point_coord (Py_ssize_t*): the coordinates of the point to scan
         point_value (image_dtype): the value of the point to scan
         footprint (uint8_t*): the neighborhood footprint
         footprint_dimensions (Py_ssize_t*): the size of each dimension of the footprint
@@ -264,6 +262,9 @@ cdef uint8_t should_propagate(
     cdef Py_ssize_t image_cols = image_dimensions[1]
     cdef Py_ssize_t footprint_rows = footprint_dimensions[0]
     cdef Py_ssize_t footprint_cols = footprint_dimensions[1]
+
+    cdef point_row = point_coord[0]
+    cdef point_col = point_coord[1]
 
     # Place the current point at each position of the footprint.
     # If that footprint position is true, then, the current point
@@ -426,8 +427,7 @@ cdef void perform_reverse_raster_scan(
                     image_dimensions,
                     num_dimensions,
                     mask,
-                    row,
-                    col,
+                    coord_ptr,
                     image[row * image_cols + col],
                     propagation_footprint,
                     footprint_dimensions,
