@@ -390,10 +390,7 @@ cdef void perform_reverse_raster_scan(
     queue,
 ):
     cdef image_dtype neighborhood_peak, point_mask
-    cdef Py_ssize_t row, col
-
-    cdef Py_ssize_t image_rows = image_dimensions[0]
-    cdef Py_ssize_t image_cols = image_dimensions[1]
+    cdef Py_ssize_t linear_coord
 
     coord_numpy = np.zeros(num_dimensions, dtype=np.int64)
     cdef Py_ssize_t* coord_ptr = <Py_ssize_t*> <Py_ssize_t> coord_numpy.ctypes.data
@@ -404,49 +401,49 @@ cdef void perform_reverse_raster_scan(
     neighbor_coord_numpy = np.array([0] * num_dimensions, dtype=np.int64)
     cdef Py_ssize_t* neighbor_coord_ptr = <Py_ssize_t*> <Py_ssize_t> neighbor_coord_numpy.ctypes.data
 
-    for row in range(image_rows - 1, -1, -1):
-        for col in range(image_cols - 1, -1, -1):
-            point_mask = <image_dtype> mask[row * image_cols + col]
+    while True:
+        linear_coord = point_to_linear(coord_ptr, image_dimensions, num_dimensions)
+        point_mask = <image_dtype> mask[linear_coord]
 
-            coord_ptr[0] = row
-            coord_ptr[1] = col
+        # If we're already at the mask, skip the neighbor test.
+        # But note: we still need to test for propagation (below).
+        if image[linear_coord] != point_mask:
+            neighborhood_peak = get_neighborhood_peak(
+                image,
+                image_dimensions,
+                num_dimensions,
+                coord_ptr,
+                footprint,
+                footprint_dimensions,
+                offset,
+                border_value,
+                method,
+                indices_ptr,
+                neighbor_coord_ptr,
+            )
+            if method == METHOD_DILATION:
+                image[linear_coord] = min(neighborhood_peak, point_mask)
+            elif method == METHOD_EROSION:
+                image[linear_coord] = max(neighborhood_peak, point_mask)
 
-            # If we're already at the mask, skip the neighbor test.
-            # But note: we still need to test for propagation (below).
-            if image[row * image_cols + col] != point_mask:
-                neighborhood_peak = get_neighborhood_peak(
-                    image,
-                    image_dimensions,
-                    num_dimensions,
-                    coord_ptr,
-                    footprint,
-                    footprint_dimensions,
-                    offset,
-                    border_value,
-                    method,
-                    indices_ptr,
-                    neighbor_coord_ptr,
-                )
-                if method == METHOD_DILATION:
-                    image[row * image_cols + col] = min(neighborhood_peak, point_mask)
-                elif method == METHOD_EROSION:
-                    image[row * image_cols + col] = max(neighborhood_peak, point_mask)
+        if should_propagate(
+                image,
+                image_dimensions,
+                num_dimensions,
+                mask,
+                coord_ptr,
+                image[linear_coord],
+                propagation_footprint,
+                footprint_dimensions,
+                offset,
+                method,
+                indices_ptr,
+                neighbor_coord_ptr,
+        ):
+            queue.append(linear_coord)
 
-            if should_propagate(
-                    image,
-                    image_dimensions,
-                    num_dimensions,
-                    mask,
-                    coord_ptr,
-                    image[row * image_cols + col],
-                    propagation_footprint,
-                    footprint_dimensions,
-                    offset,
-                    method,
-                    indices_ptr,
-                    neighbor_coord_ptr,
-            ):
-                queue.append(row * image_cols + col)
+        if increment_index(coord_ptr, image_dimensions, num_dimensions):
+            break
 
 
 @cython.boundscheck(False)
