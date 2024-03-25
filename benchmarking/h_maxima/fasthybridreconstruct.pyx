@@ -177,6 +177,9 @@ cdef image_dtype get_neighborhood_peak(
     cdef uint8_t at_center
     cdef uint8_t out_of_footprint
 
+    for x in range(num_dimensions):
+        indices_ptr[x] = 0
+
     while True:
         # This gets set to true if necessary.
         oob = False
@@ -226,6 +229,8 @@ cdef uint8_t should_propagate(
     Py_ssize_t* footprint_dimensions,
     uint8_t* offset,
     uint8_t method,
+    Py_ssize_t* indices_ptr,
+    Py_ssize_t* neighbor_ptr,
 ):
     """Determine if a point should be propagated to its neighbors.
 
@@ -248,59 +253,65 @@ cdef uint8_t should_propagate(
         footprint_dimensions (Py_ssize_t*): the size of each dimension of the footprint
         offset (uint8_t*): the offset of the footprint center.
         method (uint8_t): METHOD_DILATION or METHOD_EROSION
+        indices_ptr (Py_ssize_t*): a scratch space for indices
+        neighbor_ptr (Py_ssize_t*): a scratch space for neighbor coordinates
 
     Returns:
         uint8_t: 1 if the point should be propagated, 0 otherwise.
     """
-    cdef Py_ssize_t footprint_row_offset, footprint_col_offset
-    cdef Py_ssize_t neighbor_row, neighbor_col
     cdef image_dtype neighbor_value
-    cdef Py_ssize_t footprint_center_row = offset[0]
-    cdef Py_ssize_t footprint_center_col = offset[1]
-    cdef Py_ssize_t footprint_row, footprint_col
-    cdef Py_ssize_t image_rows = image_dimensions[0]
-    cdef Py_ssize_t image_cols = image_dimensions[1]
-    cdef Py_ssize_t footprint_rows = footprint_dimensions[0]
-    cdef Py_ssize_t footprint_cols = footprint_dimensions[1]
 
-    cdef point_row = point_coord[0]
-    cdef point_col = point_coord[1]
+    cdef Py_ssize_t linear_coord
+    cdef uint8_t oob
+    cdef uint8_t at_center
+    cdef uint8_t out_of_footprint
+
+    for x in range(num_dimensions):
+        indices_ptr[x] = 0
 
     # Place the current point at each position of the footprint.
     # If that footprint position is true, then, the current point
     # is a neighbor of the footprint center.
-    for footprint_row in range(0, footprint_rows):
-        for footprint_col in range(0, footprint_cols):
-            # The center point is always skipped.
-            # Also skip if not in footprint.
-            if ((footprint_row == offset[0] and footprint_col == offset[1])
-                    or not footprint[footprint_row * footprint_cols + footprint_col]):
-                continue
+    while True:
+        oob = False
+        at_center = True
+        out_of_footprint = False
 
+        for dim in range(num_dimensions):
             # The center point is the current point, offset by the footprint center.
-            neighbor_row = point_row + (footprint_center_row - footprint_row)
-            neighbor_col = point_col + (footprint_center_col - footprint_col)
+            neighbor_ptr[dim] = point_coord[dim] + offset[dim] - indices_ptr[dim]
 
-            # Skip out of bounds
-            if (
-                neighbor_row < 0
-                or neighbor_row >= image_rows
-                or neighbor_col < 0
-                or neighbor_col >= image_cols
-            ):
-                continue
+            if neighbor_ptr[dim] < 0 or neighbor_ptr[dim] >= image_dimensions[dim]:
+                oob = True
+                break
 
-            neighbor_value = image[neighbor_row * image_cols + neighbor_col]
+            if at_center and indices_ptr[dim] != offset[dim]:
+                at_center = False
+
+        # The center point is always skipped.
+        # Also skip if not in footprint.
+        if not oob and not at_center:
+            linear_coord = point_to_linear(indices_ptr, footprint_dimensions, num_dimensions)
+            if not footprint[linear_coord]:
+                out_of_footprint = True
+
+        # Skip out of bounds & the center point & points outside the footprint.
+        if not (oob or at_center or out_of_footprint):
+            linear_coord = point_to_linear(neighbor_ptr, image_dimensions, num_dimensions)
+            neighbor_value = image[linear_coord]
             if method == METHOD_DILATION and (
                 neighbor_value < point_value
-                and neighbor_value < <image_dtype> mask[neighbor_row * image_cols + neighbor_col]
+                and neighbor_value < <image_dtype> mask[linear_coord]
             ):
                 return 1
             elif method == METHOD_EROSION and (
-                neighbor_value > point_value
-                and neighbor_value > <image_dtype> mask[neighbor_row * image_cols + neighbor_col]
+                    neighbor_value > point_value
+                    and neighbor_value > <image_dtype> mask[linear_coord]
             ):
                 return 1
+
+        if increment_index(indices_ptr, footprint_dimensions, num_dimensions):
+            break
 
     return 0
 
@@ -433,6 +444,8 @@ cdef void perform_reverse_raster_scan(
                     footprint_dimensions,
                     offset,
                     method,
+                    indices_ptr,
+                    neighbor_coord_ptr,
             ):
                 queue.append(row * image_cols + col)
 
