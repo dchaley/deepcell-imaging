@@ -480,11 +480,8 @@ cdef process_queue(
         method (uint8_t): METHOD_DILATION or METHOD_EROSION
     """
     cdef Py_ssize_t point_linear
-    cdef Py_ssize_t footprint_row, footprint_col
     cdef image_dtype neighbor_mask
     cdef image_dtype neighbor_value, point_value
-    cdef Py_ssize_t footprint_rows = footprint_dimensions[0]
-    cdef Py_ssize_t footprint_cols = footprint_dimensions[1]
 
     coord_numpy = np.zeros(num_dimensions, dtype=np.int64)
     cdef Py_ssize_t* coord_ptr = <Py_ssize_t*> <Py_ssize_t> coord_numpy.ctypes.data
@@ -514,46 +511,45 @@ cdef process_queue(
         # Place the current point at each position of the footprint.
         # If that footprint position is true, then, the current point
         # is a neighbor of the footprint center.
-        for footprint_row in range(0, footprint_rows):
-            for footprint_col in range(0, footprint_cols):
-                indices_ptr[0] = footprint_row
-                indices_ptr[1] = footprint_col
+        while True:
+            # This gets set to true if necessary.
+            oob = False
+            # This gets set to false if necessary.
+            at_center = True
+            # This gets set to true if necessary.
+            out_of_footprint = False
 
-                # This gets set to true if necessary.
-                oob = False
-                # This gets set to false if necessary.
-                at_center = True
-                # This gets set to true if necessary.
-                out_of_footprint = False
+            for dim in range(num_dimensions):
+                # Calculate the neighbor's coordinates
+                neighbor_coord_ptr[dim] = coord_ptr[dim] + (offset[dim] - indices_ptr[dim])
+                if neighbor_coord_ptr[dim] < 0 or neighbor_coord_ptr[dim] >= image_dimensions[dim]:
+                    oob = True
+                    break
+                if indices_ptr[dim] != offset[dim]:
+                    at_center = False
 
-                for dim in range(num_dimensions):
-                    # Calculate the neighbor's coordinates
-                    neighbor_coord_ptr[dim] = coord_ptr[dim] + (offset[dim] - indices_ptr[dim])
-                    if neighbor_coord_ptr[dim] < 0 or neighbor_coord_ptr[dim] >= image_dimensions[dim]:
-                        oob = True
-                        break
-                    if indices_ptr[dim] != offset[dim]:
-                        at_center = False
+            if not oob and not at_center:
+                footprint_linear_coord = point_to_linear(indices_ptr, footprint_dimensions, num_dimensions)
+                if not footprint[footprint_linear_coord]:
+                    out_of_footprint = True
 
-                if not oob and not at_center:
-                    footprint_linear_coord = point_to_linear(indices_ptr, footprint_dimensions, num_dimensions)
-                    if not footprint[footprint_linear_coord]:
-                        out_of_footprint = True
+            # Skip out of bounds
+            # The center point is always skipped.
+            # Also skip if not in footprint.
+            if not (oob or at_center or out_of_footprint):
+                neighbor_linear_coord = point_to_linear(neighbor_coord_ptr, image_dimensions, num_dimensions)
+                neighbor_value = image[neighbor_linear_coord]
+                neighbor_mask = <image_dtype> mask[neighbor_linear_coord]
 
-                # Skip out of bounds
-                # The center point is always skipped.
-                # Also skip if not in footprint.
-                if not (oob or at_center or out_of_footprint):
-                    neighbor_linear_coord = point_to_linear(neighbor_coord_ptr, image_dimensions, num_dimensions)
-                    neighbor_value = image[neighbor_linear_coord]
-                    neighbor_mask = <image_dtype> mask[neighbor_linear_coord]
+                if method == METHOD_DILATION and (point_value > neighbor_value != neighbor_mask):
+                    image[neighbor_linear_coord] = min(point_value, neighbor_mask)
+                    queue.append(neighbor_linear_coord)
+                elif method == METHOD_EROSION and (point_value < neighbor_value != neighbor_mask):
+                    image[neighbor_linear_coord] = max(point_value, neighbor_mask)
+                    queue.append(neighbor_linear_coord)
 
-                    if method == METHOD_DILATION and (point_value > neighbor_value != neighbor_mask):
-                        image[neighbor_linear_coord] = min(point_value, neighbor_mask)
-                        queue.append(neighbor_linear_coord)
-                    elif method == METHOD_EROSION and (point_value < neighbor_value != neighbor_mask):
-                        image[neighbor_linear_coord] = max(point_value, neighbor_mask)
-                        queue.append(neighbor_linear_coord)
+            if increment_index(indices_ptr, footprint_dimensions, num_dimensions):
+                break
 
     logging.debug("Queue processing time: %s", timeit.default_timer() - t)
 
