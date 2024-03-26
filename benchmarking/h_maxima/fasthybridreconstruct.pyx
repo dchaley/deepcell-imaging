@@ -492,7 +492,16 @@ cdef process_queue(
     neighbor_coord_numpy = np.array([0] * num_dimensions, dtype=np.int64)
     cdef Py_ssize_t* neighbor_coord_ptr = <Py_ssize_t*> <Py_ssize_t> neighbor_coord_numpy.ctypes.data
 
+    indices_numpy = np.array([0] * num_dimensions, dtype=np.int64)
+    cdef Py_ssize_t* indices_ptr = <Py_ssize_t*> <Py_ssize_t> indices_numpy.ctypes.data
+
     cdef Py_ssize_t neighbor_linear_coord
+    cdef Py_ssize_t footprint_linear_coord
+
+    cdef Py_ssize_t dim
+    cdef uint8_t oob
+    cdef uint8_t at_center
+    cdef uint8_t out_of_footprint
 
     # Process the queue of pixels that need to be updated.
     logging.debug("Queue size: %s", len(queue))
@@ -507,22 +516,36 @@ cdef process_queue(
         # is a neighbor of the footprint center.
         for footprint_row in range(0, footprint_rows):
             for footprint_col in range(0, footprint_cols):
+                indices_ptr[0] = footprint_row
+                indices_ptr[1] = footprint_col
+
+                # This gets set to true if necessary.
+                oob = False
+                # This gets set to false if necessary.
+                at_center = True
+                # This gets set to true if necessary.
+                out_of_footprint = False
+
+                for dim in range(num_dimensions):
+                    # Calculate the neighbor's coordinates
+                    neighbor_coord_ptr[dim] = coord_ptr[dim] + (offset[dim] - indices_ptr[dim])
+                    if neighbor_coord_ptr[dim] < 0 or neighbor_coord_ptr[dim] >= image_dimensions[dim]:
+                        oob = True
+                        break
+                    if indices_ptr[dim] != offset[dim]:
+                        at_center = False
+
+                if not oob and not at_center:
+                    footprint_linear_coord = point_to_linear(indices_ptr, footprint_dimensions, num_dimensions)
+                    if not footprint[footprint_linear_coord]:
+                        out_of_footprint = True
+
                 # The center point is always skipped.
                 # Also skip if not in footprint.
-                if ((footprint_row == offset[0] and footprint_col == offset[1])
-                        or not footprint[footprint_row * footprint_cols + footprint_col]):
+                if at_center or out_of_footprint:
                     continue
 
-                # The center point is the current point, offset by the footprint center.
-                neighbor_coord_ptr[0] = coord_ptr[0] + (offset[0] - footprint_row)
-                neighbor_coord_ptr[1] = coord_ptr[1] + (offset[1] - footprint_col)
-
-                if (
-                        neighbor_coord_ptr[0] < 0
-                        or neighbor_coord_ptr[0] >= image_dimensions[0]
-                        or neighbor_coord_ptr[1] < 0
-                        or neighbor_coord_ptr[1] >= image_dimensions[1]
-                ):
+                if oob:
                     # Skip out of bounds
                     continue
 
