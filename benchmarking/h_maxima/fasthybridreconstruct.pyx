@@ -2,6 +2,7 @@
 
 from collections import deque
 import logging
+import math
 import numpy as np
 import timeit
 
@@ -134,7 +135,7 @@ cdef image_dtype get_neighborhood_peak(
     Py_ssize_t* point_coord,
     uint8_t* footprint,
     Py_ssize_t* footprint_dimensions,
-    uint8_t* offset,
+    Py_ssize_t* offset,
     image_dtype border_value,
     uint8_t method,
     Py_ssize_t* indices_ptr,
@@ -227,7 +228,7 @@ cdef uint8_t should_propagate(
     image_dtype point_value,
     uint8_t* footprint,
     Py_ssize_t* footprint_dimensions,
-    uint8_t* offset,
+    Py_ssize_t* offset,
     uint8_t method,
     Py_ssize_t* indices_ptr,
     Py_ssize_t* neighbor_ptr,
@@ -325,7 +326,7 @@ cdef void perform_raster_scan(
     image_dtype* mask,
     uint8_t* footprint,
     Py_ssize_t* footprint_dimensions,
-    uint8_t* offset,
+    Py_ssize_t* offset,
     image_dtype border_value,
     uint8_t method,
 ):
@@ -384,7 +385,7 @@ cdef void perform_reverse_raster_scan(
     uint8_t* footprint,
     uint8_t* propagation_footprint,
     Py_ssize_t* footprint_dimensions,
-    uint8_t* offset,
+    Py_ssize_t* offset,
     image_dtype border_value,
     uint8_t method,
     queue,
@@ -455,7 +456,7 @@ cdef process_queue(
     image_dtype* mask,
     uint8_t* footprint,
     Py_ssize_t* footprint_dimensions,
-    uint8_t* offset,
+    Py_ssize_t* offset,
     queue,
     uint8_t method,
 ):
@@ -558,7 +559,7 @@ cdef process_queue(
 def fast_hybrid_reconstruct(
     image_dtype[:, ::1] image,
         image_dtype[:, ::1] mask,
-        uint8_t[:, ::1] footprint,
+        footprint,
         uint8_t method,
         # FIXME(171): offset should be a Py_ssize_t
         uint8_t[::1] offset
@@ -596,31 +597,29 @@ def fast_hybrid_reconstruct(
     Returns:
         image_dtype[][]: the reconstructed image, modified in place
     """
-    cdef Py_ssize_t row, col
-    cdef Py_ssize_t footprint_rows, footprint_cols
-    cdef Py_ssize_t footprint_center_row, footprint_center_col
-    cdef Py_ssize_t footprint_row_offset, footprint_col_offset
-    cdef Py_ssize_t neighbor_row
-    cdef Py_ssize_t neighbor_col
     cdef image_dtype border_value
-    cdef image_dtype neighborhood_peak
+    cdef Py_ssize_t num_dimensions = image.ndim
 
-    footprint_rows = footprint.shape[0]
-    footprint_center_row = offset[0]
-    footprint_cols = footprint.shape[1]
-    footprint_center_col = offset[1]
+    offset_numpy = np.array(offset, dtype=np.int64, copy=True)
+    cdef Py_ssize_t* offset_ptr = <Py_ssize_t*> <Py_ssize_t> offset_numpy.ctypes.data
+    footprint_dimensions = np.array(footprint.shape, dtype=np.int64)
+    cdef Py_ssize_t* footprint_dimensions_ptr = <Py_ssize_t*> <Py_ssize_t> footprint_dimensions.ctypes.data
+
     # The center point, in 1d linear order.
-    cdef Py_ssize_t linear_center = footprint_center_row * footprint_cols + footprint_center_col
+    cdef Py_ssize_t linear_center = point_to_linear(offset_ptr, footprint_dimensions_ptr, num_dimensions)
 
     cdef Py_ssize_t num_before = linear_center
-    cdef Py_ssize_t num_after = footprint_rows * footprint_cols - linear_center - 1
+    # For some reason the shape comes back as an array with several zeros.
+    # Just select the actual dimensions out of it.
+    cdef Py_ssize_t num_after = math.prod(footprint.shape) - linear_center - 1
+
     # N+(G), the pixels *before* & including the center in a raster scan.
     ones_before = np.concatenate(
         [
             np.ones(num_before + 1, dtype=np.uint8),
             np.zeros(num_after, dtype=np.uint8),
         ]
-    ).reshape((footprint_rows, footprint_cols))
+    ).reshape(footprint.shape)
     footprint_raster_before = (footprint * ones_before).astype(np.uint8)
     # N-(G), the pixels *after* & including the center in a raster scan.
     ones_after = np.concatenate(
@@ -628,7 +627,7 @@ def fast_hybrid_reconstruct(
             np.zeros(num_before, dtype=bool),
             np.ones(num_after + 1, dtype=bool),
         ]
-    ).reshape((footprint_rows, footprint_cols))
+    ).reshape(footprint.shape)
     footprint_raster_after = (footprint * ones_after).astype(np.uint8)
 
     # Vincent '93 uses N- as the propagation test.
@@ -652,19 +651,14 @@ def fast_hybrid_reconstruct(
     # The propagation queue for after the raster scans.
     queue = deque()
 
-    cdef uint8_t* offset_ptr = &offset[0]
+    # TODO: do these need to be py_ssize_t or should they be uint8_t ?
+    cdef uint8_t* footprint_ptr = <uint8_t*> <Py_ssize_t> footprint.ctypes.data
     cdef uint8_t* footprint_before_ptr = <uint8_t*> <Py_ssize_t> footprint_raster_before.ctypes.data
     cdef uint8_t* footprint_after_ptr = <uint8_t*> <Py_ssize_t> footprint_raster_after.ctypes.data
     cdef uint8_t* footprint_propagation_ptr = <uint8_t*> <Py_ssize_t> footprint_propagation_test.ctypes.data
 
-    cdef Py_ssize_t image_rows = image.shape[0]
-    cdef Py_ssize_t image_cols = image.shape[1]
-
-    image_dimensions = np.array(image.shape, dtype=np.uint64)
+    image_dimensions = np.array(image.shape, dtype=np.int64)
     cdef Py_ssize_t* image_dimensions_ptr = <Py_ssize_t*> <Py_ssize_t> image_dimensions.ctypes.data
-    cdef Py_ssize_t num_dimensions = image.ndim
-
-    cdef Py_ssize_t* footprint_dimensions_ptr = <Py_ssize_t*> <Py_ssize_t> footprint.shape
 
     t = timeit.default_timer()
     perform_raster_scan(
@@ -702,7 +696,7 @@ def fast_hybrid_reconstruct(
         image_dimensions_ptr,
         num_dimensions,
         &mask[0, 0],
-        &footprint[0, 0],
+        footprint_ptr,
         footprint_dimensions_ptr,
         offset_ptr,
         queue,
