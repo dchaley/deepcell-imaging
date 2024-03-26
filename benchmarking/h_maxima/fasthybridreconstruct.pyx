@@ -480,7 +480,6 @@ cdef process_queue(
         method (uint8_t): METHOD_DILATION or METHOD_EROSION
     """
     cdef Py_ssize_t point_linear
-    cdef Py_ssize_t row, col
     cdef Py_ssize_t footprint_row, footprint_col
     cdef Py_ssize_t neighbor_row, neighbor_col
     cdef image_dtype neighbor_mask
@@ -492,14 +491,16 @@ cdef process_queue(
     cdef Py_ssize_t footprint_rows = footprint_dimensions[0]
     cdef Py_ssize_t footprint_cols = footprint_dimensions[1]
 
+    coord_numpy = np.zeros(num_dimensions, dtype=np.int64)
+    cdef Py_ssize_t* coord_ptr = <Py_ssize_t*> <Py_ssize_t> coord_numpy.ctypes.data
+
     # Process the queue of pixels that need to be updated.
     logging.debug("Queue size: %s", len(queue))
     t = timeit.default_timer()
     while len(queue) > 0:
         point_linear = queue.popleft()
-        row = cython.cdiv(point_linear, image_cols)
-        col = cython.cmod(point_linear, image_cols)
-        point_value = image[row * image_cols + col]
+        linear_to_point(point_linear, coord_ptr, image_dimensions, num_dimensions)
+        point_value = image[point_linear]
 
         # Place the current point at each position of the footprint.
         # If that footprint position is true, then, the current point
@@ -513,8 +514,8 @@ cdef process_queue(
                     continue
 
                 # The center point is the current point, offset by the footprint center.
-                neighbor_row = row + (footprint_center_row - footprint_row)
-                neighbor_col = col + (footprint_center_col - footprint_col)
+                neighbor_row = coord_ptr[0] + (footprint_center_row - footprint_row)
+                neighbor_col = coord_ptr[1] + (footprint_center_col - footprint_col)
 
                 if (
                         neighbor_row < 0
