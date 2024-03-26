@@ -481,18 +481,18 @@ cdef process_queue(
     """
     cdef Py_ssize_t point_linear
     cdef Py_ssize_t footprint_row, footprint_col
-    cdef Py_ssize_t neighbor_row, neighbor_col
     cdef image_dtype neighbor_mask
     cdef image_dtype neighbor_value, point_value
-    cdef Py_ssize_t footprint_center_row = offset[0]
-    cdef Py_ssize_t footprint_center_col = offset[1]
-    cdef Py_ssize_t image_rows = image_dimensions[0]
-    cdef Py_ssize_t image_cols = image_dimensions[1]
     cdef Py_ssize_t footprint_rows = footprint_dimensions[0]
     cdef Py_ssize_t footprint_cols = footprint_dimensions[1]
 
     coord_numpy = np.zeros(num_dimensions, dtype=np.int64)
     cdef Py_ssize_t* coord_ptr = <Py_ssize_t*> <Py_ssize_t> coord_numpy.ctypes.data
+
+    neighbor_coord_numpy = np.array([0] * num_dimensions, dtype=np.int64)
+    cdef Py_ssize_t* neighbor_coord_ptr = <Py_ssize_t*> <Py_ssize_t> neighbor_coord_numpy.ctypes.data
+
+    cdef Py_ssize_t neighbor_linear_coord
 
     # Process the queue of pixels that need to be updated.
     logging.debug("Queue size: %s", len(queue))
@@ -514,27 +514,28 @@ cdef process_queue(
                     continue
 
                 # The center point is the current point, offset by the footprint center.
-                neighbor_row = coord_ptr[0] + (footprint_center_row - footprint_row)
-                neighbor_col = coord_ptr[1] + (footprint_center_col - footprint_col)
+                neighbor_coord_ptr[0] = coord_ptr[0] + (offset[0] - footprint_row)
+                neighbor_coord_ptr[1] = coord_ptr[1] + (offset[1] - footprint_col)
 
                 if (
-                        neighbor_row < 0
-                        or neighbor_row >= image_rows
-                        or neighbor_col < 0
-                        or neighbor_col >= image_cols
+                        neighbor_coord_ptr[0] < 0
+                        or neighbor_coord_ptr[0] >= image_dimensions[0]
+                        or neighbor_coord_ptr[1] < 0
+                        or neighbor_coord_ptr[1] >= image_dimensions[1]
                 ):
                     # Skip out of bounds
                     continue
 
-                neighbor_value = image[neighbor_row * image_cols + neighbor_col]
-                neighbor_mask = <image_dtype> mask[neighbor_row * image_cols + neighbor_col]
+                neighbor_linear_coord = point_to_linear(neighbor_coord_ptr, image_dimensions, num_dimensions)
+                neighbor_value = image[neighbor_linear_coord]
+                neighbor_mask = <image_dtype> mask[neighbor_linear_coord]
 
                 if method == METHOD_DILATION and (point_value > neighbor_value != neighbor_mask):
-                    image[neighbor_row * image_cols + neighbor_col] = min(point_value, neighbor_mask)
-                    queue.append(neighbor_row * image_cols + neighbor_col)
+                    image[neighbor_linear_coord] = min(point_value, neighbor_mask)
+                    queue.append(neighbor_linear_coord)
                 elif method == METHOD_EROSION and (point_value < neighbor_value != neighbor_mask):
-                    image[neighbor_row * image_cols + neighbor_col] = max(point_value, neighbor_mask)
-                    queue.append(neighbor_row * image_cols + neighbor_col)
+                    image[neighbor_linear_coord] = max(point_value, neighbor_mask)
+                    queue.append(neighbor_linear_coord)
 
     logging.debug("Queue processing time: %s", timeit.default_timer() - t)
 
