@@ -540,25 +540,20 @@ cdef process_queue(
                     if not footprint[footprint_linear_coord]:
                         out_of_footprint = True
 
+                # Skip out of bounds
                 # The center point is always skipped.
                 # Also skip if not in footprint.
-                if at_center or out_of_footprint:
-                    continue
+                if not (oob or at_center or out_of_footprint):
+                    neighbor_linear_coord = point_to_linear(neighbor_coord_ptr, image_dimensions, num_dimensions)
+                    neighbor_value = image[neighbor_linear_coord]
+                    neighbor_mask = <image_dtype> mask[neighbor_linear_coord]
 
-                if oob:
-                    # Skip out of bounds
-                    continue
-
-                neighbor_linear_coord = point_to_linear(neighbor_coord_ptr, image_dimensions, num_dimensions)
-                neighbor_value = image[neighbor_linear_coord]
-                neighbor_mask = <image_dtype> mask[neighbor_linear_coord]
-
-                if method == METHOD_DILATION and (point_value > neighbor_value != neighbor_mask):
-                    image[neighbor_linear_coord] = min(point_value, neighbor_mask)
-                    queue.append(neighbor_linear_coord)
-                elif method == METHOD_EROSION and (point_value < neighbor_value != neighbor_mask):
-                    image[neighbor_linear_coord] = max(point_value, neighbor_mask)
-                    queue.append(neighbor_linear_coord)
+                    if method == METHOD_DILATION and (point_value > neighbor_value != neighbor_mask):
+                        image[neighbor_linear_coord] = min(point_value, neighbor_mask)
+                        queue.append(neighbor_linear_coord)
+                    elif method == METHOD_EROSION and (point_value < neighbor_value != neighbor_mask):
+                        image[neighbor_linear_coord] = max(point_value, neighbor_mask)
+                        queue.append(neighbor_linear_coord)
 
     logging.debug("Queue processing time: %s", timeit.default_timer() - t)
 
