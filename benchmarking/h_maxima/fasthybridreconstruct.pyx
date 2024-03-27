@@ -557,12 +557,30 @@ cdef process_queue(
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def fast_hybrid_reconstruct(
-    image_dtype[:, ::1] image,
-        image_dtype[:, ::1] mask,
+    image,
+    mask,
+    footprint,
+    uint8_t method,
+    # FIXME(171): offset should be a Py_ssize_t
+    uint8_t[::1] offset
+):
+    return fast_hybrid_reconstruct_impl(
+        image.dtype.type(0),
+        image,
+        mask,
         footprint,
-        uint8_t method,
-        # FIXME(171): offset should be a Py_ssize_t
-        uint8_t[::1] offset
+        method,
+        offset,
+    )
+
+def fast_hybrid_reconstruct_impl(
+    image_dtype dummy_value,
+    image,
+    mask,
+    footprint,
+    uint8_t method,
+    # FIXME(171): offset should be a Py_ssize_t
+    uint8_t[::1] offset
 ):
     """Perform grayscale reconstruction using the 'Fast-Hybrid' algorithm.
 
@@ -659,13 +677,15 @@ def fast_hybrid_reconstruct(
 
     image_dimensions = np.array(image.shape, dtype=np.int64)
     cdef Py_ssize_t* image_dimensions_ptr = <Py_ssize_t*> <Py_ssize_t> image_dimensions.ctypes.data
+    cdef image_dtype* image_ptr = <image_dtype*> <Py_ssize_t> image.ctypes.data
+    cdef image_dtype* mask_ptr = <image_dtype*> <Py_ssize_t> mask.ctypes.data
 
     t = timeit.default_timer()
     perform_raster_scan(
-        &image[0, 0],
+        image_ptr,
         image_dimensions_ptr,
         num_dimensions,
-        &mask[0, 0],
+        mask_ptr,
         footprint_before_ptr,
         footprint_dimensions_ptr,
         offset_ptr,
@@ -676,10 +696,10 @@ def fast_hybrid_reconstruct(
 
     t = timeit.default_timer()
     perform_reverse_raster_scan(
-        &image[0, 0],
+        image_ptr,
         image_dimensions_ptr,
         num_dimensions,
-        &mask[0, 0],
+        mask_ptr,
         footprint_after_ptr,
         footprint_propagation_ptr,
         footprint_dimensions_ptr,
@@ -692,10 +712,10 @@ def fast_hybrid_reconstruct(
 
     # Propagate points as necessary.
     process_queue(
-        &image[0, 0],
+        image_ptr,
         image_dimensions_ptr,
         num_dimensions,
-        &mask[0, 0],
+        mask_ptr,
         footprint_ptr,
         footprint_dimensions_ptr,
         offset_ptr,
