@@ -36,15 +36,15 @@ cpdef enum:
     METHOD_EROSION = 1
 
 cdef uint8_t increment_index(
-    Py_ssize_t* indices,
-    Py_ssize_t* dimensions,
+    Py_ssize_t* indices_ptr,
+    Py_ssize_t* dimensions_ptr,
     Py_ssize_t num_dimensions,
 ):
     """Increment an index in N dimensions.
 
     Args:
-        indices (Py_ssize_t*): the indices to increment
-        dimensions (Py_ssize_t*): the size of each dimension
+        indices_ptr (Py_ssize_t*): the indices to increment
+        dimensions_ptr (Py_ssize_t*): the size of each dimension
         num_dimensions (Py_ssize_t): the number of dimensions
 
     Returns:
@@ -52,26 +52,26 @@ cdef uint8_t increment_index(
     """
     cdef Py_ssize_t i
     for i in range(num_dimensions - 1, -1, -1):
-        if indices[i] < dimensions[i] - 1:
-            indices[i] += 1
+        if indices_ptr[i] < dimensions_ptr[i] - 1:
+            indices_ptr[i] += 1
             return 0
         else:
-            indices[i] = 0
+            indices_ptr[i] = 0
             if i == 0:
                 return 1
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef Py_ssize_t point_to_linear(
-    Py_ssize_t* point,
-    Py_ssize_t* dimensions,
+    Py_ssize_t* coord_ptr,
+    Py_ssize_t* dimensions_ptr,
     Py_ssize_t num_dimensions,
 ):
     """Convert a point in N dimensions to a linear index.
 
     Args:
-        point (Py_ssize_t*): the point to convert
-        dimensions (Py_ssize_t*): the size of each dimension
+        coord_ptr (Py_ssize_t*): the point to convert
+        dimensions_ptr (Py_ssize_t*): the size of each dimension
         num_dimensions (Py_ssize_t): the number of dimensions
 
     Returns:
@@ -81,8 +81,8 @@ cdef Py_ssize_t point_to_linear(
     cdef Py_ssize_t multiplier = 1
     cdef Py_ssize_t i
     for i in range(num_dimensions - 1, -1, -1):
-        linear += point[i] * multiplier
-        multiplier *= dimensions[i]
+        linear += coord_ptr[i] * multiplier
+        multiplier *= dimensions_ptr[i]
     return linear
 
 # for testing; test_fast_hybrid.py
@@ -96,16 +96,16 @@ def point_to_linear_python(point, dimensions, num_dimensions):
 @cython.wraparound(False)
 cdef Py_ssize_t* linear_to_point(
     Py_ssize_t linear,
-    Py_ssize_t* point_output,
-    Py_ssize_t* dimensions,
+    Py_ssize_t* point_output_ptr,
+    Py_ssize_t* dimensions_ptr,
     Py_ssize_t num_dimensions,
 ):
     """Convert a linear index to a point in N dimensions.
 
     Args:
         linear (Py_ssize_t): the linear index
-        point_output (Py_ssize_t*): the point to write to
-        dimensions (Py_ssize_t*): the size of each dimension
+        point_output_ptr (Py_ssize_t*): the point to write to
+        dimensions_ptr (Py_ssize_t*): the size of each dimension
         num_dimensions (Py_ssize_t): the number of dimensions
 
     Returns:
@@ -113,8 +113,8 @@ cdef Py_ssize_t* linear_to_point(
     """
     cdef Py_ssize_t i
     for i in range(num_dimensions - 1, -1, -1):
-        point_output[i] = cython.cmod(linear, dimensions[i])
-        linear = cython.cdiv(linear, dimensions[i])
+        point_output_ptr[i] = cython.cmod(linear, dimensions_ptr[i])
+        linear = cython.cdiv(linear, dimensions_ptr[i])
 
 # for testing; test_fast_hybrid.py
 def linear_to_point_python(linear, dimensions, num_dimensions):
@@ -128,17 +128,17 @@ def linear_to_point_python(linear, dimensions, num_dimensions):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef image_dtype get_neighborhood_peak(
-    image_dtype* image,
-    Py_ssize_t* image_dimensions,
+    image_dtype* image_ptr,
+    Py_ssize_t* image_dimensions_ptr,
     Py_ssize_t num_dimensions,
-    Py_ssize_t* point_coord,
-    uint8_t* footprint,
-    Py_ssize_t* footprint_dimensions,
-    Py_ssize_t* offset,
+    Py_ssize_t* center_coord_ptr,
+    uint8_t* footprint_ptr,
+    Py_ssize_t* footprint_dimensions_ptr,
+    Py_ssize_t* footprint_center_ptr,
     image_dtype border_value,
     uint8_t method,
-    Py_ssize_t* indices_ptr,
-    Py_ssize_t* neighbor_ptr,
+    Py_ssize_t* footprint_coord_ptr,
+    Py_ssize_t* neighbor_coord_ptr,
 ):
     """Get the neighborhood peak around a point.
 
@@ -152,33 +152,34 @@ cdef image_dtype get_neighborhood_peak(
     this is the minimum image value.
 
     Args:
-      image (image_dtype*): the image to scan
-      image_dimensions (Py_ssize_t*): the size of each dimension
+      image_ptr (image_dtype*): the image to scan
+      image_dimensions_ptr (Py_ssize_t*): the size of each dimension
       num_dimensions (Py_ssize_t): the number of image dimensions
-      point_coord (Py_ssize_t*): the coordinates of the point to scan
-      footprint (uint8_t*): the neighborhood footprint
-      footprint_dimensions (Py_ssize_t*): the size of each dimension of the footprint
-      offset (uint8_t*): the offset of the footprint center.
+      center_coord_ptr (Py_ssize_t*): the coordinates of the point to scan
+      footprint_ptr (uint8_t*): the neighborhood footprint
+      footprint_dimensions_ptr (Py_ssize_t*): the size of each dimension of the footprint
+      footprint_center_ptr (uint8_t*): the offset of the footprint center.
       border_value (image_dtype): the value to use for out-of-bound points
       method (uint8_t): METHOD_DILATION or METHOD_EROSION
-      indices_ptr (Py_ssize_t*): a scratch space for indices
-      neighbor_ptr (Py_ssize_t*): a scratch space for neighbor coordinates
+      footprint_coord_ptr (Py_ssize_t*): a scratch space for indices
+      neighbor_coord_ptr (Py_ssize_t*): a scratch space for neighbor coordinates
 
     Returns:
         image_dtype: the maximum in the point's neighborhood, greater than or equal to border_value.
     """
     cdef image_dtype pixel_value
-    # OOB values get the border value
+    # The peak starts at the border value, and is updated up (or down) as necessary.
     cdef image_dtype neighborhood_peak = border_value
-    cdef Py_ssize_t linear_coord
+    cdef Py_ssize_t linear_index
 
     cdef Py_ssize_t dim
     cdef uint8_t oob
     cdef uint8_t at_center
     cdef uint8_t out_of_footprint
 
+    # Reset the loop points to zero.
     for x in range(num_dimensions):
-        indices_ptr[x] = 0
+        footprint_coord_ptr[x] = 0
 
     while True:
         # This gets set to true if necessary.
@@ -190,27 +191,27 @@ cdef image_dtype get_neighborhood_peak(
 
         for dim in range(num_dimensions):
             # Calculate the neighbor's coordinates
-            neighbor_ptr[dim] = point_coord[dim] + indices_ptr[dim] - offset[dim]
-            if neighbor_ptr[dim] < 0 or neighbor_ptr[dim] >= image_dimensions[dim]:
+            neighbor_coord_ptr[dim] = center_coord_ptr[dim] + footprint_coord_ptr[dim] - footprint_center_ptr[dim]
+            if neighbor_coord_ptr[dim] < 0 or neighbor_coord_ptr[dim] >= image_dimensions_ptr[dim]:
                 oob = True
                 break
-            if indices_ptr[dim] != offset[dim]:
+            if footprint_coord_ptr[dim] != footprint_center_ptr[dim]:
                 at_center = False
 
         if not oob and not at_center:
-            linear_coord = point_to_linear(indices_ptr, footprint_dimensions, num_dimensions)
-            if not footprint[linear_coord]:
+            linear_index = point_to_linear(footprint_coord_ptr, footprint_dimensions_ptr, num_dimensions)
+            if not footprint_ptr[linear_index]:
                 out_of_footprint = True
 
         if not oob and (not out_of_footprint or at_center):
-            linear_coord = point_to_linear(neighbor_ptr, image_dimensions, num_dimensions)
-            pixel_value = image[linear_coord]
+            linear_index = point_to_linear(neighbor_coord_ptr, image_dimensions_ptr, num_dimensions)
+            pixel_value = image_ptr[linear_index]
             if method == METHOD_DILATION:
                 neighborhood_peak = max(neighborhood_peak, pixel_value)
             elif method == METHOD_EROSION:
                 neighborhood_peak = min(neighborhood_peak, pixel_value)
 
-        if increment_index(indices_ptr, footprint_dimensions, num_dimensions):
+        if increment_index(footprint_coord_ptr, footprint_dimensions_ptr, num_dimensions):
             break
 
     return neighborhood_peak
@@ -219,18 +220,18 @@ cdef image_dtype get_neighborhood_peak(
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef uint8_t should_propagate(
-    image_dtype* image,
-    Py_ssize_t* image_dimensions,
+    image_dtype* image_ptr,
+    Py_ssize_t* image_dimensions_ptr,
     Py_ssize_t num_dimensions,
-    image_dtype* mask,
-    Py_ssize_t* point_coord,
+    image_dtype* mask_ptr,
+    Py_ssize_t* coord_ptr,
     image_dtype point_value,
-    uint8_t* footprint,
-    Py_ssize_t* footprint_dimensions,
-    Py_ssize_t* offset,
+    uint8_t* footprint_ptr,
+    Py_ssize_t* footprint_dimensions_ptr,
+    Py_ssize_t* footprint_center_ptr,
     uint8_t method,
-    Py_ssize_t* indices_ptr,
-    Py_ssize_t* neighbor_ptr,
+    Py_ssize_t* footprint_coord_ptr,
+    Py_ssize_t* neighbor_coord_ptr,
 ):
     """Determine if a point should be propagated to its neighbors.
 
@@ -243,31 +244,32 @@ cdef uint8_t should_propagate(
     algorithm, the footprint is the raster footprint without the center point.
 
     Args:
-        image (image_dtype*): the image to scan
-        image_dimensions (Py_ssize_t*): the size of each dimension
+        image_ptr (image_dtype*): the image to scan
+        image_dimensions_ptr (Py_ssize_t*): the size of each dimension
         num_dimensions (Py_ssize_t): the number of image dimensions
-        mask (image_dtype*): the mask to apply
-        point_coord (Py_ssize_t*): the coordinates of the point to scan
+        mask_ptr (image_dtype*): the mask to apply
+        coord_ptr (Py_ssize_t*): the coordinates of the point to scan
         point_value (image_dtype): the value of the point to scan
-        footprint (uint8_t*): the neighborhood footprint
-        footprint_dimensions (Py_ssize_t*): the size of each dimension of the footprint
-        offset (uint8_t*): the offset of the footprint center.
+        footprint_ptr (uint8_t*): the neighborhood footprint
+        footprint_dimensions_ptr (Py_ssize_t*): the size of each dimension of the footprint
+        footprint_center_ptr (uint8_t*): the offset of the footprint center.
         method (uint8_t): METHOD_DILATION or METHOD_EROSION
-        indices_ptr (Py_ssize_t*): a scratch space for indices
-        neighbor_ptr (Py_ssize_t*): a scratch space for neighbor coordinates
+        footprint_coord_ptr (Py_ssize_t*): a scratch space for indices
+        neighbor_coord_ptr (Py_ssize_t*): a scratch space for neighbor coordinates
 
     Returns:
         uint8_t: 1 if the point should be propagated, 0 otherwise.
     """
     cdef image_dtype neighbor_value
 
-    cdef Py_ssize_t linear_coord
+    cdef Py_ssize_t linear_index
     cdef uint8_t oob
     cdef uint8_t at_center
     cdef uint8_t out_of_footprint
 
+    # Reset the loop points to zero.
     for x in range(num_dimensions):
-        indices_ptr[x] = 0
+        footprint_coord_ptr[x] = 0
 
     # Place the current point at each position of the footprint.
     # If that footprint position is true, then, the current point
@@ -279,38 +281,38 @@ cdef uint8_t should_propagate(
 
         for dim in range(num_dimensions):
             # The center point is the current point, offset by the footprint center.
-            neighbor_ptr[dim] = point_coord[dim] + offset[dim] - indices_ptr[dim]
+            neighbor_coord_ptr[dim] = coord_ptr[dim] + footprint_center_ptr[dim] - footprint_coord_ptr[dim]
 
-            if neighbor_ptr[dim] < 0 or neighbor_ptr[dim] >= image_dimensions[dim]:
+            if neighbor_coord_ptr[dim] < 0 or neighbor_coord_ptr[dim] >= image_dimensions_ptr[dim]:
                 oob = True
                 break
 
-            if at_center and indices_ptr[dim] != offset[dim]:
+            if at_center and footprint_coord_ptr[dim] != footprint_center_ptr[dim]:
                 at_center = False
 
         # The center point is always skipped.
         # Also skip if not in footprint.
         if not oob and not at_center:
-            linear_coord = point_to_linear(indices_ptr, footprint_dimensions, num_dimensions)
-            if not footprint[linear_coord]:
+            linear_index = point_to_linear(footprint_coord_ptr, footprint_dimensions_ptr, num_dimensions)
+            if not footprint_ptr[linear_index]:
                 out_of_footprint = True
 
         # Skip out of bounds & the center point & points outside the footprint.
         if not (oob or at_center or out_of_footprint):
-            linear_coord = point_to_linear(neighbor_ptr, image_dimensions, num_dimensions)
-            neighbor_value = image[linear_coord]
+            linear_index = point_to_linear(neighbor_coord_ptr, image_dimensions_ptr, num_dimensions)
+            neighbor_value = image_ptr[linear_index]
             if method == METHOD_DILATION and (
                 neighbor_value < point_value
-                and neighbor_value < <image_dtype> mask[linear_coord]
+                and neighbor_value < <image_dtype> mask_ptr[linear_index]
             ):
                 return 1
             elif method == METHOD_EROSION and (
                     neighbor_value > point_value
-                    and neighbor_value > <image_dtype> mask[linear_coord]
+                    and neighbor_value > <image_dtype> mask_ptr[linear_index]
             ):
                 return 1
 
-        if increment_index(indices_ptr, footprint_dimensions, num_dimensions):
+        if increment_index(footprint_coord_ptr, footprint_dimensions_ptr, num_dimensions):
             break
 
     return 0
@@ -319,143 +321,143 @@ cdef uint8_t should_propagate(
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef void perform_raster_scan(
-    image_dtype* image,
-    Py_ssize_t* image_dimensions,
+    image_dtype* image_ptr,
+    Py_ssize_t* image_dimensions_ptr,
     Py_ssize_t num_dimensions,
-    image_dtype* mask,
-    uint8_t* footprint,
-    Py_ssize_t* footprint_dimensions,
-    Py_ssize_t* offset,
+    image_dtype* mask_ptr,
+    uint8_t* footprint_ptr,
+    Py_ssize_t* footprint_dimensions_ptr,
+    Py_ssize_t* footprint_center_ptr,
     image_dtype border_value,
     uint8_t method,
 ):
     cdef image_dtype neighborhood_peak, point_mask
-    cdef Py_ssize_t linear_coord
+    cdef Py_ssize_t linear_index
 
-    coord_numpy = np.zeros(num_dimensions, dtype=np.int64)
-    cdef Py_ssize_t* coord_ptr = <Py_ssize_t*> <Py_ssize_t> coord_numpy.ctypes.data
+    scan_coord_numpy = np.zeros(num_dimensions, dtype=np.int64)
+    cdef Py_ssize_t* scan_coord_ptr = <Py_ssize_t*> <Py_ssize_t> scan_coord_numpy.ctypes.data
 
-    indices_numpy = np.array([0] * num_dimensions, dtype=np.int64)
-    cdef Py_ssize_t* indices_ptr = <Py_ssize_t*> <Py_ssize_t> indices_numpy.ctypes.data
-
-    neighbor_coord_numpy = np.array([0] * num_dimensions, dtype=np.int64)
+    # We use these 2 buffers to avoid re-allocating them in the inner loop.
+    loop_coord_numpy = np.zeros(num_dimensions, dtype=np.int64)
+    neighbor_coord_numpy = np.zeros(num_dimensions, dtype=np.int64)
+    cdef Py_ssize_t* loop_coord_ptr = <Py_ssize_t*> <Py_ssize_t> loop_coord_numpy.ctypes.data
     cdef Py_ssize_t* neighbor_coord_ptr = <Py_ssize_t*> <Py_ssize_t> neighbor_coord_numpy.ctypes.data
 
     while True:
-        linear_coord = point_to_linear(coord_ptr, image_dimensions, num_dimensions)
-        point_mask = <image_dtype> mask[linear_coord]
+        linear_index = point_to_linear(scan_coord_ptr, image_dimensions_ptr, num_dimensions)
+        point_mask = <image_dtype> mask_ptr[linear_index]
 
         # If the image is already at the limiting mask value, skip this pixel.
-        if image[linear_coord] == point_mask:
-            if increment_index(coord_ptr, image_dimensions, num_dimensions):
+        if image_ptr[linear_index] == point_mask:
+            if increment_index(scan_coord_ptr, image_dimensions_ptr, num_dimensions):
                 break
             continue
 
         neighborhood_peak = get_neighborhood_peak(
-            image,
-            image_dimensions,
+            image_ptr,
+            image_dimensions_ptr,
             num_dimensions,
-            coord_ptr,
-            footprint,
-            footprint_dimensions,
-            offset,
+            scan_coord_ptr,
+            footprint_ptr,
+            footprint_dimensions_ptr,
+            footprint_center_ptr,
             border_value,
             method,
-            indices_ptr,
+            loop_coord_ptr,
             neighbor_coord_ptr,
         )
 
         if method == METHOD_DILATION:
-            image[linear_coord] = min(neighborhood_peak, point_mask)
+            image_ptr[linear_index] = min(neighborhood_peak, point_mask)
         elif method == METHOD_EROSION:
-            image[linear_coord] = max(neighborhood_peak, point_mask)
+            image_ptr[linear_index] = max(neighborhood_peak, point_mask)
 
-        if increment_index(coord_ptr, image_dimensions, num_dimensions):
+        if increment_index(scan_coord_ptr, image_dimensions_ptr, num_dimensions):
             break
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef void perform_reverse_raster_scan(
-    image_dtype* image,
-    Py_ssize_t* image_dimensions,
+    image_dtype* image_ptr,
+    Py_ssize_t* image_dimensions_ptr,
     Py_ssize_t num_dimensions,
-    image_dtype* mask,
-    uint8_t* footprint,
-    uint8_t* propagation_footprint,
-    Py_ssize_t* footprint_dimensions,
-    Py_ssize_t* offset,
+    image_dtype* mask_ptr,
+    uint8_t* footprint_ptr,
+    uint8_t* propagation_footprint_ptr,
+    Py_ssize_t* footprint_dimensions_ptr,
+    Py_ssize_t* footprint_center_ptr,
     image_dtype border_value,
     uint8_t method,
     queue,
 ):
     cdef image_dtype neighborhood_peak, point_mask
-    cdef Py_ssize_t linear_coord
+    cdef Py_ssize_t linear_index
 
-    coord_numpy = np.zeros(num_dimensions, dtype=np.int64)
-    cdef Py_ssize_t* coord_ptr = <Py_ssize_t*> <Py_ssize_t> coord_numpy.ctypes.data
+    scan_coord_numpy = np.zeros(num_dimensions, dtype=np.int64)
+    cdef Py_ssize_t* scan_coord_ptr = <Py_ssize_t*> <Py_ssize_t> scan_coord_numpy.ctypes.data
 
-    indices_numpy = np.array([0] * num_dimensions, dtype=np.int64)
-    cdef Py_ssize_t* indices_ptr = <Py_ssize_t*> <Py_ssize_t> indices_numpy.ctypes.data
-
-    neighbor_coord_numpy = np.array([0] * num_dimensions, dtype=np.int64)
+    # We use these 2 buffers to avoid re-allocating them in the inner loop.
+    loop_coord_numpy = np.zeros(num_dimensions, dtype=np.int64)
+    neighbor_coord_numpy = np.zeros(num_dimensions, dtype=np.int64)
+    cdef Py_ssize_t* loop_coord_ptr = <Py_ssize_t*> <Py_ssize_t> loop_coord_numpy.ctypes.data
     cdef Py_ssize_t* neighbor_coord_ptr = <Py_ssize_t*> <Py_ssize_t> neighbor_coord_numpy.ctypes.data
 
     while True:
-        linear_coord = point_to_linear(coord_ptr, image_dimensions, num_dimensions)
-        point_mask = <image_dtype> mask[linear_coord]
+        linear_index = point_to_linear(scan_coord_ptr, image_dimensions_ptr, num_dimensions)
+        point_mask = <image_dtype> mask_ptr[linear_index]
 
         # If we're already at the mask, skip the neighbor test.
         # But note: we still need to test for propagation (below).
-        if image[linear_coord] != point_mask:
+        if image_ptr[linear_index] != point_mask:
             neighborhood_peak = get_neighborhood_peak(
-                image,
-                image_dimensions,
+                image_ptr,
+                image_dimensions_ptr,
                 num_dimensions,
-                coord_ptr,
-                footprint,
-                footprint_dimensions,
-                offset,
+                scan_coord_ptr,
+                footprint_ptr,
+                footprint_dimensions_ptr,
+                footprint_center_ptr,
                 border_value,
                 method,
-                indices_ptr,
+                loop_coord_ptr,
                 neighbor_coord_ptr,
             )
             if method == METHOD_DILATION:
-                image[linear_coord] = min(neighborhood_peak, point_mask)
+                image_ptr[linear_index] = min(neighborhood_peak, point_mask)
             elif method == METHOD_EROSION:
-                image[linear_coord] = max(neighborhood_peak, point_mask)
+                image_ptr[linear_index] = max(neighborhood_peak, point_mask)
 
         if should_propagate(
-                image,
-                image_dimensions,
+                image_ptr,
+                image_dimensions_ptr,
                 num_dimensions,
-                mask,
-                coord_ptr,
-                image[linear_coord],
-                propagation_footprint,
-                footprint_dimensions,
-                offset,
+                mask_ptr,
+                scan_coord_ptr,
+                image_ptr[linear_index],
+                propagation_footprint_ptr,
+                footprint_dimensions_ptr,
+                footprint_center_ptr,
                 method,
-                indices_ptr,
+                loop_coord_ptr,
                 neighbor_coord_ptr,
         ):
-            queue.append(linear_coord)
+            queue.append(linear_index)
 
-        if increment_index(coord_ptr, image_dimensions, num_dimensions):
+        if increment_index(scan_coord_ptr, image_dimensions_ptr, num_dimensions):
             break
 
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef process_queue(
-    image_dtype* image,
-    Py_ssize_t* image_dimensions,
+    image_dtype* image_ptr,
+    Py_ssize_t* image_dimensions_ptr,
     Py_ssize_t num_dimensions,
-    image_dtype* mask,
-    uint8_t* footprint,
-    Py_ssize_t* footprint_dimensions,
-    Py_ssize_t* offset,
+    image_dtype* mask_ptr,
+    uint8_t* footprint_ptr,
+    Py_ssize_t* footprint_dimensions_ptr,
+    Py_ssize_t* offset_ptr,
     queue,
     uint8_t method,
 ):
@@ -469,31 +471,31 @@ cdef process_queue(
     Note that this modifies the image in place.
 
     Args:
-        image (image_type[][]): the image to scan
-        image_dimensions (Py_ssize_t*): the size of each dimension
+        image_ptr (image_type[][]): the image to scan
+        image_dimensions_ptr (Py_ssize_t*): the size of each dimension
         num_dimensions (Py_ssize_t): the number of image dimensions
-        mask (image_dtype*): the image mask (ceiling on image values)
-        footprint (uint8_t*): the neighborhood footprint
-        footprint_dimensions (Py_ssize_t*): the size of each dimension of the footprint
-        offset (uint8_t*): the offset of the footprint center.
+        mask_ptr (image_dtype*): the image mask (ceiling on image values)
+        footprint_ptr (uint8_t*): the neighborhood footprint
+        footprint_dimensions_ptr (Py_ssize_t*): the size of each dimension of the footprint
+        offset_ptr (uint8_t*): the offset of the footprint center.
         queue (deque): the queue of points to process
         method (uint8_t): METHOD_DILATION or METHOD_EROSION
     """
-    cdef Py_ssize_t point_linear
+    cdef Py_ssize_t queue_linear_index
     cdef image_dtype neighbor_mask
     cdef image_dtype neighbor_value, point_value
 
     coord_numpy = np.zeros(num_dimensions, dtype=np.int64)
     cdef Py_ssize_t* coord_ptr = <Py_ssize_t*> <Py_ssize_t> coord_numpy.ctypes.data
 
+    # We use these 2 buffers to avoid re-allocating them in the inner loop.
+    loop_coord_numpy = np.array([0] * num_dimensions, dtype=np.int64)
     neighbor_coord_numpy = np.array([0] * num_dimensions, dtype=np.int64)
+    cdef Py_ssize_t* loop_coord_ptr = <Py_ssize_t*> <Py_ssize_t> loop_coord_numpy.ctypes.data
     cdef Py_ssize_t* neighbor_coord_ptr = <Py_ssize_t*> <Py_ssize_t> neighbor_coord_numpy.ctypes.data
 
-    indices_numpy = np.array([0] * num_dimensions, dtype=np.int64)
-    cdef Py_ssize_t* indices_ptr = <Py_ssize_t*> <Py_ssize_t> indices_numpy.ctypes.data
-
-    cdef Py_ssize_t neighbor_linear_coord
-    cdef Py_ssize_t footprint_linear_coord
+    cdef Py_ssize_t neighbor_linear_index
+    cdef Py_ssize_t footprint_linear_index
 
     cdef Py_ssize_t dim
     cdef uint8_t oob
@@ -504,9 +506,9 @@ cdef process_queue(
     logging.debug("Queue size: %s", len(queue))
     t = timeit.default_timer()
     while len(queue) > 0:
-        point_linear = queue.popleft()
-        linear_to_point(point_linear, coord_ptr, image_dimensions, num_dimensions)
-        point_value = image[point_linear]
+        queue_linear_index = queue.popleft()
+        linear_to_point(queue_linear_index, coord_ptr, image_dimensions_ptr, num_dimensions)
+        point_value = image_ptr[queue_linear_index]
 
         # Place the current point at each position of the footprint.
         # If that footprint position is true, then, the current point
@@ -521,34 +523,34 @@ cdef process_queue(
 
             for dim in range(num_dimensions):
                 # Calculate the neighbor's coordinates
-                neighbor_coord_ptr[dim] = coord_ptr[dim] + (offset[dim] - indices_ptr[dim])
-                if neighbor_coord_ptr[dim] < 0 or neighbor_coord_ptr[dim] >= image_dimensions[dim]:
+                neighbor_coord_ptr[dim] = coord_ptr[dim] + (offset_ptr[dim] - loop_coord_ptr[dim])
+                if neighbor_coord_ptr[dim] < 0 or neighbor_coord_ptr[dim] >= image_dimensions_ptr[dim]:
                     oob = True
                     break
-                if indices_ptr[dim] != offset[dim]:
+                if loop_coord_ptr[dim] != offset_ptr[dim]:
                     at_center = False
 
             if not oob and not at_center:
-                footprint_linear_coord = point_to_linear(indices_ptr, footprint_dimensions, num_dimensions)
-                if not footprint[footprint_linear_coord]:
+                footprint_linear_index = point_to_linear(loop_coord_ptr, footprint_dimensions_ptr, num_dimensions)
+                if not footprint_ptr[footprint_linear_index]:
                     out_of_footprint = True
 
             # Skip out of bounds
             # The center point is always skipped.
             # Also skip if not in footprint.
             if not (oob or at_center or out_of_footprint):
-                neighbor_linear_coord = point_to_linear(neighbor_coord_ptr, image_dimensions, num_dimensions)
-                neighbor_value = image[neighbor_linear_coord]
-                neighbor_mask = <image_dtype> mask[neighbor_linear_coord]
+                neighbor_linear_index = point_to_linear(neighbor_coord_ptr, image_dimensions_ptr, num_dimensions)
+                neighbor_value = image_ptr[neighbor_linear_index]
+                neighbor_mask = <image_dtype> mask_ptr[neighbor_linear_index]
 
                 if method == METHOD_DILATION and (point_value > neighbor_value != neighbor_mask):
-                    image[neighbor_linear_coord] = min(point_value, neighbor_mask)
-                    queue.append(neighbor_linear_coord)
+                    image_ptr[neighbor_linear_index] = min(point_value, neighbor_mask)
+                    queue.append(neighbor_linear_index)
                 elif method == METHOD_EROSION and (point_value < neighbor_value != neighbor_mask):
-                    image[neighbor_linear_coord] = max(point_value, neighbor_mask)
-                    queue.append(neighbor_linear_coord)
+                    image_ptr[neighbor_linear_index] = max(point_value, neighbor_mask)
+                    queue.append(neighbor_linear_index)
 
-            if increment_index(indices_ptr, footprint_dimensions, num_dimensions):
+            if increment_index(loop_coord_ptr, footprint_dimensions_ptr, num_dimensions):
                 break
 
     logging.debug("Queue processing time: %s", timeit.default_timer() - t)
@@ -574,7 +576,7 @@ def fast_hybrid_reconstruct(
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def fast_hybrid_reconstruct_impl(
-    image_dtype dummy_value,
+    image_dtype _dummy_value,
     image,
     mask,
     footprint,
@@ -618,14 +620,15 @@ def fast_hybrid_reconstruct_impl(
     cdef Py_ssize_t num_dimensions = image.ndim
 
     cdef Py_ssize_t* offset_ptr = <Py_ssize_t*> <Py_ssize_t> offset.ctypes.data
+
     footprint_dimensions = np.array(footprint.shape, dtype=np.int64)
     cdef Py_ssize_t* footprint_dimensions_ptr = <Py_ssize_t*> <Py_ssize_t> footprint_dimensions.ctypes.data
 
     # The center point, in 1d linear order.
-    cdef Py_ssize_t linear_center = point_to_linear(offset_ptr, footprint_dimensions_ptr, num_dimensions)
+    cdef Py_ssize_t footprint_linear_center = point_to_linear(offset_ptr, footprint_dimensions_ptr, num_dimensions)
 
-    cdef Py_ssize_t num_before = linear_center
-    cdef Py_ssize_t num_after = np.prod(footprint.shape) - linear_center - 1
+    cdef Py_ssize_t num_before = footprint_linear_center
+    cdef Py_ssize_t num_after = np.prod(footprint.shape) - footprint_linear_center - 1
 
     # N+(G), the pixels *before* & including the center in a raster scan.
     ones_before = np.concatenate(
