@@ -2,7 +2,6 @@
 
 from collections import deque
 import logging
-import math
 import numpy as np
 import timeit
 
@@ -626,9 +625,7 @@ def fast_hybrid_reconstruct_impl(
     cdef Py_ssize_t linear_center = point_to_linear(offset_ptr, footprint_dimensions_ptr, num_dimensions)
 
     cdef Py_ssize_t num_before = linear_center
-    # For some reason the shape comes back as an array with several zeros.
-    # Just select the actual dimensions out of it.
-    cdef Py_ssize_t num_after = math.prod(footprint.shape) - linear_center - 1
+    cdef Py_ssize_t num_after = np.prod(footprint.shape) - linear_center - 1
 
     # N+(G), the pixels *before* & including the center in a raster scan.
     ones_before = np.concatenate(
@@ -668,7 +665,6 @@ def fast_hybrid_reconstruct_impl(
     # The propagation queue for after the raster scans.
     queue = deque()
 
-    # TODO: do these need to be py_ssize_t or should they be uint8_t ?
     cdef uint8_t* footprint_ptr = <uint8_t*> <Py_ssize_t> footprint.ctypes.data
     cdef uint8_t* footprint_before_ptr = <uint8_t*> <Py_ssize_t> footprint_raster_before.ctypes.data
     cdef uint8_t* footprint_after_ptr = <uint8_t*> <Py_ssize_t> footprint_raster_after.ctypes.data
