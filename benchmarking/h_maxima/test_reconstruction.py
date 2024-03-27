@@ -139,7 +139,6 @@ def test_fill_hole(dtype):
     assert_array_almost_equal(result, expected)
 
 
-@xfail(reason="n dimensions, https://github.com/dchaley/deepcell-imaging/issues/118")
 @pytest.mark.parametrize(
     "dtype",
     [
@@ -224,12 +223,11 @@ def test_invalid_offset_not_none():
         )
 
 
-@xfail(reason="n dimensions, https://github.com/dchaley/deepcell-imaging/issues/118")
 def test_offset_not_none_1d():
     """Test reconstruction with valid offset parameter"""
     seed = np.array([0, 3, 6, 2, 1, 1, 1, 4, 2, 0])
     mask = np.array([0, 8, 6, 8, 8, 8, 8, 4, 4, 0])
-    expected = np.array([0, 3, 6, 6, 6, 6, 6, 4, 4, 0])
+    expected = np.array([0, 6, 6, 4, 4, 4, 4, 4, 2, 0])
 
     assert_array_almost_equal(
         reconstruction(

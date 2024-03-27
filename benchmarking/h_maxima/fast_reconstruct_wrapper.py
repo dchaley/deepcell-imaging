@@ -33,6 +33,8 @@ def cython_reconstruct_wrapper(
     if footprint is None:
         footprint = np.ones([3] * image.ndim, dtype=np.uint8)
     else:
+        if footprint.ndim != image.ndim:
+            raise ValueError("Footprint must have same ndim as image")
         footprint = footprint.astype(np.uint8, copy=True)
 
     # The existing skimage code is inconsistent in how it creates the offset.
@@ -65,7 +67,7 @@ def cython_reconstruct_wrapper(
         if mask.dtype != normalized_type:
             mask = mask.astype(normalized_type, copy=True)
 
-    offset = offset.astype(np.uint8, copy=True)
+    offset = offset.astype(np.int64, copy=True)
 
     fast_hybrid_reconstruct(
         image=image,
