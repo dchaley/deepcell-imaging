@@ -67,7 +67,7 @@ def cython_reconstruct_wrapper(
         if mask.dtype != normalized_type:
             mask = mask.astype(normalized_type, copy=True)
 
-    offset = offset.astype(np.uint8, copy=True)
+    offset = offset.astype(np.int64, copy=True)
 
     fast_hybrid_reconstruct(
         image=image,

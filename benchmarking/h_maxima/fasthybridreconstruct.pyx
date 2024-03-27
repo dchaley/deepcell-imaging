@@ -561,8 +561,7 @@ def fast_hybrid_reconstruct(
     mask,
     footprint,
     uint8_t method,
-    # FIXME(171): offset should be a Py_ssize_t
-    uint8_t[::1] offset
+    offset
 ):
     return fast_hybrid_reconstruct_impl(
         image.dtype.type(0),
@@ -573,14 +572,15 @@ def fast_hybrid_reconstruct(
         offset,
     )
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def fast_hybrid_reconstruct_impl(
     image_dtype dummy_value,
     image,
     mask,
     footprint,
     uint8_t method,
-    # FIXME(171): offset should be a Py_ssize_t
-    uint8_t[::1] offset
+    offset
 ):
     """Perform grayscale reconstruction using the 'Fast-Hybrid' algorithm.
 
@@ -606,20 +606,19 @@ def fast_hybrid_reconstruct_impl(
     Note that this modifies the image in place.
 
     Args:
-        image (image_dtype[][]): the image
-        mask (image_dtype[][]): the mask image
-        footprint (uint8_t[][]): the neighborhood footprint aka N(G)
+        image (numpy array of type: image_dtype): the image
+        mask (numpy array of type: image_dtype): the mask image
+        footprint (numpy array of type: uint8_t): the neighborhood footprint aka N(G)
         method (uint8_t): METHOD_DILATION or METHOD_EROSION
-        offset (uint8_t[]): the offset of the footprint center.
+        offset (numpy array of type: Py_ssize_t): the offset of the footprint center.
 
     Returns:
-        image_dtype[][]: the reconstructed image, modified in place
+        numpy array of type image_dtype: the reconstructed image, modified in place
     """
     cdef image_dtype border_value
     cdef Py_ssize_t num_dimensions = image.ndim
 
-    offset_numpy = np.array(offset, dtype=np.int64, copy=True)
-    cdef Py_ssize_t* offset_ptr = <Py_ssize_t*> <Py_ssize_t> offset_numpy.ctypes.data
+    cdef Py_ssize_t* offset_ptr = <Py_ssize_t*> <Py_ssize_t> offset.ctypes.data
     footprint_dimensions = np.array(footprint.shape, dtype=np.int64)
     cdef Py_ssize_t* footprint_dimensions_ptr = <Py_ssize_t*> <Py_ssize_t> footprint_dimensions.ctypes.data
 
