@@ -564,18 +564,36 @@ def fast_hybrid_reconstruct(
     uint8_t method,
     offset
 ):
-    return fast_hybrid_reconstruct_impl(
-        image.dtype.type(0),
-        image,
-        mask,
-        footprint,
-        method,
-        offset,
-    )
+    dummy_value = image.dtype.type(0)
+
+    if image.dtype == np.uint8:
+        fast_hybrid_reconstruct_impl(<uint8_t> dummy_value, image, mask, footprint, method, offset)
+    elif image.dtype == np.int8:
+        fast_hybrid_reconstruct_impl(<int8_t> dummy_value, image, mask, footprint, method, offset)
+    elif image.dtype == np.uint16:
+        fast_hybrid_reconstruct_impl(<uint16_t> dummy_value, image, mask, footprint, method, offset)
+    elif image.dtype == np.int16:
+        fast_hybrid_reconstruct_impl(<int16_t> dummy_value, image, mask, footprint, method, offset)
+    elif image.dtype == np.uint32:
+        fast_hybrid_reconstruct_impl(<uint32_t> dummy_value, image, mask, footprint, method, offset)
+    elif image.dtype == np.int32:
+        fast_hybrid_reconstruct_impl(<int32_t> dummy_value, image, mask, footprint, method, offset)
+    elif image.dtype == np.uint64:
+        fast_hybrid_reconstruct_impl(<uint64_t> dummy_value, image, mask, footprint, method, offset)
+    elif image.dtype == np.int64:
+        fast_hybrid_reconstruct_impl(<int64_t> dummy_value, image, mask, footprint, method, offset)
+    elif image.dtype == np.float32:
+        fast_hybrid_reconstruct_impl(<float> dummy_value, image, mask, footprint, method, offset)
+    elif image.dtype == np.float64:
+        fast_hybrid_reconstruct_impl(<double> dummy_value, image, mask, footprint, method, offset)
+    else:
+        raise ValueError("Unsupported image dtype: %s" % image.dtype)
+
+    return image
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def fast_hybrid_reconstruct_impl(
+cdef void fast_hybrid_reconstruct_impl(
     image_dtype _dummy_value,
     image,
     mask,
@@ -607,6 +625,7 @@ def fast_hybrid_reconstruct_impl(
     Note that this modifies the image in place.
 
     Args:
+        _dummy_value (image_dtype): a dummy value of the image dtype for type matching
         image (numpy array of type: image_dtype): the image
         mask (numpy array of type: image_dtype): the mask image
         footprint (numpy array of type: uint8_t): the neighborhood footprint aka N(G)
@@ -721,5 +740,4 @@ def fast_hybrid_reconstruct_impl(
         method,
     )
 
-    # All done. Return image (which was modified in place).
-    return image
+    # All done. Image was modified in place.
