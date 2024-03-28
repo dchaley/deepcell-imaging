@@ -35,6 +35,8 @@ cpdef enum:
     METHOD_DILATION = 0
     METHOD_EROSION = 1
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 cdef uint8_t increment_index(
     Py_ssize_t* indices_ptr,
     Py_ssize_t* dimensions_ptr,
@@ -170,12 +172,15 @@ cdef image_dtype get_neighborhood_peak(
     cdef image_dtype pixel_value
     # The peak starts at the border value, and is updated up (or down) as necessary.
     cdef image_dtype neighborhood_peak = border_value
-    cdef Py_ssize_t linear_index
+    cdef Py_ssize_t linear_index = 0
+    cdef Py_ssize_t neighbor_linear_index = 0
 
     cdef Py_ssize_t dim
+    cdef uint8_t end = False
     cdef uint8_t oob
     cdef uint8_t at_center
     cdef uint8_t out_of_footprint
+    cdef Py_ssize_t i
 
     # Reset the loop points to zero.
     for x in range(num_dimensions):
@@ -198,20 +203,29 @@ cdef image_dtype get_neighborhood_peak(
             if footprint_coord_ptr[dim] != footprint_center_ptr[dim]:
                 at_center = False
 
-        if not oob and not at_center:
-            linear_index = point_to_linear(footprint_coord_ptr, footprint_dimensions_ptr, num_dimensions)
-            if not footprint_ptr[linear_index]:
-                out_of_footprint = True
+        if not oob and not at_center and not footprint_ptr[linear_index]:
+            out_of_footprint = True
 
         if not oob and (not out_of_footprint or at_center):
-            linear_index = point_to_linear(neighbor_coord_ptr, image_dimensions_ptr, num_dimensions)
-            pixel_value = image_ptr[linear_index]
+            neighbor_linear_index = point_to_linear(neighbor_coord_ptr, image_dimensions_ptr, num_dimensions)
+            pixel_value = image_ptr[neighbor_linear_index]
             if method == METHOD_DILATION:
                 neighborhood_peak = max(neighborhood_peak, pixel_value)
             elif method == METHOD_EROSION:
                 neighborhood_peak = min(neighborhood_peak, pixel_value)
 
-        if increment_index(footprint_coord_ptr, footprint_dimensions_ptr, num_dimensions):
+        linear_index += 1
+        for i in range(num_dimensions - 1, -1, -1):
+            if footprint_coord_ptr[i] < footprint_dimensions_ptr[i] - 1:
+                footprint_coord_ptr[i] += 1
+                break
+            else:
+                footprint_coord_ptr[i] = 0
+                if i == 0:
+                    end = True
+                    break
+
+        if end:
             break
 
     return neighborhood_peak
@@ -266,6 +280,8 @@ cdef uint8_t should_propagate(
     cdef uint8_t oob
     cdef uint8_t at_center
     cdef uint8_t out_of_footprint
+    cdef uint8_t end = False
+    cdef Py_ssize_t i
 
     # Reset the loop points to zero.
     for x in range(num_dimensions):
@@ -312,7 +328,17 @@ cdef uint8_t should_propagate(
             ):
                 return 1
 
-        if increment_index(footprint_coord_ptr, footprint_dimensions_ptr, num_dimensions):
+        for i in range(num_dimensions - 1, -1, -1):
+            if footprint_coord_ptr[i] < footprint_dimensions_ptr[i] - 1:
+                footprint_coord_ptr[i] += 1
+                break
+            else:
+                footprint_coord_ptr[i] = 0
+                if i == 0:
+                    end = True
+                    break
+
+        if end:
             break
 
     return 0
