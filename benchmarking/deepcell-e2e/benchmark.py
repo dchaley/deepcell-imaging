@@ -284,6 +284,7 @@ headers = [
     "Predict inference time (s)",
     "Predict postprocess time (s)",
     "deepcell-tf version",
+    "machine_config",
     "is_first_run",
 ]
 
@@ -432,6 +433,11 @@ prediction_overhead_s = (
     prediction_time_s - preprocess_time_s - inference_time_s - postprocess_time_s
 )
 
+if gpu_count == 0:
+    machine_config = machine_type
+else:
+    machine_config = "%s + %sx %s" % (machine_type, gpu_count, gpu_name)
+
 # Write benchmarking data as CSV:
 
 output = io.StringIO()
@@ -462,11 +468,12 @@ writer.writerow(
         round(inference_time_s, 2),
         round(postprocess_time_s, 2),
         deepcell_version,
+        machine_config,
         "",  # is_first_run (leave it blank / null)
     ]
 )
 
-print("Appending benchmark result to bigquery")
+logger.info("Appending benchmark result to bigquery: %s", output.getvalue())
 # Construct a BigQuery client object.
 bq_client = bigquery.Client()
 
@@ -480,6 +487,4 @@ table_id = "{}.benchmarking.results".format(project_id)
 load_job = bq_client.load_table_from_file(csv_file, table_id, job_config=job_config)
 load_job.result()  # Waits for the job to complete.
 
-print("Appended result row to bigquery:")
-
-print(output.getvalue())
+print("Appended result row to bigquery.")
