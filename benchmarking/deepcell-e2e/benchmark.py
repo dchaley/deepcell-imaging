@@ -284,6 +284,7 @@ headers = [
     "Predict inference time (s)",
     "Predict postprocess time (s)",
     "deepcell-tf version",
+    "is_first_run",
 ]
 
 parsed_url = urllib.parse.urlparse(input_channels_path)
@@ -324,9 +325,9 @@ else:
 
 import subprocess
 
-print("-----Starting auth check")
-print(subprocess.check_output(["gcloud", "auth", "list"]))
-print("-----Ending auth check")
+# print("-----Starting auth check")
+# print(subprocess.check_output(["gcloud", "auth", "list"]))
+# print("-----Ending auth check")
 
 
 def get_project_id():
@@ -462,6 +463,7 @@ writer.writerow(
         round(inference_time_s, 2),
         round(postprocess_time_s, 2),
         deepcell_version,
+        None,  # is_first_run
     ]
 )
 
