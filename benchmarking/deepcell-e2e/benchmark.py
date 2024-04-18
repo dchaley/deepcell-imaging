@@ -416,7 +416,6 @@ except RuntimeError as e:
 # Get the OS type from the platform library,
 # then set the memory unit factor accordingly.
 os_type = platform.system()
-os_type = os_type[0]
 # This is crude and impartial– but it works across my mac & Google Cloud
 if "Darwin" == os_type:
     memory_unit_factor = 1000000000
@@ -463,7 +462,7 @@ writer.writerow(
         round(inference_time_s, 2),
         round(postprocess_time_s, 2),
         deepcell_version,
-        None,  # is_first_run
+        "",  # is_first_run (leave it blank / null)
     ]
 )
 
