@@ -264,28 +264,12 @@ if visualize:
 # Benchmark data
 # %%
 headers = [
-    "Input file id",
-    "Image size (MB)",
-    "Pixels (M)",
-    "Compartment",
-    "Benchmark datetime (UTC)",
-    "Machine type",
-    "GPU type",
-    "# GPUs",
-    "Batch size",
-    "Kernel",
-    "Success?",
-    "Total time (s)",
-    "Peak memory (GB)",
-    "Load time (s)",
-    "Total prediction time (s)",
-    "Prediction overhead (s)",
-    "Predict preprocess time (s)",
-    "Predict inference time (s)",
-    "Predict postprocess time (s)",
-    "deepcell-tf version",
-    "machine_config",
-    "is_first_run",
+    'input_file_id', 'numpy_size_mb', 'pixels_m', 'compartment', 'benchmark_datetime_utc',
+    'instance_type', 'gpu_type', 'num_gpus', 'batch_size', 'kernel',
+    'success', 'total_time_s', 'peak_memory_gb',
+    'load_time_s', 'total_prediction_time_s', 'prediction_overhead_s',
+    'predict_preprocess_time_s', 'predict_inference_time_s', 'predict_postprocess_time_s',
+    'deepcell_tf_version', 'machine_config', 'is_first_run',
 ]
 
 parsed_url = urllib.parse.urlparse(input_channels_path)
