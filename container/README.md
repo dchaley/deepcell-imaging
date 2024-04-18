@@ -4,27 +4,15 @@ This sets up a container that executes the steps in the benchmark setup notebook
 
 Followed [Google instructions on derivative containers](https://cloud.google.com/deep-learning-containers/docs/derivative-container).
 
-To build/push the container,
+To build/push the container, run: `build-and-push-gce-container.sh`. Make sure to update the environment variables as necessary.
 
-```
-export LOCATION="us-west1"
-export REPOSITORY_NAME="deepcell-benchmarking"
-export PROJECT=$(gcloud config list project --format "value(core.project)")
-export IMAGE_NAME="${LOCATION}-docker.pkg.dev/${PROJECT}/${REPOSITORY_NAME}/benchmarking:v3"
-```
-
-We need to change the image name version tag each build/push.
-
-# Command to build * push docker image
+To create the repository, run:
 
 ```
 gcloud artifacts repositories create $REPOSITORY_NAME \
     --repository-format=docker \
     --location=$LOCATION
 gcloud auth configure-docker ${LOCATION}-docker.pkg.dev
-
-docker build . -t $IMAGE_NAME
-docker push $IMAGE_NAME
 ```
 
 # Command to create Vertex AI custom job w/ container
