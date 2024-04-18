@@ -360,7 +360,8 @@ try:
 except Exception as e:
     print("Error getting project id: %s" % e)
 
-if custom_job_name:
+
+def get_vertex_ai_custom_job_machine_type(custom_job_name):
     # For running on vertex AI:
     try:
         from google.cloud import aiplatform
@@ -371,12 +372,33 @@ if custom_job_name:
         matching_jobs = aiplatform.CustomJob.list(filter=display_filter)
 
         job = matching_jobs[0]
-        machine_type = job.job_spec.worker_pool_specs[0].machine_spec.machine_type
-    except Exception as e:
+        return job.job_spec.worker_pool_specs[0].machine_spec.machine_type
+    except RuntimeError as e:
         exception_string = traceback.format_exc()
         logging.warning("Error getting machine type: " + exception_string)
-        machine_type = "error"
-else:
+        return "error"
+
+
+def get_compute_engine_machine_type():
+    # Call the metadata server.
+    try:
+        import requests
+
+        metadata_server = "http://metadata/computeMetadata/v1/instance/machine-type"
+        metadata_flavor = {"Metadata-Flavor": "Google"}
+
+        return requests.get(metadata_server, headers=metadata_flavor).text
+    except RuntimeError as e:
+        exception_string = traceback.format_exc()
+        logging.warning("Error getting machine type: " + exception_string)
+        return "error"
+
+
+try:
+    # machine_type = get_vertex_ai_custom_job_machine_type(custom_job_name)
+    machine_type = get_compute_engine_machine_type()
+except RuntimeError as e:
+    logging.warning("Error getting machine type: '%s'. Defaulting to os info" + e)
     # assume a generic python environment
     # See also:
     # https://docs.python.org/3.10/library/os.html#os.cpu_count
