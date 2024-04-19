@@ -264,12 +264,28 @@ if visualize:
 # Benchmark data
 # %%
 headers = [
-    'input_file_id', 'numpy_size_mb', 'pixels_m', 'compartment', 'benchmark_datetime_utc',
-    'instance_type', 'gpu_type', 'num_gpus', 'batch_size', 'kernel',
-    'success', 'total_time_s', 'peak_memory_gb',
-    'load_time_s', 'total_prediction_time_s', 'prediction_overhead_s',
-    'predict_preprocess_time_s', 'predict_inference_time_s', 'predict_postprocess_time_s',
-    'deepcell_tf_version', 'machine_config', 'is_first_run',
+    "input_file_id",
+    "numpy_size_mb",
+    "pixels_m",
+    "compartment",
+    "benchmark_datetime_utc",
+    "instance_type",
+    "gpu_type",
+    "num_gpus",
+    "batch_size",
+    "kernel",
+    "success",
+    "total_time_s",
+    "peak_memory_gb",
+    "load_time_s",
+    "total_prediction_time_s",
+    "prediction_overhead_s",
+    "predict_preprocess_time_s",
+    "predict_inference_time_s",
+    "predict_postprocess_time_s",
+    "deepcell_tf_version",
+    "machine_config",
+    "is_first_run",
 ]
 
 parsed_url = urllib.parse.urlparse(input_channels_path)
@@ -464,7 +480,7 @@ bq_client = bigquery.Client()
 job_config = bigquery.LoadJobConfig(
     write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
     source_format=bigquery.SourceFormat.CSV,
-    skip_leading_rows=0,
+    skip_leading_rows=1,
 )
 csv_file = io.StringIO(output.getvalue())
 table_id = "{}.benchmarking.results".format(project_id)
