@@ -286,6 +286,7 @@ headers = [
     "deepcell_tf_version",
     "machine_config",
     "is_first_run",
+    "gcp_service",
 ]
 
 parsed_url = urllib.parse.urlparse(input_channels_path)
@@ -446,6 +447,9 @@ writer.writerow(headers)
 
 deepcell_version = deepcell.__version__
 
+# Hard-coding the GCP service for now.
+gcp_service = "batch"
+
 writer.writerow(
     [
         filename,
@@ -470,6 +474,7 @@ writer.writerow(
         deepcell_version,
         machine_config,
         "",  # is_first_run (leave it blank / null)
+        gcp_service,
     ]
 )
 
