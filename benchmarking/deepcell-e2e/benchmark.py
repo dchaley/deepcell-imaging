@@ -390,7 +390,9 @@ def get_compute_engine_machine_type():
         metadata_server = "http://metadata/computeMetadata/v1/instance/machine-type"
         metadata_flavor = {"Metadata-Flavor": "Google"}
 
-        return requests.get(metadata_server, headers=metadata_flavor).text
+        # This comes back like this: projects/1234567890/machineTypes/n2-standard-8
+        full_machine_type = requests.get(metadata_server, headers=metadata_flavor).text
+        return full_machine_type.split("/")[-1]
     except RuntimeError as e:
         exception_string = traceback.format_exc()
         logging.warning("Error getting machine type: " + exception_string)
