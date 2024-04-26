@@ -27,6 +27,7 @@ import re
 import resource
 import smart_open
 import sys
+from tenacity import retry, wait_random_exponential
 import tensorflow as tf
 import traceback
 import timeit
@@ -393,7 +394,7 @@ def get_compute_engine_machine_type():
         # This comes back like this: projects/1234567890/machineTypes/n2-standard-8
         full_machine_type = requests.get(metadata_server, headers=metadata_flavor).text
         return full_machine_type.split("/")[-1]
-    except RuntimeError as e:
+    except Exception as e:
         exception_string = traceback.format_exc()
         logging.warning("Error getting machine type: " + exception_string)
         return "error"
@@ -402,7 +403,7 @@ def get_compute_engine_machine_type():
 try:
     # machine_type = get_vertex_ai_custom_job_machine_type(custom_job_name)
     machine_type = get_compute_engine_machine_type()
-except RuntimeError as e:
+except Exception as e:
     logging.warning("Error getting machine type: '%s'. Defaulting to os info" + e)
     # assume a generic python environment
     # See also:
@@ -490,8 +491,15 @@ job_config = bigquery.LoadJobConfig(
     skip_leading_rows=1,
 )
 csv_file = io.StringIO(output.getvalue())
-table_id = "{}.benchmarking.results".format(project_id)
-load_job = bq_client.load_table_from_file(csv_file, table_id, job_config=job_config)
-load_job.result()  # Waits for the job to complete.
 
+
+@retry(wait=wait_random_exponential(multiplier=1, max=60))
+def upload_to_bigquery(csv_string, table_id, bq_job_config):
+    load_job = bq_client.load_table_from_file(
+        csv_string, table_id, job_config=bq_job_config
+    )
+    load_job.result()  # Waits for the job to complete.
+
+
+upload_to_bigquery(csv_file, "{}.benchmarking.results".format(project_id), job_config)
 print("Appended result row to bigquery.")
