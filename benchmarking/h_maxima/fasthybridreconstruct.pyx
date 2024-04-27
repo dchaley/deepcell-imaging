@@ -29,6 +29,7 @@ ctypedef fused image_dtype:
 #     uint8_t
 #     int16_t
 #     int64_t
+#     float
 #     double
 
 cpdef enum:
