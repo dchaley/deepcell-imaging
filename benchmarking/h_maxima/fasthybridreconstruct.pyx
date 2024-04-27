@@ -38,7 +38,7 @@ cpdef enum:
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef uint8_t increment_index(
+cdef inline uint8_t increment_index(
     Py_ssize_t* indices_ptr,
     Py_ssize_t* dimensions_ptr,
     Py_ssize_t num_dimensions,
@@ -65,7 +65,7 @@ cdef uint8_t increment_index(
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef Py_ssize_t point_to_linear(
+cdef inline Py_ssize_t point_to_linear(
     Py_ssize_t* coord_ptr,
     Py_ssize_t* dimensions_ptr,
     Py_ssize_t num_dimensions,
@@ -97,7 +97,7 @@ def point_to_linear_python(point, dimensions, num_dimensions):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef Py_ssize_t* linear_to_point(
+cdef inline Py_ssize_t* linear_to_point(
     Py_ssize_t linear,
     Py_ssize_t* point_output_ptr,
     Py_ssize_t* dimensions_ptr,
