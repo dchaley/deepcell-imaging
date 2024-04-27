@@ -42,7 +42,7 @@ cdef inline uint8_t increment_index(
     Py_ssize_t* indices_ptr,
     Py_ssize_t* dimensions_ptr,
     Py_ssize_t num_dimensions,
-):
+) nogil:
     """Increment an index in N dimensions.
 
     Args:
@@ -69,7 +69,7 @@ cdef inline Py_ssize_t point_to_linear(
     Py_ssize_t* coord_ptr,
     Py_ssize_t* dimensions_ptr,
     Py_ssize_t num_dimensions,
-):
+) nogil:
     """Convert a point in N dimensions to a linear index.
 
     Args:
@@ -102,7 +102,7 @@ cdef inline Py_ssize_t* linear_to_point(
     Py_ssize_t* point_output_ptr,
     Py_ssize_t* dimensions_ptr,
     Py_ssize_t num_dimensions,
-):
+) nogil:
     """Convert a linear index to a point in N dimensions.
 
     Args:
@@ -142,7 +142,7 @@ cdef image_dtype get_neighborhood_peak(
     uint8_t method,
     Py_ssize_t* footprint_coord_ptr,
     Py_ssize_t* neighbor_coord_ptr,
-):
+) nogil:
     """Get the neighborhood peak around a point.
 
     For dilation, this is the maximum in the neighborhood. For erosion, the minimum.
@@ -238,7 +238,7 @@ cdef uint8_t should_propagate(
     uint8_t method,
     Py_ssize_t* footprint_coord_ptr,
     Py_ssize_t* neighbor_coord_ptr,
-):
+) nogil:
     """Determine if a point should be propagated to its neighbors.
 
     This implements the queue test during the raster scan/anti-scan.
