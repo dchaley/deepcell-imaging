@@ -4,6 +4,7 @@ import pytest
 import random
 import skimage.morphology.grayreconstruct
 import time
+import timeit
 
 from fast_reconstruct_wrapper import cython_reconstruct_wrapper
 
@@ -92,9 +93,13 @@ def test_random_data(dtype, rows, cols, method, random_seed):
     else:
         mask = np.minimum(image, mask, out=mask)
 
+    t = timeit.default_timer()
     cython_result = cython_reconstruct_wrapper(image, mask, method=method)
+    print("Cython time:", timeit.default_timer() - t)
+    t = timeit.default_timer()
     scikit_result = skimage.morphology.grayreconstruct.reconstruction(
         image, mask, method=method
     )
+    print("Scikit time:", timeit.default_timer() - t)
 
     assert_array_almost_equal(cython_result, scikit_result)
