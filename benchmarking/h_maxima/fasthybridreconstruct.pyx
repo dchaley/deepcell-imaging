@@ -63,6 +63,34 @@ cdef inline uint8_t increment_index(
             if i == 0:
                 return 1
 
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef inline uint8_t decrement_index(
+        Py_ssize_t* indices_ptr,
+        Py_ssize_t* dimensions_ptr,
+        Py_ssize_t num_dimensions,
+) nogil:
+    """Decrement an index in N dimensions.
+
+    Args:
+        indices_ptr (Py_ssize_t*): the indices to increment
+        dimensions_ptr (Py_ssize_t*): the size of each dimension
+        num_dimensions (Py_ssize_t): the number of dimensions
+
+    Returns:
+        1 if the iteration is complete, 0 otherwise.
+    """
+    cdef Py_ssize_t i
+    for i in range(num_dimensions - 1, -1, -1):
+        if indices_ptr[i] > 0:
+            indices_ptr[i] -= 1
+            return 0
+        else:
+            indices_ptr[i] = dimensions_ptr[i] - 1
+            if i == 0:
+                return 1
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef inline Py_ssize_t point_to_linear(
@@ -276,6 +304,7 @@ cdef uint8_t should_propagate(
     cdef uint8_t at_center
     cdef uint8_t out_of_footprint
     cdef uint8_t end = False
+    cdef Py_ssize_t center_linear_index = point_to_linear(footprint_center_ptr, footprint_dimensions_ptr, num_dimensions)
 
     # Reset the loop points to zero.
     for x in range(num_dimensions):
@@ -291,8 +320,18 @@ cdef uint8_t should_propagate(
         linear_neighbor_index = 0
         multiplier = 1
 
+        # There's no need to test in reverse-raster order during the
+        # reverse raster scan: we're already scanning in that order.
+        if linear_footprint_index > center_linear_index:
+            break
+
+        # The point to consider is the propagating point, offset by the footprint
+        # center. Then we offset backward by the footprint loop position.
+        #
+        # In the first iteration, we're placing the footprint such that its 0th point
+        # is on the propagating point. If that point is in the footprint, then, the
+        # propagating point is a neighbor of the footprint's center in that position.
         for dim in range(num_dimensions - 1, -1, -1):
-            # The center point is the current point, offset by the footprint center.
             neighbor_coord_ptr[dim] = coord_ptr[dim] + footprint_center_ptr[dim] - footprint_coord_ptr[dim]
 
             if neighbor_coord_ptr[dim] < 0 or neighbor_coord_ptr[dim] >= image_dimensions_ptr[dim]:
@@ -404,9 +443,12 @@ cdef void perform_reverse_raster_scan(
 ):
     cdef image_dtype neighborhood_peak, point_mask
     cdef Py_ssize_t linear_index
+    cdef Py_ssize_t dimension
 
     scan_coord_numpy = np.zeros(num_dimensions, dtype=np.int64)
     cdef Py_ssize_t* scan_coord_ptr = <Py_ssize_t*> <Py_ssize_t> scan_coord_numpy.ctypes.data
+    for dimension in range(num_dimensions):
+        scan_coord_ptr[dimension] = image_dimensions_ptr[dimension] - 1
 
     # We use these 2 buffers to avoid re-allocating them in the inner loop.
     loop_coord_numpy = np.zeros(num_dimensions, dtype=np.int64)
@@ -455,7 +497,7 @@ cdef void perform_reverse_raster_scan(
         ):
             queue.append(linear_index)
 
-        if increment_index(scan_coord_ptr, image_dimensions_ptr, num_dimensions):
+        if decrement_index(scan_coord_ptr, image_dimensions_ptr, num_dimensions):
             break
 
 
