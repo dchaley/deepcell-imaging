@@ -14,7 +14,6 @@ from datetime import datetime, timezone
 import deepcell
 from deepcell.applications import Mesmer
 from google.cloud import bigquery
-from functools import reduce
 import io
 from itertools import groupby
 import logging
@@ -27,7 +26,7 @@ import re
 import resource
 import smart_open
 import sys
-from tenacity import retry, wait_random_exponential
+from tenacity import retry, retry_if_exception_message, wait_random_exponential
 import tensorflow as tf
 import traceback
 import timeit
@@ -493,7 +492,10 @@ job_config = bigquery.LoadJobConfig(
 csv_file = io.StringIO(output.getvalue())
 
 
-@retry(wait=wait_random_exponential(multiplier=1, max=60))
+@retry(
+    wait=wait_random_exponential(multiplier=1, max=60),
+    retry=retry_if_exception_message(match=".*403 Exceeded rate limits.*"),
+)
 def upload_to_bigquery(csv_string, table_id, bq_job_config):
     load_job = bq_client.load_table_from_file(
         csv_string, table_id, job_config=bq_job_config
