@@ -9,7 +9,7 @@ cimport cython
 from libc.stdint cimport uint8_t, int8_t, uint16_t, int16_t, uint32_t, int32_t, uint64_t, int64_t
 
 # This fast-hybrid reconstruction algorithm supports the following data types.
-# Adding more should be a simple matter of adding them to this list.
+# To add more, add to this list, and to the type cast in the main function.
 
 # Production mode types
 ctypedef fused image_dtype:
@@ -158,6 +158,50 @@ def linear_to_point_python(linear, dimensions, num_dimensions):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
+cdef inline uint8_t offset_coord(
+    Py_ssize_t* start_coord,
+    Py_ssize_t* footprint_center_offset,
+    Py_ssize_t* offset_coord,
+    Py_ssize_t* result_coord,
+    Py_ssize_t sign,
+    Py_ssize_t* dimensions,
+    Py_ssize_t num_dimensions,
+    Py_ssize_t* result_linear_index,
+    uint8_t* at_center,
+) nogil:
+    """Offset (add) the starting point by the offset point minus a center point.
+
+    If the sign is negative, the offset-center is subtracted instead.
+
+    If any dimension is out of bounds, return false and skip assigning more coordinates.
+
+    Otherwise, set all dimension coordinates, the linear index, and whether the point is at the center.
+
+    Returns:
+        uint8_t: 1 if the neighbor is in bounds, 0 otherwise.
+    """
+    cdef Py_ssize_t i
+    result_linear_index[0] = 0
+    cdef Py_ssize_t multiplier = 1
+    at_center[0] = True
+    for i in range(num_dimensions - 1, -1, -1):
+        result_coord[i] = start_coord[i] + sign * (offset_coord[i] - footprint_center_offset[i])
+
+        # Make sure the dimension is in bounds; return false if not.
+        if result_coord[i] < 0 or result_coord[i] >= dimensions[i]:
+            return 0
+
+        result_linear_index[0] += result_coord[i] * multiplier
+        multiplier *= dimensions[i]
+
+        if at_center[0] and offset_coord[i] != footprint_center_offset[i]:
+            at_center[0] = False
+
+    # Each dimension is in bounds.
+    return 1
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
 cdef image_dtype get_neighborhood_peak(
     image_dtype* image_ptr,
     Py_ssize_t* image_dimensions_ptr,
@@ -203,38 +247,29 @@ cdef image_dtype get_neighborhood_peak(
     cdef image_dtype neighborhood_peak = border_value
     cdef Py_ssize_t linear_index = 0
     cdef Py_ssize_t neighbor_linear_index = 0
-    cdef Py_ssize_t multiplier = 1
 
     cdef Py_ssize_t dimension
     cdef uint8_t oob
     cdef uint8_t at_center
-    cdef uint8_t out_of_footprint
 
     # Reset the loop points to zero.
-    for x in range(num_dimensions):
-        footprint_coord_ptr[x] = 0
+    for dimension in range(num_dimensions):
+        footprint_coord_ptr[dimension] = 0
 
     while True:
-        # This gets set to true if necessary.
-        oob = False
-        # This gets set to false if necessary.
-        at_center = True
-        # This gets set to true if necessary.
-        out_of_footprint = False
-        neighbor_linear_index = 0
-        multiplier = 1
+        oob = not offset_coord(
+            center_coord_ptr,
+            footprint_center_ptr,
+            footprint_coord_ptr,
+            neighbor_coord_ptr,
+            1,
+            image_dimensions_ptr,
+            num_dimensions,
+            &neighbor_linear_index,
+            &at_center,
+        )
 
-        for dimension in range(num_dimensions - 1, -1, -1):
-            # Calculate the neighbor's coordinates
-            neighbor_coord_ptr[dimension] = center_coord_ptr[dimension] + footprint_coord_ptr[dimension] - footprint_center_ptr[dimension]
-            if neighbor_coord_ptr[dimension] < 0 or neighbor_coord_ptr[dimension] >= image_dimensions_ptr[dimension]:
-                oob = True
-                break
-            neighbor_linear_index += neighbor_coord_ptr[dimension] * multiplier
-            multiplier *= image_dimensions_ptr[dimension]
-            if at_center and footprint_coord_ptr[dimension] != footprint_center_ptr[dimension]:
-                at_center = False
-
+        # Consider in-bound points in the footprint or at the current point.
         if not oob and (at_center or footprint_ptr[linear_index]):
             pixel_value = image_ptr[neighbor_linear_index]
             if method == METHOD_DILATION:
@@ -296,51 +331,36 @@ cdef uint8_t should_propagate(
 
     cdef Py_ssize_t footprint_linear_index = 0
     cdef Py_ssize_t neighbor_linear_index = 0
-    cdef Py_ssize_t multiplier = 1
     cdef Py_ssize_t dimension
     cdef uint8_t oob
     cdef uint8_t at_center
-    cdef uint8_t out_of_footprint
-    cdef uint8_t end = False
     cdef Py_ssize_t center_linear_index = point_to_linear(footprint_center_ptr, footprint_dimensions_ptr, num_dimensions)
 
     # Reset the loop points to zero.
-    for x in range(num_dimensions):
-        footprint_coord_ptr[x] = 0
+    for dimension in range(num_dimensions):
+        footprint_coord_ptr[dimension] = 0
 
-    # Place the current point at each position of the footprint.
-    # If that footprint position is true, then, the current point
-    # is a neighbor of the footprint center.
+    # For each point the queue point could propagate to, in
+    # other words for each point this point is a neighbor of,
+    # propagate if necessary & add that point to the queue
+    # for further propagation.
     while True:
-        oob = False
-        at_center = True
-        out_of_footprint = False
-        neighbor_linear_index = 0
-        multiplier = 1
-
         # There's no need to test in reverse-raster order during the
         # reverse raster scan: we're already scanning in that order.
         if footprint_linear_index > center_linear_index:
             break
 
-        # The point to consider is the propagating point, offset by the footprint
-        # center. Then we offset backward by the footprint loop position.
-        #
-        # In the first iteration, we're placing the footprint such that its 0th point
-        # is on the propagating point. If that point is in the footprint, then, the
-        # propagating point is a neighbor of the footprint's center in that position.
-        for dimension in range(num_dimensions - 1, -1, -1):
-            neighbor_coord_ptr[dimension] = coord_ptr[dimension] + footprint_center_ptr[dimension] - footprint_coord_ptr[dimension]
-
-            if neighbor_coord_ptr[dimension] < 0 or neighbor_coord_ptr[dimension] >= image_dimensions_ptr[dimension]:
-                oob = True
-                break
-
-            neighbor_linear_index += neighbor_coord_ptr[dimension] * multiplier
-            multiplier *= image_dimensions_ptr[dimension]
-
-            if at_center and footprint_coord_ptr[dimension] != footprint_center_ptr[dimension]:
-                at_center = False
+        oob = not offset_coord(
+            coord_ptr,
+            footprint_center_ptr,
+            footprint_coord_ptr,
+            neighbor_coord_ptr,
+            -1, # we are testing for points of which *this point* is a neighbor
+            image_dimensions_ptr,
+            num_dimensions,
+            &neighbor_linear_index,
+            &at_center,
+        )
 
         # Skip:
         # - out-of-bounds points
@@ -539,7 +559,7 @@ cdef process_queue(
     coord_numpy = np.zeros(num_dimensions, dtype=np.int64)
     cdef Py_ssize_t* queue_pt_coord_ptr = <Py_ssize_t*> <Py_ssize_t> coord_numpy.ctypes.data
 
-    # We use these 2 buffers to avoid re-allocating them in the inner loop.
+    # Pre-allocate these 2 buffers & re-use them in loops later.
     loop_coord_numpy = np.array([0] * num_dimensions, dtype=np.int64)
     neighbor_coord_numpy = np.array([0] * num_dimensions, dtype=np.int64)
     cdef Py_ssize_t* loop_coord_ptr = <Py_ssize_t*> <Py_ssize_t> loop_coord_numpy.ctypes.data
@@ -548,10 +568,8 @@ cdef process_queue(
     cdef Py_ssize_t neighbor_linear_index
     cdef Py_ssize_t footprint_linear_index = 0
 
-    cdef Py_ssize_t dimension
     cdef uint8_t oob
     cdef uint8_t at_center
-    cdef uint8_t out_of_footprint
 
     # Process the queue of pixels that need to be updated.
     while len(queue) > 0:
@@ -560,28 +578,27 @@ cdef process_queue(
         point_value = image_ptr[queue_pt_linear_index]
         footprint_linear_index = 0
 
-        # Place the current point at each position of the footprint.
-        # If that footprint position is true, then, the current point
-        # is a neighbor of the footprint center.
+        # For each point the queue point could propagate to, in
+        # other words for each point this point is a neighbor of,
+        # propagate if necessary & add that point to the queue
+        # for further propagation.
         while True:
-            oob = False
-            at_center = True
-            out_of_footprint = False
-
-            for dimension in range(num_dimensions):
-                # Calculate the neighbor's coordinates
-                neighbor_coord_ptr[dimension] = queue_pt_coord_ptr[dimension] + (offset_ptr[dimension] - loop_coord_ptr[dimension])
-                if neighbor_coord_ptr[dimension] < 0 or neighbor_coord_ptr[dimension] >= image_dimensions_ptr[dimension]:
-                    oob = True
-                    break
-                if loop_coord_ptr[dimension] != offset_ptr[dimension]:
-                    at_center = False
+            oob = not offset_coord(
+                queue_pt_coord_ptr,
+                offset_ptr,
+                loop_coord_ptr,
+                neighbor_coord_ptr,
+                -1, # we are testing for points of which *this point* is a neighbor
+                image_dimensions_ptr,
+                num_dimensions,
+                &neighbor_linear_index,
+                &at_center,
+            )
 
             # Skip out of bounds
             # The center point is always skipped.
             # Also skip if not in footprint.
             if not oob and not at_center and footprint_ptr[footprint_linear_index]:
-                neighbor_linear_index = point_to_linear(neighbor_coord_ptr, image_dimensions_ptr, num_dimensions)
                 neighbor_value = image_ptr[neighbor_linear_index]
                 neighbor_mask = <image_dtype> mask_ptr[neighbor_linear_index]
 
@@ -606,8 +623,11 @@ def fast_hybrid_reconstruct(
     uint8_t method,
     offset
 ):
+    # The dummy value lets the compiler pick the right overload.
+    # (The image & mask are Python numpy objects)
     dummy_value = image.dtype.type(0)
 
+    # To support a new type, add it here and to the type alias.
     if image.dtype == np.uint8:
         fast_hybrid_reconstruct_impl(<uint8_t> dummy_value, image, mask, footprint, method, offset)
     elif image.dtype == np.int8:
@@ -661,8 +681,8 @@ cdef void fast_hybrid_reconstruct_impl(
     enhancements described in Teodoro's paper. Instead, it relies on Cython
     to perform the sequential iterations very quickly. One of its main
     advantages over the downhill filter implementation above is that it
-    avoids two sorts and accompanying memory allocations for several-
-    hundred-megabyte image files.
+    avoids two n-log-n sorts, and accompanying memory allocations. Instead
+    most of its work is performed in 2 linear scans.
 
     Note that this modifies the image in place.
 
