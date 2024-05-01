@@ -24,14 +24,6 @@ ctypedef fused image_dtype:
     float
     double
 
-# Dev mode types
-# ctypedef fused image_dtype:
-#     uint8_t
-#     int16_t
-#     int64_t
-#     float
-#     double
-
 cpdef enum:
     METHOD_DILATION = 0
     METHOD_EROSION = 1
