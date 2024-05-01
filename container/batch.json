@@ -1,0 +1,49 @@
+{
+    "taskGroups": [
+        {
+            "taskSpec": {
+                "runnables": [
+                    {
+                        "container": {
+                            "imageUri": "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:gce",
+                            "commands": [
+                                "--custom_job_name=notrelevant"
+                            ]
+                        }
+                    }
+                ],
+                "computeResource": {
+                    "cpuMilli": 1000,
+                    "memoryMib": 26000
+                }
+            },
+            "taskCount": 1,
+            "parallelism": 1
+        }
+    ],
+    "allocationPolicy": {
+        "instances": [
+            {
+                "installGpuDrivers": true,
+                "policy": {
+                  "machineType": "n1-standard-8",
+                  "provisioningModel": "STANDARD",
+                    "accelerators": [
+                        {
+                            "type": "nvidia-tesla-t4",
+                            "count": 1
+                        }
+                    ]
+                }
+            }
+        ],
+        "location": {
+            "allowedLocations": [
+                "regions/us-central1"
+            ]
+        }
+    },
+    "logsPolicy": {
+        "destination": "CLOUD_LOGGING"
+    }
+}
