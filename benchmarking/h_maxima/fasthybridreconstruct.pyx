@@ -689,7 +689,7 @@ cdef void fast_hybrid_reconstruct_impl(
     cdef Py_ssize_t footprint_linear_center = point_to_linear(offset_ptr, footprint_dimensions_ptr, num_dimensions)
 
     cdef Py_ssize_t num_before = footprint_linear_center
-    cdef Py_ssize_t num_after = np.prod(footprint.shape) - footprint_linear_center - 1
+    cdef Py_ssize_t num_after = np.prod(footprint.shape) - footprint_linear_center - <Py_ssize_t> 1
 
     # N+(G), the pixels *before* & including the center in a raster scan.
     ones_before = np.concatenate(
