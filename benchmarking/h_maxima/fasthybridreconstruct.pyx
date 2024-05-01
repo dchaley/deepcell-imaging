@@ -200,6 +200,8 @@ cdef image_dtype get_neighborhood_peak(
     Py_ssize_t num_dimensions,
     Py_ssize_t* center_coord_ptr,
     uint8_t* footprint_ptr,
+    Py_ssize_t footprint_start_index,
+    Py_ssize_t footprint_end_index,
     Py_ssize_t* footprint_dimensions_ptr,
     Py_ssize_t* footprint_center_ptr,
     image_dtype border_value,
@@ -237,16 +239,14 @@ cdef image_dtype get_neighborhood_peak(
     cdef image_dtype pixel_value
     # The peak starts at the border value, and is updated up (or down) as necessary.
     cdef image_dtype neighborhood_peak = border_value
-    cdef Py_ssize_t linear_index = 0
     cdef Py_ssize_t neighbor_linear_index = 0
 
-    cdef Py_ssize_t dimension
     cdef uint8_t oob
     cdef uint8_t at_center
 
-    # Reset the loop points to zero.
-    for dimension in range(num_dimensions):
-        footprint_coord_ptr[dimension] = 0
+    # Set the neighborhood loop coordinate to the start.
+    cdef Py_ssize_t linear_index = footprint_start_index
+    linear_to_point(footprint_start_index, footprint_coord_ptr, footprint_dimensions_ptr, num_dimensions)
 
     while True:
         oob = not offset_coord(
@@ -270,7 +270,7 @@ cdef image_dtype get_neighborhood_peak(
                 neighborhood_peak = min(neighborhood_peak, pixel_value)
 
         linear_index += 1
-        if increment_index(footprint_coord_ptr, footprint_dimensions_ptr, num_dimensions):
+        if linear_index > footprint_end_index or increment_index(footprint_coord_ptr, footprint_dimensions_ptr, num_dimensions):
             break
 
     return neighborhood_peak
@@ -337,11 +337,6 @@ cdef uint8_t should_propagate(
     # propagate if necessary & add that point to the queue
     # for further propagation.
     while True:
-        # There's no need to test in reverse-raster order during the
-        # reverse raster scan: we're already scanning in that order.
-        if footprint_linear_index > center_linear_index:
-            break
-
         oob = not offset_coord(
             coord_ptr,
             footprint_center_ptr,
@@ -372,8 +367,12 @@ cdef uint8_t should_propagate(
                 return 1
 
         footprint_linear_index += 1
-        if increment_index(footprint_coord_ptr, footprint_dimensions_ptr, num_dimensions):
+        # Stop the loop if we've reached the center point.
+        # Otherwise, increment and continue.
+        if footprint_linear_index > center_linear_index:
             break
+        else:
+            increment_index(footprint_coord_ptr, footprint_dimensions_ptr, num_dimensions)
 
     return 0
 
@@ -392,7 +391,8 @@ cdef void perform_raster_scan(
     uint8_t method,
 ):
     cdef image_dtype neighborhood_peak, point_mask
-    cdef Py_ssize_t scan_linear_index
+    cdef Py_ssize_t scan_linear_index = 0
+    cdef Py_ssize_t center_linear_index = point_to_linear(footprint_center_ptr, footprint_dimensions_ptr, num_dimensions)
 
     scan_coord_numpy = np.zeros(num_dimensions, dtype=np.int64)
     cdef Py_ssize_t* scan_coord_ptr = <Py_ssize_t*> <Py_ssize_t> scan_coord_numpy.ctypes.data
@@ -404,34 +404,32 @@ cdef void perform_raster_scan(
     cdef Py_ssize_t* neighbor_coord_ptr = <Py_ssize_t*> <Py_ssize_t> neighbor_coord_numpy.ctypes.data
 
     while True:
-        scan_linear_index = point_to_linear(scan_coord_ptr, image_dimensions_ptr, num_dimensions)
         point_mask = <image_dtype> mask_ptr[scan_linear_index]
 
-        # If the image is already at the limiting mask value, skip this pixel.
-        if image_ptr[scan_linear_index] == point_mask:
-            if increment_index(scan_coord_ptr, image_dimensions_ptr, num_dimensions):
-                break
-            continue
+        # Skip if the image is already at the limiting mask value.
+        if image_ptr[scan_linear_index] != point_mask:
+            neighborhood_peak = get_neighborhood_peak(
+                image_ptr,
+                image_dimensions_ptr,
+                num_dimensions,
+                scan_coord_ptr,
+                footprint_ptr,
+                0,
+                center_linear_index,
+                footprint_dimensions_ptr,
+                footprint_center_ptr,
+                border_value,
+                method,
+                loop_coord_ptr,
+                neighbor_coord_ptr,
+            )
 
-        neighborhood_peak = get_neighborhood_peak(
-            image_ptr,
-            image_dimensions_ptr,
-            num_dimensions,
-            scan_coord_ptr,
-            footprint_ptr,
-            footprint_dimensions_ptr,
-            footprint_center_ptr,
-            border_value,
-            method,
-            loop_coord_ptr,
-            neighbor_coord_ptr,
-        )
+            if method == METHOD_DILATION:
+                image_ptr[scan_linear_index] = min(neighborhood_peak, point_mask)
+            elif method == METHOD_EROSION:
+                image_ptr[scan_linear_index] = max(neighborhood_peak, point_mask)
 
-        if method == METHOD_DILATION:
-            image_ptr[scan_linear_index] = min(neighborhood_peak, point_mask)
-        elif method == METHOD_EROSION:
-            image_ptr[scan_linear_index] = max(neighborhood_peak, point_mask)
-
+        scan_linear_index += 1
         if increment_index(scan_coord_ptr, image_dimensions_ptr, num_dimensions):
             break
 
@@ -444,7 +442,6 @@ cdef void perform_reverse_raster_scan(
     Py_ssize_t num_dimensions,
     image_dtype* mask_ptr,
     uint8_t* footprint_ptr,
-    uint8_t* propagation_footprint_ptr,
     Py_ssize_t* footprint_dimensions_ptr,
     Py_ssize_t* footprint_center_ptr,
     image_dtype border_value,
@@ -452,13 +449,23 @@ cdef void perform_reverse_raster_scan(
     queue,
 ):
     cdef image_dtype neighborhood_peak, point_mask
-    cdef Py_ssize_t scan_linear_index
-    cdef Py_ssize_t dimension
+    cdef Py_ssize_t center_linear_index = point_to_linear(footprint_center_ptr, footprint_dimensions_ptr, num_dimensions)
+    cdef Py_ssize_t footprint_end_linear_index = 0
+    cdef Py_ssize_t multiplier = 1
 
+    cdef Py_ssize_t scan_linear_index
     scan_coord_numpy = np.zeros(num_dimensions, dtype=np.int64)
     cdef Py_ssize_t* scan_coord_ptr = <Py_ssize_t*> <Py_ssize_t> scan_coord_numpy.ctypes.data
-    for dimension in range(num_dimensions):
+
+    # Initialize the scan coordinate to the end of the image.
+    # Also initialize the footprint end linear index.
+    cdef Py_ssize_t dimension
+    for dimension in range(num_dimensions - 1, -1, -1):
         scan_coord_ptr[dimension] = image_dimensions_ptr[dimension] - 1
+        footprint_end_linear_index += (footprint_dimensions_ptr[dimension] - 1) * multiplier
+        multiplier *= footprint_dimensions_ptr[dimension]
+
+    scan_linear_index = point_to_linear(scan_coord_ptr, image_dimensions_ptr, num_dimensions)
 
     # We use these 2 buffers to avoid re-allocating them in the inner loop.
     loop_coord_numpy = np.zeros(num_dimensions, dtype=np.int64)
@@ -467,7 +474,6 @@ cdef void perform_reverse_raster_scan(
     cdef Py_ssize_t* neighbor_coord_ptr = <Py_ssize_t*> <Py_ssize_t> neighbor_coord_numpy.ctypes.data
 
     while True:
-        scan_linear_index = point_to_linear(scan_coord_ptr, image_dimensions_ptr, num_dimensions)
         point_mask = <image_dtype> mask_ptr[scan_linear_index]
 
         # If we're already at the mask, skip the neighbor test.
@@ -479,6 +485,8 @@ cdef void perform_reverse_raster_scan(
                 num_dimensions,
                 scan_coord_ptr,
                 footprint_ptr,
+                center_linear_index,
+                footprint_end_linear_index,
                 footprint_dimensions_ptr,
                 footprint_center_ptr,
                 border_value,
@@ -498,7 +506,7 @@ cdef void perform_reverse_raster_scan(
                 mask_ptr,
                 scan_coord_ptr,
                 image_ptr[scan_linear_index],
-                propagation_footprint_ptr,
+                footprint_ptr,
                 footprint_dimensions_ptr,
                 footprint_center_ptr,
                 method,
@@ -507,6 +515,7 @@ cdef void perform_reverse_raster_scan(
         ):
             queue.append(scan_linear_index)
 
+        scan_linear_index -= 1
         if decrement_index(scan_coord_ptr, image_dimensions_ptr, num_dimensions):
             break
 
@@ -700,26 +709,7 @@ cdef void fast_hybrid_reconstruct_impl(
     # The center point, in 1d linear order.
     cdef Py_ssize_t footprint_linear_center = point_to_linear(offset_ptr, footprint_dimensions_ptr, num_dimensions)
 
-    cdef Py_ssize_t num_before = footprint_linear_center
-    cdef Py_ssize_t num_after = np.prod(footprint.shape) - footprint_linear_center - <Py_ssize_t> 1
-
-    # N+(G), the pixels *before* & including the center in a raster scan.
-    ones_before = np.concatenate(
-        [
-            np.ones(num_before + 1, dtype=np.uint8),
-            np.zeros(num_after, dtype=np.uint8),
-        ]
-    ).reshape(footprint.shape)
-    footprint_raster_before = (footprint * ones_before).astype(np.uint8)
-    # N-(G), the pixels *after* & including the center in a raster scan.
-    ones_after = np.concatenate(
-        [
-            np.zeros(num_before, dtype=bool),
-            np.ones(num_after + 1, dtype=bool),
-        ]
-    ).reshape(footprint.shape)
-    footprint_raster_after = (footprint * ones_after).astype(np.uint8)
-
+    # TODO: this should go somewhere else…
     # Vincent '93 uses N- as the propagation test.
     # In other words, it checks all q ∈ N-(p) : the points after.
     # The idea is, in our anti-raster scan, do we need to propagate
@@ -742,9 +732,6 @@ cdef void fast_hybrid_reconstruct_impl(
     queue = deque()
 
     cdef uint8_t* footprint_ptr = <uint8_t*> <Py_ssize_t> footprint.ctypes.data
-    cdef uint8_t* footprint_before_ptr = <uint8_t*> <Py_ssize_t> footprint_raster_before.ctypes.data
-    cdef uint8_t* footprint_after_ptr = <uint8_t*> <Py_ssize_t> footprint_raster_after.ctypes.data
-    cdef uint8_t* footprint_propagation_ptr = <uint8_t*> <Py_ssize_t> footprint_propagation_test.ctypes.data
 
     image_dimensions = np.array(image.shape, dtype=np.int64)
     cdef Py_ssize_t* image_dimensions_ptr = <Py_ssize_t*> <Py_ssize_t> image_dimensions.ctypes.data
@@ -757,7 +744,7 @@ cdef void fast_hybrid_reconstruct_impl(
         image_dimensions_ptr,
         num_dimensions,
         mask_ptr,
-        footprint_before_ptr,
+        footprint_ptr,
         footprint_dimensions_ptr,
         offset_ptr,
         border_value,
@@ -771,8 +758,7 @@ cdef void fast_hybrid_reconstruct_impl(
         image_dimensions_ptr,
         num_dimensions,
         mask_ptr,
-        footprint_after_ptr,
-        footprint_propagation_ptr,
+        footprint_ptr,
         footprint_dimensions_ptr,
         offset_ptr,
         border_value,
