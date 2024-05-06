@@ -57,6 +57,7 @@ parser.add_argument(
     required=True,
 )
 args = parser.parse_args()
+# TODO: add a parameter for the provisioning model
 
 custom_job_name = args.custom_job_name
 
@@ -273,7 +274,6 @@ headers = [
     "gpu_type",
     "num_gpus",
     "batch_size",
-    "kernel",
     "success",
     "total_time_s",
     "peak_memory_gb",
@@ -285,8 +285,7 @@ headers = [
     "predict_postprocess_time_s",
     "deepcell_tf_version",
     "machine_config",
-    "is_first_run",
-    "gcp_service",
+    "provisioning_model",
 ]
 
 parsed_url = urllib.parse.urlparse(input_channels_path)
@@ -449,8 +448,8 @@ writer.writerow(headers)
 
 deepcell_version = deepcell.__version__
 
-# Hard-coding the GCP service for now.
-gcp_service = "batch"
+# Leave this blank for now, will set up a parameter later.
+provisioning_model = ""
 
 writer.writerow(
     [
@@ -463,7 +462,6 @@ writer.writerow(
         gpu_name,
         gpu_count,
         batch_size,
-        kernel_name,
         prediction_success,
         round(total_time_s, 2),
         round(peak_mem / memory_unit_factor, 1),
@@ -475,8 +473,7 @@ writer.writerow(
         round(postprocess_time_s, 2),
         deepcell_version,
         machine_config,
-        "",  # is_first_run (leave it blank / null)
-        gcp_service,
+        provisioning_model,
     ]
 )
 
@@ -503,5 +500,7 @@ def upload_to_bigquery(csv_string, table_id, bq_job_config):
     load_job.result()  # Waits for the job to complete.
 
 
-upload_to_bigquery(csv_file, "{}.benchmarking.results".format(project_id), job_config)
+upload_to_bigquery(
+    csv_file, "{}.benchmarking.results_batch".format(project_id), job_config
+)
 print("Appended result row to bigquery.")
