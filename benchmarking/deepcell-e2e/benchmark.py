@@ -1,18 +1,8 @@
-import logging
-
-try:
-    import deepcell
-except:
-    logging.error("Couldn't load deepcell module. Run the setup notebook.")
-    raise
-
 # Imports
 
 import argparse
 import csv
 from datetime import datetime, timezone
-import deepcell
-from deepcell.applications import Mesmer
 from google.cloud import bigquery
 import io
 from itertools import groupby
@@ -27,7 +17,6 @@ import resource
 import smart_open
 import sys
 from tenacity import retry, retry_if_exception_message, wait_random_exponential
-import tensorflow as tf
 import traceback
 import timeit
 import urllib.parse
@@ -49,58 +38,90 @@ spec.loader.exec_module(module)
 
 from deepcell_imaging import cached_open
 
+BIGQUERY_RESULTS_TABLE = "deepcell-401920.benchmarking.results_batch"
+
 parser = argparse.ArgumentParser("benchmark")
 parser.add_argument(
-    "--custom_job_name",
-    help="Vertex AI custom job display name",
+    "--input_channels_path",
+    help="Path to the input channels npz file",
     type=str,
     required=True,
 )
+parser.add_argument(
+    "--prediction_compartment",
+    help="The compartment to predict: whole-cell (default), nuclear, both",
+    type=str,
+    default="whole-cell",
+)
+parser.add_argument(
+    "--batch_size",
+    help="How many tiles are predicted at once.",
+    type=int,
+    default=4,
+)
+parser.add_argument(
+    "--model_path",
+    help="Path to the model archive",
+    type=str,
+    default="gs://davids-genomics-data-public/cellular-segmentation/deep-cell/vanvalenlab-tf-model-multiplex-downloaded-20230706/MultiplexSegmentation.tar.gz",
+)
+parser.add_argument(
+    "--model_hash",
+    help="Hash of the model archive",
+    type=str,
+    default="a1dfbce2594f927b9112f23a0a1739e0",
+)
+parser.add_argument(
+    "--model_extract_directory",
+    help="The directory name the archive extracts to",
+    type=str,
+    default="MultiplexSegmentation",
+)
+parser.add_argument(
+    "--predictions_output_path",
+    help="If set, path to save the predictions numpy file",
+    type=str,
+    default=None,
+)
+parser.add_argument(
+    "--visualized_input_path",
+    help="If set, path to save the input visualization png file",
+    type=str,
+    default=None,
+)
+parser.add_argument(
+    "--visualized_predictions_path",
+    help="If set, path to save the predictions visualization png file",
+    type=str,
+    default=None,
+)
+parser.add_argument(
+    "--provisioning_model",
+    help="The model provisioning method",
+    type=str,
+    required=True,
+)
+
 args = parser.parse_args()
-# TODO: add a parameter for the provisioning model
 
-custom_job_name = args.custom_job_name
+input_channels_path = args.input_channels_path
+prediction_compartment = args.prediction_compartment
+batch_size = args.batch_size
+model_remote_path = args.model_path
+model_hash = args.model_hash
+model_extract_directory = args.model_extract_directory
+predictions_output_path = args.predictions_output_path
+input_png_output_path = args.visualized_input_path
+predictions_png_output_path = args.visualized_predictions_path
+provisioning_model = args.provisioning_model
 
-
-# This cell is a notebook 'parameters' cell.
-# Utilities like Vertex AI or Papermill can override them for an execution.
-
-input_channels_path = "gs://davids-genomics-data-public/cellular-segmentation/deep-cell/vanvalenlab-multiplex-20200810_tissue_dataset/mesmer-sample-3-dev/input_channels.npz"
-# 'whole-cell' means predict the cell outlines
-# 'nuclear' means predict the cell nucleus outlines
-# 'both' does … both
-# Set this to 'nuclear' for data that only has a nuclear channel
-prediction_compartment = "whole-cell"
-
-# The batch size controls how many tiles are predicted at once.
-# Default: 4.
-# DeepCell divides each image into tiles, predicts in batches,
-# then untiles the result to return overall segmentat predictions.
-batch_size = 4
-
-# The location of the TensorFlow model to download.
-# The tarball needs to extract to the directory: 'MultiplexSegmentation'
-model_remote_path = "gs://davids-genomics-data-public/cellular-segmentation/deep-cell/vanvalenlab-tf-model-multiplex-downloaded-20230706/MultiplexSegmentation.tar.gz"
-model_hash = "a1dfbce2594f927b9112f23a0a1739e0"
+# Import these here, to speed up startup & arg parsing
+import deepcell
+from deepcell.applications import Mesmer
+import tensorflow as tf
 
 # The local cache location
-model_path = os.path.expanduser("~") + "/.keras/models/MultiplexSegmentation"
-
-predictions_output_path = None
-# predictions_output_path = 'gs://davids-genomics-data-public/cellular-segmentation/deep-cell/vanvalenlab-multiplex-20200810_tissue_dataset/mesmer-sample-3-dev/segmentation_predictions.npz'
-
-project_id = "deepcell-401920"
-location = "us-west1"
-# Set to None for local execution.
-notebook_runtime_id = "updateme"
-
-# Set this to True to visualize & save input & prediction.
-# If true, the paths may be provided to save the visualizations to storage.
-visualize = False
-input_png_output_path = None
-predictions_png_output_path = None
-# input_png_output_path = 'gs://davids-genomics-data-public/cellular-segmentation/deep-cell/vanvalenlab-multiplex-20200810_tissue_dataset/mesmer-sample-3-dev/input.png'
-# predictions_png_output_path = 'gs://davids-genomics-data-public/cellular-segmentation/deep-cell/vanvalenlab-multiplex-20200810_tissue_dataset/mesmer-sample-3-dev/segmentation_predictions.png'
+model_path = os.path.expanduser("~") + "/.keras/models/%s" % model_extract_directory
 
 # Model warm-up
 
@@ -198,18 +219,12 @@ if match:
 else:
     logger.warning("Couldn't parse step timings from debug_logs")
     preprocess_time_s = inference_time_s = postprocess_time_s = math.nan
-# %% md
-## Save predictions [optional]
-# %%
+
 if predictions_output_path:
     with smart_open.open(predictions_output_path, "wb") as predictions_file:
         np.savez_compressed(predictions_file, predictions=segmentation_predictions)
-# %% md
-# Visualization [optional]
-# %% md
-## Input channel visualization
-# %%
-if visualize:
+
+if input_png_output_path:
     from deepcell.utils.plot_utils import create_rgb_image
     from PIL import Image
 
@@ -222,48 +237,29 @@ if visualize:
         input_channels[np.newaxis, ...], channel_colors=[nuclear_color, membrane_color]
     )[0]
 
-    if input_png_output_path:
-        # The png needs to normalize rgb values from 0..1, so normalize to 0..255
-        im = Image.fromarray((input_rgb * 255).astype(np.uint8))
-        with smart_open.open(input_png_output_path, "wb") as input_png_file:
-            im.save(input_png_file, mode="RGB")
-        del im
+    # The png needs to normalize rgb values from 0..1, so normalize to 0..255
+    im = Image.fromarray((input_rgb * 255).astype(np.uint8))
+    with smart_open.open(input_png_output_path, "wb") as input_png_file:
+        im.save(input_png_file, mode="RGB")
 
-    from matplotlib import pyplot as plt
-
-    fig, ax = plt.subplots(1, 1, figsize=(5, 5))
-    ax.imshow(input_rgb)
-    ax.set_title("Input")
-    plt.show()
-# %% md
-## Prediction overlay visualization
-# %%
-if visualize:
+if predictions_png_output_path:
     from deepcell.utils.plot_utils import make_outline_overlay
+    from PIL import Image
 
     overlay_data = make_outline_overlay(
         rgb_data=input_rgb[np.newaxis, ...],
         predictions=segmentation_predictions[np.newaxis, ...],
     )[0]
 
-    from PIL import Image
+    # The rgb values are 0..1, so normalize to 0..255
+    im = Image.fromarray((overlay_data * 255).astype(np.uint8))
+    with smart_open.open(predictions_png_output_path, "wb") as predictions_png_file:
+        im.save(predictions_png_file, mode="RGB")
 
-    if predictions_png_output_path:
-        # The rgb values are 0..1, so normalize to 0..255
-        im = Image.fromarray((overlay_data * 255).astype(np.uint8))
-        with smart_open.open(predictions_png_output_path, "wb") as predictions_png_file:
-            im.save(predictions_png_file, mode="RGB")
-        del im
+##################
+# Benchmark data #
+##################
 
-    from matplotlib import pyplot as plt
-
-    fig, ax = plt.subplots(1, 1, figsize=(5, 5))
-    ax.imshow(overlay_data)
-    ax.set_title("Predictions")
-    plt.show()
-# %% md
-# Benchmark data
-# %%
 headers = [
     "input_file_id",
     "numpy_size_mb",
@@ -295,16 +291,6 @@ image_size = round(input_channels.nbytes / 1000 / 1000, 2)
 # Multiply x * y to get pixel count.
 pixels = input_channels.shape[0] * input_channels.shape[1]
 
-import ipykernel
-
-try:
-    kernel_name = ipykernel.connect.get_connection_info(unpack=True)["kernel_name"]
-except:
-    try:
-        kernel_name = os.environ["HOSTNAME"]
-    except:
-        kernel_name = "custom_job"
-
 # Get the number of GPUs
 gpu_devices = tf.config.experimental.list_physical_devices("GPU")
 gpu_details = [tf.config.experimental.get_device_details(gpu) for gpu in gpu_devices]
@@ -323,12 +309,6 @@ elif len(gpu_names) == 1:
     gpu_count = len(gpus_by_name[gpu_name])
 else:
     raise "Dunno how to handle multiple gpu types"
-
-import subprocess
-
-# print("-----Starting auth check")
-# print(subprocess.check_output(["gcloud", "auth", "list"]))
-# print("-----Ending auth check")
 
 
 def get_project_id():
@@ -358,27 +338,11 @@ def get_project_id():
 
 
 try:
-    print("Project id: %s" % get_project_id())
+    project_id = get_project_id()
+    logger.info("Project id: %s" % project_id)
 except Exception as e:
-    print("Error getting project id: %s" % e)
-
-
-def get_vertex_ai_custom_job_machine_type(custom_job_name):
-    # For running on vertex AI:
-    try:
-        from google.cloud import aiplatform
-
-        aiplatform.init(project=project_id, location=location)
-        display_filter = 'display_name="{}"'.format(custom_job_name)
-
-        matching_jobs = aiplatform.CustomJob.list(filter=display_filter)
-
-        job = matching_jobs[0]
-        return job.job_spec.worker_pool_specs[0].machine_spec.machine_type
-    except RuntimeError as e:
-        exception_string = traceback.format_exc()
-        logging.warning("Error getting machine type: " + exception_string)
-        return "error"
+    project_id = "unknown"
+    logger.error("Error getting project id: %s" % e)
 
 
 def get_compute_engine_machine_type():
@@ -399,7 +363,6 @@ def get_compute_engine_machine_type():
 
 
 try:
-    # machine_type = get_vertex_ai_custom_job_machine_type(custom_job_name)
     machine_type = get_compute_engine_machine_type()
 except Exception as e:
     logging.warning("Error getting machine type: '%s'. Defaulting to os info" + e)
@@ -447,9 +410,6 @@ writer = csv.writer(output, quoting=csv.QUOTE_NONNUMERIC)
 writer.writerow(headers)
 
 deepcell_version = deepcell.__version__
-
-# Leave this blank for now, will set up a parameter later.
-provisioning_model = ""
 
 writer.writerow(
     [
@@ -500,7 +460,5 @@ def upload_to_bigquery(csv_string, table_id, bq_job_config):
     load_job.result()  # Waits for the job to complete.
 
 
-upload_to_bigquery(
-    csv_file, "{}.benchmarking.results_batch".format(project_id), job_config
-)
-print("Appended result row to bigquery.")
+upload_to_bigquery(csv_file, BIGQUERY_RESULTS_TABLE, job_config)
+logger.info("Appended result row to bigquery.")
