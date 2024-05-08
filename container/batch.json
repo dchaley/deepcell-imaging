@@ -19,7 +19,16 @@
                 "computeResource": {
                     "cpuMilli": 1000,
                     "memoryMib": 26000
-                }
+                },
+                "maxRetryCount": 3,
+                "lifecyclePolicies": [
+                  {
+                    "action": "RETRY_TASK",
+                    "actionCondition": {
+                      "exitCodes": [50001]
+                    }
+                  }
+                ]
             },
             "taskCount": 1,
             "parallelism": 1
