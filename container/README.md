@@ -1,5 +1,7 @@
 # DeepCell benchmarking container
 
+## Building the container
+
 This sets up a container that executes the steps in the benchmark setup notebook. It checks out the repo so in principle we could run the notebook however we haven't tried that yet.
 
 Followed [Google instructions on derivative containers](https://cloud.google.com/deep-learning-containers/docs/derivative-container).
@@ -15,24 +17,51 @@ gcloud artifacts repositories create $REPOSITORY_NAME \
 gcloud auth configure-docker ${LOCATION}-docker.pkg.dev
 ```
 
-# Command to create Vertex AI custom job w/ container
+## Command to run benchmark job on Google Batch
 
-Available machine types: [docs](https://cloud.google.com/vertex-ai/docs/training/configure-compute#machine-types).
+1. Set up an environment.
 
-Available accelerator types: [docs](https://cloud.google.com/vertex-ai/docs/reference/rest/v1/MachineSpec#AcceleratorType).
+   1. The easiest is to just open Cloud Shell in the project.
 
-Use this for t4 gpu: `export GPU_TYPE="NVIDIA_TESLA_T4"`
+      Go to console.cloud.google.com, select the project, & click the terminal icon. You can upload files to cloud shell under the "More" menu (three dots).
 
-```
-export JOB_NAME="Benchmark n1-highmem-4 yyyymmddhhmmss"
-export MACHINE_TYPE="n1-highmem-4"
-export GPU_COUNT=0
-export GPU_TYPE=""
-export CONTAINER_URI="us-west1-docker.pkg.dev/deepcell-401920/deepcell-benchmarking/benchmarking@sha256:ed12549aab1c201042234a7e4fd79237dfdbd4257156e239abeef2de84994fae"
-export REPLICA_COUNT=1
+   2. You can also install `gcloud` to your local computer, run `gcloud auth`, etc.
 
-gcloud ai custom-jobs create \
-  --region=$LOCATION --project=$PROJECT \
-  --display-name="$JOB_NAME" \
-  --worker-pool-spec=machine-type="$MACHINE_TYPE",accelerator-type="$GPU_TYPE",accelerator-count="$GPU_COUNT",replica-count="$REPLICA_COUNT",container-image-uri=$CONTAINER_URI --args="--custom_job_name='$JOB_NAME'"
-```
+2. Create a JSON file specifying the inputs. See also: [batch.json](batch.json)
+
+   1. Job parameters
+
+      1. Update the input parameter: `input_channels_path`
+
+         This should be a .npz file like the ones we have here: `davids-genomics-data-public/cellular-segmentation/10x-genomics/preview-human-breast-20221103-418mb/input_channels.npz`
+
+      2. Update the `output_path`
+
+         This should be a unique base directory in a cloud bucket somewhere. Example: `gs://deepcell-batch-jobs_us-central1/job-runs/19991231-default-path`
+
+         Remove the visualize flags as desired.
+
+         Files will be written as: `predictions.npz`, `input.png`, `predictions.png`
+
+      3. If you are not using spot instances (the default), update the `provisioning_model` to `standard` (etc) as appropriate.
+
+   2. Batch infra settings
+
+      1. Update memory settings based on number of pixels.
+         1. Refer to our [Looker chart](https://lookerstudio.google.com/u/0/reporting/cc9595d1-e639-4b35-a144-0bb8a41df2d0/page/p_rr3yyoz8cd/edit) for memory requirements by pixel count.
+         2. Set the `machineType` as appropriate for the number of pixels in the input. 
+         3. Set the `memoryMib` as appropriate. Default: `26000` = 25.39 GB.
+      2. Change the `accelerators` if desired. Default: 1 Tesla T4 GPU.
+      3. Change the `provisioningModel` if desired. Default: `SPOT`.
+
+3. You now have a json file to submit to the Batch API.
+
+   1. Run:
+
+      ```bash
+      gcloud batch jobs submit $JOB_ID --location us-central1 --config batch.json
+      ```
+
+      Pick some unique value for $JOB_ID. It must start with a letter, and contain only dashes, numbers, and lowercase letters.
+
+4. You can watch the batch job run here: https://console.cloud.google.com/batch/jobs?project=deepcell-on-batch

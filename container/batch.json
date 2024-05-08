@@ -8,16 +8,15 @@
                             "imageUri": "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:gce",
                             "commands": [
                                 "--input_channels_path=gs://davids-genomics-data-public/cellular-segmentation/deep-cell/vanvalenlab-multiplex-20200810_tissue_dataset/mesmer-sample-3-dev/input_channels.npz",
-                                "--predictions_output_path=gs://deepcell-batch-jobs_us-central1/job-runs/20240507-test-3/predictions.npz",
-                                "--visualized_input_path=gs://deepcell-batch-jobs_us-central1/job-runs/20240507-test-3/input.png",
-                                "--visualized_predictions_path=gs://deepcell-batch-jobs_us-central1/job-runs/20240507-test-3/predictions.png",
+                                "--output_path=gs://deepcell-batch-jobs_us-central1/job-runs/19991231-default-path",
+                                "--visualize_input",
+                                "--visualize_predictions",
                                 "--provisioning_model=spot"
                             ]
                         }
                     }
                 ],
                 "computeResource": {
-                    "cpuMilli": 1000,
                     "memoryMib": 26000
                 },
                 "maxRetryCount": 3,
