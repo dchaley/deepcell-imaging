@@ -78,22 +78,20 @@ parser.add_argument(
     default="MultiplexSegmentation",
 )
 parser.add_argument(
-    "--predictions_output_path",
-    help="If set, path to save the predictions numpy file",
+    "--output_path",
+    help="If set, base path for predictions & other output files.",
     type=str,
     default=None,
 )
 parser.add_argument(
-    "--visualized_input_path",
-    help="If set, path to save the input visualization png file",
-    type=str,
-    default=None,
+    "--visualize_input",
+    help="If true, visualize the input as input.png in the output path.",
+    action='store_true',
 )
 parser.add_argument(
-    "--visualized_predictions_path",
-    help="If set, path to save the predictions visualization png file",
-    type=str,
-    default=None,
+    "--visualize_predictions",
+    help="If true, visualize the predictions as predictions.png in the output path.",
+    action='store_true',
 )
 parser.add_argument(
     "--provisioning_model",
@@ -110,10 +108,14 @@ batch_size = args.batch_size
 model_remote_path = args.model_path
 model_hash = args.model_hash
 model_extract_directory = args.model_extract_directory
-predictions_output_path = args.predictions_output_path
-input_png_output_path = args.visualized_input_path
-predictions_png_output_path = args.visualized_predictions_path
+output_path = args.output_path
+output_path = output_path.rstrip('/') # remove trailing slashes
+visualize_input = args.visualize_input
+visualize_predictions = args.visualize_predictions
 provisioning_model = args.provisioning_model
+
+if (visualize_input or visualize_predictions) and not output_path:
+    raise ValueError("Can't visualize without an output path")
 
 # Import these here, to speed up startup & arg parsing
 import deepcell
@@ -220,11 +222,11 @@ else:
     logger.warning("Couldn't parse step timings from debug_logs")
     preprocess_time_s = inference_time_s = postprocess_time_s = math.nan
 
-if predictions_output_path:
-    with smart_open.open(predictions_output_path, "wb") as predictions_file:
+if output_path:
+    with smart_open.open("%s/predictions.npz" % output_path, "wb") as predictions_file:
         np.savez_compressed(predictions_file, predictions=segmentation_predictions)
 
-if input_png_output_path:
+if visualize_input:
     from deepcell.utils.plot_utils import create_rgb_image
     from PIL import Image
 
@@ -239,10 +241,10 @@ if input_png_output_path:
 
     # The png needs to normalize rgb values from 0..1, so normalize to 0..255
     im = Image.fromarray((input_rgb * 255).astype(np.uint8))
-    with smart_open.open(input_png_output_path, "wb") as input_png_file:
+    with smart_open.open("%s/input.png" % output_path, "wb") as input_png_file:
         im.save(input_png_file, mode="RGB")
 
-if predictions_png_output_path:
+if visualize_predictions:
     from deepcell.utils.plot_utils import make_outline_overlay
     from PIL import Image
 
@@ -253,7 +255,7 @@ if predictions_png_output_path:
 
     # The rgb values are 0..1, so normalize to 0..255
     im = Image.fromarray((overlay_data * 255).astype(np.uint8))
-    with smart_open.open(predictions_png_output_path, "wb") as predictions_png_file:
+    with smart_open.open("%s/predictions.png" % output_path, "wb") as predictions_png_file:
         im.save(predictions_png_file, mode="RGB")
 
 ##################
