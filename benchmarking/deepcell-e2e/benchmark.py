@@ -86,18 +86,24 @@ parser.add_argument(
 parser.add_argument(
     "--visualize_input",
     help="If true, visualize the input as input.png in the output path.",
-    action='store_true',
+    action="store_true",
 )
 parser.add_argument(
     "--visualize_predictions",
     help="If true, visualize the predictions as predictions.png in the output path.",
-    action='store_true',
+    action="store_true",
 )
 parser.add_argument(
     "--provisioning_model",
     help="The model provisioning method",
     type=str,
     required=True,
+)
+parser.add_argument(
+    "--bigquery_table",
+    help="The BigQuery table to write results to",
+    type=str,
+    default=BIGQUERY_RESULTS_TABLE,
 )
 
 args = parser.parse_args()
@@ -109,10 +115,11 @@ model_remote_path = args.model_path
 model_hash = args.model_hash
 model_extract_directory = args.model_extract_directory
 output_path = args.output_path
-output_path = output_path.rstrip('/') # remove trailing slashes
+output_path = output_path.rstrip("/")  # remove trailing slashes
 visualize_input = args.visualize_input
 visualize_predictions = args.visualize_predictions
 provisioning_model = args.provisioning_model
+bigquery_table = args.bigquery_table
 
 if (visualize_input or visualize_predictions) and not output_path:
     raise ValueError("Can't visualize without an output path")
@@ -255,7 +262,9 @@ if visualize_predictions:
 
     # The rgb values are 0..1, so normalize to 0..255
     im = Image.fromarray((overlay_data * 255).astype(np.uint8))
-    with smart_open.open("%s/predictions.png" % output_path, "wb") as predictions_png_file:
+    with smart_open.open(
+        "%s/predictions.png" % output_path, "wb"
+    ) as predictions_png_file:
         im.save(predictions_png_file, mode="RGB")
 
 ##################
@@ -462,5 +471,6 @@ def upload_to_bigquery(csv_string, table_id, bq_job_config):
     load_job.result()  # Waits for the job to complete.
 
 
-upload_to_bigquery(csv_file, BIGQUERY_RESULTS_TABLE, job_config)
-logger.info("Appended result row to bigquery.")
+if bigquery_table:
+    upload_to_bigquery(csv_file, bigquery_table, job_config)
+    logger.info("Appended result row to bigquery.")
