@@ -1,5 +1,6 @@
-# Base container image is the official tensorflow 2.8.4-gpu image.
-FROM tensorflow/tensorflow:2.8.4-gpu
+# Base container image is the *rebuilt* tensorflow 2.8.4-gpu image.
+# See also: https://github.com/dchaley/tensorflow-2.8.4-redux
+FROM us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/base-tf-2.8.4-rebuilt-gpu:latest
 
 # Refresh the key to nvidia's repositories.
 # https://forums.developer.nvidia.com/t/notice-cuda-linux-repository-key-rotation/212771
