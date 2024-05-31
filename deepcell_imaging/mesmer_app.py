@@ -28,6 +28,7 @@
 
 from pathlib import Path
 
+import logging
 import numpy as np
 import os
 import sys
@@ -262,16 +263,40 @@ class Mesmer(Application):
             model_path = model_dir / MODEL_NAME
             model = tf.keras.models.load_model(model_path)
 
-        super().__init__(
-            model,
-            model_image_shape=model.input_shape[1:],
-            model_mpp=0.5,
-            preprocessing_fn=mesmer_preprocess,
-            postprocessing_fn=mesmer_postprocess,
-            format_model_output_fn=format_output_mesmer,
-            dataset_metadata=self.dataset_metadata,
-            model_metadata=self.model_metadata,
-        )
+        model_mpp = 0.5
+        model_image_shape = model.input_shape[1:]
+        preprocessing_fn = mesmer_preprocess
+        postprocessing_fn = mesmer_postprocess
+        format_model_output_fn = format_output_mesmer
+        dataset_metadata = self.dataset_metadata
+        model_metadata = self.model_metadata
+
+        self.model = model
+
+        self.model_image_shape = model_image_shape
+        # Require dimension 1 larger than model_input_shape due to addition of batch dimension
+        self.required_rank = len(self.model_image_shape) + 1
+
+        self.required_channels = self.model_image_shape[-1]
+
+        self.model_mpp = model_mpp
+        self.preprocessing_fn = preprocessing_fn
+        self.postprocessing_fn = postprocessing_fn
+        self.format_model_output_fn = format_model_output_fn
+        self.dataset_metadata = dataset_metadata
+        self.model_metadata = model_metadata
+
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+        # Test that pre and post processing functions are callable
+        if self.preprocessing_fn is not None and not callable(self.preprocessing_fn):
+            raise ValueError("Preprocessing_fn must be a callable function.")
+        if self.postprocessing_fn is not None and not callable(self.postprocessing_fn):
+            raise ValueError("Postprocessing_fn must be a callable function.")
+        if self.format_model_output_fn is not None and not callable(
+            self.format_model_output_fn
+        ):
+            raise ValueError("Format_model_output_fn must be a callable function.")
 
     def predict(
         self,
