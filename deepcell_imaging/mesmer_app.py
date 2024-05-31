@@ -351,11 +351,34 @@ class Mesmer(Application):
             "compartment": compartment,
         }
 
-        return self._predict_segmentation(
-            image,
+        # Check input size of image
+        if len(image.shape) != self.required_rank:
+            raise ValueError(
+                f"Input data must have {self.required_rank} dimensions. "
+                f"Input data only has {len(image.shape)} dimensions"
+            )
+
+        if image.shape[-1] != self.required_channels:
+            raise ValueError(
+                f"Input data must have {self.required_channels} channels. "
+                f"Input data only has {image.shape[-1]} channels"
+            )
+
+        # Resize image, returns unmodified if appropriate
+        resized_image = self._resize_input(image, image_mpp)
+
+        # Generate model outputs
+        output_images = self._run_model(
+            image=resized_image,
             batch_size=batch_size,
-            image_mpp=image_mpp,
             pad_mode=pad_mode,
             preprocess_kwargs=preprocess_kwargs,
-            postprocess_kwargs=postprocess_kwargs,
         )
+
+        # Postprocess predictions to create label image
+        label_image = self._postprocess(output_images, **postprocess_kwargs)
+
+        # Resize label_image back to original resolution if necessary
+        label_image = self._resize_output(label_image, image.shape)
+
+        return label_image
