@@ -33,6 +33,7 @@ import numpy as np
 import os
 import sys
 import tensorflow as tf
+import timeit
 
 from deepcell_toolbox.deep_watershed import deep_watershed
 from deepcell_toolbox.processing import percentile_threshold
@@ -75,6 +76,13 @@ model_path = os.path.splitext(downloaded_file_path)[0]
 def predict(input_channels, image_mpp, compartment, batch_size):
     model = tf.keras.models.load_model(model_path)
     app = Mesmer(model=model)
+
+    # In the end result, we don't have app.predict.
+    # We have:
+    #  (1) preprocess(...)
+    #  (2) predict(...)
+    #  (3) postprocess(...)
+
     return app.predict(
         input_channels,
         image_mpp=image_mpp,
@@ -200,6 +208,33 @@ def mesmer_postprocess(
         )
 
     return label_images
+
+
+def batch_predict(model, tiles, batch_size):
+    # list to hold final output
+    output_tiles = []
+
+    # loop through each batch
+    for i in range(0, tiles.shape[0], batch_size):
+        batch_inputs = tiles[i : i + batch_size, ...]
+
+        batch_outputs = model.predict(batch_inputs, batch_size=batch_size)
+
+        # model with only a single output gets temporarily converted to a list
+        if not isinstance(batch_outputs, list):
+            batch_outputs = [batch_outputs]
+
+        # initialize output list with empty arrays to hold all batches
+        if not output_tiles:
+            for batch_out in batch_outputs:
+                shape = (tiles.shape[0],) + batch_out.shape[1:]
+                output_tiles.append(np.zeros(shape, dtype=tiles.dtype))
+
+        # save each batch to corresponding index in output list
+        for j, batch_out in enumerate(batch_outputs):
+            output_tiles[j][i : i + batch_size, ...] = batch_out
+
+    return output_tiles
 
 
 class Mesmer(Application):
@@ -390,15 +425,33 @@ class Mesmer(Application):
             )
 
         # Resize image, returns unmodified if appropriate
-        resized_image = self._resize_input(image, image_mpp)
+        image = self._resize_input(image, image_mpp)
+
+        # -----------------------------
 
         # Generate model outputs
-        output_images = self._run_model(
-            image=resized_image,
-            batch_size=batch_size,
-            pad_mode=pad_mode,
-            preprocess_kwargs=preprocess_kwargs,
+        # Preprocess image if function is defined
+        image = self._preprocess(image, **preprocess_kwargs)
+
+        # Tile images, raises error if the image is not 4d
+        tiles, tiles_info = self._tile_input(image, pad_mode=pad_mode)
+
+        # Run images through model
+        t = timeit.default_timer()
+        output_tiles = batch_predict(
+            model=self.model, tiles=tiles, batch_size=batch_size
         )
+        self.logger.debug(
+            "Model inference finished in %s s", timeit.default_timer() - t
+        )
+
+        # Untile images
+        output_images = self._untile_output(output_tiles, tiles_info)
+
+        # restructure outputs into a dict if function provided
+        output_images = self._format_model_output(output_images)
+
+        # -----------------------------
 
         # Postprocess predictions to create label image
         label_image = self._postprocess(output_images, **postprocess_kwargs)
