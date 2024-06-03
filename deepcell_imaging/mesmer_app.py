@@ -38,7 +38,7 @@ import timeit
 from deepcell_toolbox.deep_watershed import deep_watershed
 from deepcell_toolbox.processing import percentile_threshold
 from deepcell_toolbox.processing import histogram_normalization
-from deepcell_toolbox.utils import resize
+from deepcell_toolbox.utils import resize, tile_image
 
 from deepcell.applications import Application
 from deepcell.utils import fetch_data, extract_archive
@@ -120,6 +120,43 @@ def mesmer_preprocess(image, **kwargs):
         output = histogram_normalization(image=output, kernel_size=kernel_size)
 
     return output
+
+
+def tile_input(image, model_image_shape, pad_mode="constant"):
+    if len(image.shape) != 4:
+        raise ValueError(
+            "deepcell_toolbox.tile_image only supports 4d images."
+            f"Image submitted for predict has {len(image.shape)} dimensions"
+        )
+
+    # Check difference between input and model image size
+    x_diff = image.shape[1] - model_image_shape[0]
+    y_diff = image.shape[2] - model_image_shape[1]
+
+    # Check if the input is smaller than model image size
+    if x_diff < 0 or y_diff < 0:
+        # Calculate padding
+        x_diff, y_diff = abs(x_diff), abs(y_diff)
+        x_pad = (
+            (x_diff // 2, x_diff // 2 + 1) if x_diff % 2 else (x_diff // 2, x_diff // 2)
+        )
+        y_pad = (
+            (y_diff // 2, y_diff // 2 + 1) if y_diff % 2 else (y_diff // 2, y_diff // 2)
+        )
+
+        tiles = np.pad(image, [(0, 0), x_pad, y_pad, (0, 0)], "reflect")
+        tiles_info = {"padding": True, "x_pad": x_pad, "y_pad": y_pad}
+    # Otherwise tile images larger than model size
+    else:
+        # Tile images, needs 4d
+        tiles, tiles_info = tile_image(
+            image,
+            model_input_shape=model_image_shape,
+            stride_ratio=0.75,
+            pad_mode=pad_mode,
+        )
+
+    return tiles, tiles_info
 
 
 def format_output_mesmer(output_list):
@@ -408,8 +445,11 @@ class Mesmer(Application):
             "compartment": compartment,
         }
 
+        # The 1st dimension is the batch dimension, remove it.
+        model_image_shape = model.input_shape[1:]
+
         # Require dimension 1 larger than model_input_shape due to addition of batch dimension
-        required_rank = len(model.input_shape[1:]) + 1
+        required_rank = len(model_image_shape) + 1
 
         # Check input size of image
         if len(image.shape) != required_rank:
@@ -433,8 +473,6 @@ class Mesmer(Application):
             self.logger.debug("Resized input from %s to %s", shape, new_shape)
 
         # -----------------------------
-        # Generate model outputs
-
         # Preprocessing
         t = timeit.default_timer()
         self.logger.debug(
@@ -451,9 +489,11 @@ class Mesmer(Application):
             timeit.default_timer() - t,
         )
         # End preprocessing
+        # -----------------------------
+        # Start inference
 
         # Tile images, raises error if the image is not 4d
-        tiles, tiles_info = self._tile_input(image, pad_mode=pad_mode)
+        tiles, tiles_info = tile_input(image, model_image_shape, pad_mode=pad_mode)
 
         # Run images through model
         t = timeit.default_timer()
@@ -470,6 +510,7 @@ class Mesmer(Application):
         # restructure outputs into a dict if function provided
         output_images = self._format_model_output(output_images)
 
+        # End inference
         # -----------------------------
 
         # Postprocess predictions to create label image
