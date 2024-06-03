@@ -301,7 +301,6 @@ class Mesmer(Application):
 
         model_mpp = 0.5
         model_image_shape = model.input_shape[1:]
-        preprocessing_fn = mesmer_preprocess
         postprocessing_fn = mesmer_postprocess
         format_model_output_fn = format_output_mesmer
         dataset_metadata = self.dataset_metadata
@@ -317,7 +316,6 @@ class Mesmer(Application):
         self.required_channels = self.model_image_shape[-1]
 
         self.model_mpp = model_mpp
-        self.preprocessing_fn = preprocessing_fn
         self.postprocessing_fn = postprocessing_fn
         self.format_model_output_fn = format_model_output_fn
         self.dataset_metadata = dataset_metadata
@@ -326,8 +324,6 @@ class Mesmer(Application):
         self.logger = logging.getLogger(self.__class__.__name__)
 
         # Test that pre and post processing functions are callable
-        if self.preprocessing_fn is not None and not callable(self.preprocessing_fn):
-            raise ValueError("Preprocessing_fn must be a callable function.")
         if self.postprocessing_fn is not None and not callable(self.postprocessing_fn):
             raise ValueError("Postprocessing_fn must be a callable function.")
         if self.format_model_output_fn is not None and not callable(
@@ -434,10 +430,24 @@ class Mesmer(Application):
         image = self._resize_input(image, image_mpp)
 
         # -----------------------------
-
         # Generate model outputs
-        # Preprocess image if function is defined
-        image = self._preprocess(image, **preprocess_kwargs)
+
+        # Preprocessing
+        t = timeit.default_timer()
+        self.logger.debug(
+            "Pre-processing data with %s and kwargs: %s",
+            mesmer_preprocess.__name__,
+            **preprocess_kwargs,
+        )
+
+        image = mesmer_preprocess(image, **preprocess_kwargs)
+
+        self.logger.debug(
+            "Pre-processed data with %s in %s s",
+            mesmer_preprocess.__name__,
+            timeit.default_timer() - t,
+        )
+        # End preprocessing
 
         # Tile images, raises error if the image is not 4d
         tiles, tiles_info = self._tile_input(image, pad_mode=pad_mode)
