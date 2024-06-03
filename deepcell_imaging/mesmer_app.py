@@ -313,8 +313,6 @@ class Mesmer(Application):
         # We still need this for _postprocess. When that is inlined, remove.
         self.required_rank = len(self.model_image_shape) + 1
 
-        self.required_channels = self.model_image_shape[-1]
-
         self.model_mpp = model_mpp
         self.postprocessing_fn = postprocessing_fn
         self.format_model_output_fn = format_model_output_fn
@@ -420,10 +418,10 @@ class Mesmer(Application):
                 f"Input data only has {len(image.shape)} dimensions"
             )
 
-        if image.shape[-1] != self.required_channels:
+        if image.shape[-1] != model.input_shape[-1]:
             raise ValueError(
-                f"Input data must have {self.required_channels} channels. "
-                f"Input data only has {image.shape[-1]} channels"
+                f"Input data must have {model.input_shape[-1]} channels. "
+                f"Input data has {image.shape[-1]} channels"
             )
 
         # Resize image, returns unmodified if appropriate
