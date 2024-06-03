@@ -84,6 +84,7 @@ def predict(input_channels, image_mpp, compartment, batch_size):
     #  (3) postprocess(...)
 
     return app.predict(
+        model,
         input_channels,
         image_mpp=image_mpp,
         compartment=compartment,
@@ -310,6 +311,7 @@ class Mesmer(Application):
 
         self.model_image_shape = model_image_shape
         # Require dimension 1 larger than model_input_shape due to addition of batch dimension
+        # We still need this for _postprocess. When that is inlined, remove.
         self.required_rank = len(self.model_image_shape) + 1
 
         self.required_channels = self.model_image_shape[-1]
@@ -335,6 +337,7 @@ class Mesmer(Application):
 
     def predict(
         self,
+        model,
         image,
         batch_size=4,
         image_mpp=None,
@@ -411,10 +414,13 @@ class Mesmer(Application):
             "compartment": compartment,
         }
 
+        # Require dimension 1 larger than model_input_shape due to addition of batch dimension
+        required_rank = len(model.input_shape[1:]) + 1
+
         # Check input size of image
-        if len(image.shape) != self.required_rank:
+        if len(image.shape) != required_rank:
             raise ValueError(
-                f"Input data must have {self.required_rank} dimensions. "
+                f"Input data must have {required_rank} dimensions. "
                 f"Input data only has {len(image.shape)} dimensions"
             )
 
