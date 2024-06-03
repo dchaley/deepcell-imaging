@@ -38,6 +38,7 @@ import timeit
 from deepcell_toolbox.deep_watershed import deep_watershed
 from deepcell_toolbox.processing import percentile_threshold
 from deepcell_toolbox.processing import histogram_normalization
+from deepcell_toolbox.utils import resize
 
 from deepcell.applications import Application
 from deepcell.utils import fetch_data, extract_archive
@@ -61,6 +62,7 @@ MODEL_KEY = "models/MultiplexSegmentation-9.tar.gz"
 MODEL_NAME = "MultiplexSegmentation"
 MODEL_HASH = "a1dfbce2594f927b9112f23a0a1739e0"
 
+MESMER_MODEL_MPP = 0.5
 
 downloaded_file_path = cached_open.get_file(
     "MultiplexSegmentation.tgz",
@@ -299,7 +301,6 @@ class Mesmer(Application):
             model_path = model_dir / MODEL_NAME
             model = tf.keras.models.load_model(model_path)
 
-        model_mpp = 0.5
         model_image_shape = model.input_shape[1:]
         postprocessing_fn = mesmer_postprocess
         format_model_output_fn = format_output_mesmer
@@ -313,7 +314,6 @@ class Mesmer(Application):
         # We still need this for _postprocess. When that is inlined, remove.
         self.required_rank = len(self.model_image_shape) + 1
 
-        self.model_mpp = model_mpp
         self.postprocessing_fn = postprocessing_fn
         self.format_model_output_fn = format_model_output_fn
         self.dataset_metadata = dataset_metadata
@@ -424,8 +424,13 @@ class Mesmer(Application):
                 f"Input data has {image.shape[-1]} channels"
             )
 
-        # Resize image, returns unmodified if appropriate
-        image = self._resize_input(image, image_mpp)
+        # Scale the image if mpp defined & different from the model mpp
+        if image_mpp not in {None, MESMER_MODEL_MPP}:
+            shape = image.shape
+            scale_factor = image_mpp / MESMER_MODEL_MPP
+            new_shape = (int(shape[1] * scale_factor), int(shape[2] * scale_factor))
+            image = resize(image, new_shape, data_format="channels_last")
+            self.logger.debug("Resized input from %s to %s", shape, new_shape)
 
         # -----------------------------
         # Generate model outputs
