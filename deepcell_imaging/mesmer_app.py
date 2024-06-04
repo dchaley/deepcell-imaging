@@ -159,6 +159,45 @@ def tile_input(image, model_image_shape, pad_mode="constant"):
     return tiles, tiles_info
 
 
+def _resize_output(image, original_shape):
+    """Rescales input if the shape does not match the original shape
+    excluding the batch and channel dimensions.
+
+    Args:
+        image (numpy.array): Image to be rescaled to original shape
+        original_shape (tuple): Shape of the original input image
+
+    Returns:
+        numpy.array: Rescaled image
+    """
+    if not isinstance(image, list):
+        image = [image]
+
+    for i in range(len(image)):
+        img = image[i]
+        # Compare x,y based on rank of image
+        if len(img.shape) == 4:
+            same = img.shape[1:-1] == original_shape[1:-1]
+        elif len(img.shape) == 3:
+            same = img.shape[1:] == original_shape[1:-1]
+        else:
+            same = img.shape == original_shape[1:-1]
+
+        # Resize if same is false
+        if not same:
+            # Resize function only takes the x,y dimensions for shape
+            new_shape = original_shape[1:-1]
+            img = resize(
+                img, new_shape, data_format="channels_last", labeled_image=True
+            )
+        image[i] = img
+
+    if len(image) == 1:
+        image = image[0]
+
+    return image
+
+
 def format_output_mesmer(output_list):
     """Takes list of model outputs and formats into a dictionary for better readability
 
@@ -517,6 +556,6 @@ class Mesmer(Application):
         label_image = self._postprocess(output_images, **postprocess_kwargs)
 
         # Resize label_image back to original resolution if necessary
-        label_image = self._resize_output(label_image, image.shape)
+        label_image = _resize_output(label_image, image.shape)
 
         return label_image
