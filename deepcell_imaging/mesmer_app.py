@@ -38,7 +38,7 @@ import timeit
 from deepcell_toolbox.deep_watershed import deep_watershed
 from deepcell_toolbox.processing import percentile_threshold
 from deepcell_toolbox.processing import histogram_normalization
-from deepcell_toolbox.utils import resize, tile_image
+from deepcell_toolbox.utils import resize, tile_image, untile_image
 
 from deepcell.applications import Application
 from deepcell.utils import fetch_data, extract_archive
@@ -157,6 +157,34 @@ def tile_input(image, model_image_shape, pad_mode="constant"):
         )
 
     return tiles, tiles_info
+
+
+def _untile_output(output_tiles, tiles_info, model_image_shape):
+    # If padding was used, remove padding
+    if tiles_info.get("padding", False):
+
+        def _process(im, tiles_info):
+            ((xl, xh), (yl, yh)) = tiles_info["x_pad"], tiles_info["y_pad"]
+            # Edge-case: upper-bound == 0 - this can occur when only one of
+            # either X or Y is smaller than model_img_shape while the other
+            # is equal to model_image_shape.
+            xh = -xh if xh != 0 else None
+            yh = -yh if yh != 0 else None
+            return im[:, xl:xh, yl:yh, :]
+
+    # Otherwise untile
+    else:
+
+        def _process(im, tiles_info):
+            out = untile_image(im, tiles_info, model_input_shape=model_image_shape)
+            return out
+
+    if isinstance(output_tiles, list):
+        output_images = [_process(o, tiles_info) for o in output_tiles]
+    else:
+        output_images = _process(output_tiles, tiles_info)
+
+    return output_images
 
 
 def _resize_output(image, original_shape):
@@ -529,7 +557,7 @@ class Mesmer(Application):
         )
 
         # Untile images
-        output_images = self._untile_output(output_tiles, tiles_info)
+        output_images = _untile_output(output_tiles, tiles_info, model_image_shape)
 
         # restructure outputs into a dict if function provided
         output_images = format_output_mesmer(output_images)
