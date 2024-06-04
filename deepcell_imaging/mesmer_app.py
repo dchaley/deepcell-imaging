@@ -550,7 +550,7 @@ class Mesmer(Application):
         # Run images through model
         t = timeit.default_timer()
         output_tiles = batch_predict(
-            model=self.model, tiles=tiles, batch_size=batch_size
+            model=model, tiles=tiles, batch_size=batch_size
         )
         self.logger.debug(
             "Model inference finished in %s s", timeit.default_timer() - t
