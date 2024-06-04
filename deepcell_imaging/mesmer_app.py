@@ -379,7 +379,6 @@ class Mesmer(Application):
 
         model_image_shape = model.input_shape[1:]
         postprocessing_fn = mesmer_postprocess
-        format_model_output_fn = format_output_mesmer
         dataset_metadata = self.dataset_metadata
         model_metadata = self.model_metadata
 
@@ -391,7 +390,6 @@ class Mesmer(Application):
         self.required_rank = len(self.model_image_shape) + 1
 
         self.postprocessing_fn = postprocessing_fn
-        self.format_model_output_fn = format_model_output_fn
         self.dataset_metadata = dataset_metadata
         self.model_metadata = model_metadata
 
@@ -400,10 +398,6 @@ class Mesmer(Application):
         # Test that pre and post processing functions are callable
         if self.postprocessing_fn is not None and not callable(self.postprocessing_fn):
             raise ValueError("Postprocessing_fn must be a callable function.")
-        if self.format_model_output_fn is not None and not callable(
-            self.format_model_output_fn
-        ):
-            raise ValueError("Format_model_output_fn must be a callable function.")
 
     def predict(
         self,
@@ -547,7 +541,7 @@ class Mesmer(Application):
         output_images = self._untile_output(output_tiles, tiles_info)
 
         # restructure outputs into a dict if function provided
-        output_images = self._format_model_output(output_images)
+        output_images = format_output_mesmer(output_images)
 
         # End inference
         # -----------------------------
