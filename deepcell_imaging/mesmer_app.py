@@ -378,26 +378,17 @@ class Mesmer(Application):
             model = tf.keras.models.load_model(model_path)
 
         model_image_shape = model.input_shape[1:]
-        postprocessing_fn = mesmer_postprocess
         dataset_metadata = self.dataset_metadata
         model_metadata = self.model_metadata
 
         self.model = model
 
         self.model_image_shape = model_image_shape
-        # Require dimension 1 larger than model_input_shape due to addition of batch dimension
-        # We still need this for _postprocess. When that is inlined, remove.
-        self.required_rank = len(self.model_image_shape) + 1
 
-        self.postprocessing_fn = postprocessing_fn
         self.dataset_metadata = dataset_metadata
         self.model_metadata = model_metadata
 
         self.logger = logging.getLogger(self.__class__.__name__)
-
-        # Test that pre and post processing functions are callable
-        if self.postprocessing_fn is not None and not callable(self.postprocessing_fn):
-            raise ValueError("Postprocessing_fn must be a callable function.")
 
     def predict(
         self,
@@ -547,7 +538,24 @@ class Mesmer(Application):
         # -----------------------------
 
         # Postprocess predictions to create label image
-        label_image = self._postprocess(output_images, **postprocess_kwargs)
+        t = timeit.default_timer()
+        self.logger.debug(
+            "Post-processing results with %s and kwargs: %s",
+            mesmer_postprocess.__name__,
+            **postprocess_kwargs,
+        )
+
+        label_image = mesmer_postprocess(output_images, **postprocess_kwargs)
+
+        # Restore channel dimension if not already there
+        if len(label_image.shape) == required_rank - 1:
+            label_image = np.expand_dims(label_image, axis=-1)
+
+        self.logger.debug(
+            "Post-processed results with %s in %s s",
+            mesmer_postprocess.__name__,
+            timeit.default_timer() - t,
+        )
 
         # Resize label_image back to original resolution if necessary
         label_image = _resize_output(label_image, image.shape)
