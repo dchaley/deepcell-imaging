@@ -414,7 +414,6 @@ class Mesmer(Application):
         self.dataset_metadata = dataset_metadata
         self.model_metadata = model_metadata
 
-        self.logger = logging.getLogger(self.__class__.__name__)
 
     def predict(
         self,
@@ -457,6 +456,8 @@ class Mesmer(Application):
         Returns:
             numpy.array: Instance segmentation mask.
         """
+        logger = logging.getLogger(__name__)
+
         default_kwargs_cell = {
             "maxima_threshold": 0.075,
             "maxima_smooth": 0,
@@ -520,12 +521,12 @@ class Mesmer(Application):
             scale_factor = image_mpp / MESMER_MODEL_MPP
             new_shape = (int(shape[1] * scale_factor), int(shape[2] * scale_factor))
             image = resize(image, new_shape, data_format="channels_last")
-            self.logger.debug("Resized input from %s to %s", shape, new_shape)
+            logger.debug("Resized input from %s to %s", shape, new_shape)
 
         # -----------------------------
         # Preprocessing
         t = timeit.default_timer()
-        self.logger.debug(
+        logger.debug(
             "Pre-processing data with %s and kwargs: %s",
             mesmer_preprocess.__name__,
             **preprocess_kwargs,
@@ -533,7 +534,7 @@ class Mesmer(Application):
 
         image = mesmer_preprocess(image, **preprocess_kwargs)
 
-        self.logger.debug(
+        logger.debug(
             "Pre-processed data with %s in %s s",
             mesmer_preprocess.__name__,
             timeit.default_timer() - t,
@@ -550,7 +551,7 @@ class Mesmer(Application):
         output_tiles = batch_predict(
             model=model, tiles=tiles, batch_size=batch_size
         )
-        self.logger.debug(
+        logger.debug(
             "Model inference finished in %s s", timeit.default_timer() - t
         )
 
@@ -565,7 +566,7 @@ class Mesmer(Application):
 
         # Postprocess predictions to create label image
         t = timeit.default_timer()
-        self.logger.debug(
+        logger.debug(
             "Post-processing results with %s and kwargs: %s",
             mesmer_postprocess.__name__,
             **postprocess_kwargs,
@@ -577,7 +578,7 @@ class Mesmer(Application):
         if len(label_image.shape) == required_rank - 1:
             label_image = np.expand_dims(label_image, axis=-1)
 
-        self.logger.debug(
+        logger.debug(
             "Post-processed results with %s in %s s",
             mesmer_postprocess.__name__,
             timeit.default_timer() - t,
