@@ -54,9 +54,7 @@ spec.loader.exec_module(module)
 
 from deepcell_imaging import cached_open
 
-MODEL_REMOTE_PATH = (
-    "gs://davids-genomics-data-public/cellular-segmentation/deep-cell/vanvalenlab-tf-model-multiplex-downloaded-20230706/MultiplexSegmentation.tar.gz",
-)
+MODEL_REMOTE_PATH = "gs://davids-genomics-data-public/cellular-segmentation/deep-cell/vanvalenlab-tf-model-multiplex-downloaded-20230706/MultiplexSegmentation.tar.gz"
 
 MODEL_KEY = "models/MultiplexSegmentation-9.tar.gz"
 MODEL_NAME = "MultiplexSegmentation"
