@@ -1,0 +1,61 @@
+{
+    "taskGroups": [
+        {
+            "taskSpec": {
+                "runnables": [
+                    {
+                        "container": {
+                            "imageUri": "us-central1-docker.pkg.dev/deepcell-401920/deepcell-benchmarking-us-central1/benchmarking:gce",
+                            "commands": [
+                                "--input_channels_path=gs://davids-genomics-data-public/cellular-segmentation/deep-cell/vanvalenlab-multiplex-20200810_tissue_dataset/mesmer-sample-3-dev/input_channels.npz",
+                                "--output_path=gs://deepcell-batch-jobs_us-central1/job-runs/j20250523-standard-noquotacheck",
+                                "--visualize_input",
+                                "--visualize_predictions",
+                                "--provisioning_model=standard"
+                            ]
+                        }
+                    }
+                ],
+                "computeResource": {
+                    "memoryMib": 26000
+                },
+                "maxRetryCount": 3,
+                "lifecyclePolicies": [
+                  {
+                    "action": "RETRY_TASK",
+                    "actionCondition": {
+                      "exitCodes": [50001]
+                    }
+                  }
+                ]
+            },
+            "taskCount": 1,
+            "parallelism": 1
+        }
+    ],
+    "allocationPolicy": {
+        "instances": [
+            {
+                "installGpuDrivers": true,
+                "policy": {
+                  "machineType": "n1-standard-8",
+                  "provisioningModel": "STANDARD",
+                    "accelerators": [
+                        {
+                            "type": "nvidia-tesla-t4",
+                            "count": 1
+                        }
+                    ]
+                }
+            }
+        ],
+        "location": {
+            "allowedLocations": [
+                "regions/us-central1"
+            ]
+        }
+    },
+    "logsPolicy": {
+        "destination": "CLOUD_LOGGING"
+    }
+}
