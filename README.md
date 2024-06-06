@@ -43,3 +43,30 @@ Here are some areas we've identified:
 - Postprocessing
   - h_maxima: need to ship a [~15x speedup optimization](https://github.com/dchaley/deepcell-imaging/tree/main/benchmarking/h_maxima)
 
+# Local development
+
+## Mac OS x86_64
+
+Nothing special. You just need Python 3.10 at the latest.
+
+```
+python3.10 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+## Mac OS arm64
+
+Some incantations are needed to work on Apple silicon computers. You also need Python 3.9.
+
+```
+python3.9 -m venv venv
+source venv/bin/activate
+pip install -r requirements-mac-arm64.txt
+pip install -r requirements.txt
+# Let it fail to install DeepCell, then:
+pip install -r requirements.txt --no-deps
+```
+
+The issue is that DeepCell depends on `tensorflow` not `tensorflow-macos` which we need for the 2.8 version on arm64 chips.
+
