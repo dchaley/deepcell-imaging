@@ -72,6 +72,59 @@ downloaded_file_path = cached_open.get_file(
 model_path = os.path.splitext(downloaded_file_path)[0]
 
 
+def validate_image(model, image):
+    # The 1st dimension is the batch dimension, remove it.
+    model_image_shape = model.input_shape[1:]
+
+    # Require dimension 1 larger than model_input_shape due to addition of batch dimension
+    required_rank = len(model_image_shape) + 1
+
+    # Check input size of image
+    if len(image.shape) != required_rank:
+        raise ValueError(
+            f"Input data must have {required_rank} dimensions. "
+            f"Input data only has {len(image.shape)} dimensions"
+        )
+
+    if image.shape[-1] != model.input_shape[-1]:
+        raise ValueError(
+            f"Input data must have {model.input_shape[-1]} channels. "
+            f"Input data has {image.shape[-1]} channels"
+        )
+
+
+def preprocess_image(model, image, image_mpp):
+    logger = logging.getLogger(__name__)
+    preprocess_kwargs = {}
+
+    validate_image(model, image)
+
+    t = timeit.default_timer()
+    logger.debug(
+        "Pre-processing data with %s and kwargs: %s",
+        mesmer_preprocess.__name__,
+        **preprocess_kwargs,
+    )
+
+    # Scale the image if mpp defined & different from the model mpp
+    if image_mpp not in {None, MESMER_MODEL_MPP}:
+        shape = image.shape
+        scale_factor = image_mpp / MESMER_MODEL_MPP
+        new_shape = (int(shape[1] * scale_factor), int(shape[2] * scale_factor))
+        image = resize(image, new_shape, data_format="channels_last")
+        logger.debug("Resized input from %s to %s", shape, new_shape)
+
+    image = mesmer_preprocess(image, **preprocess_kwargs)
+
+    logger.debug(
+        "Pre-processed data with %s in %s s",
+        mesmer_preprocess.__name__,
+        timeit.default_timer() - t,
+    )
+
+    return image
+
+
 def predict(input_channels, image_mpp, compartment, batch_size):
     model = tf.keras.models.load_model(model_path)
 
@@ -81,7 +134,7 @@ def predict(input_channels, image_mpp, compartment, batch_size):
     #  (2) predict(...)
     #  (3) postprocess(...)
 
-    return _predict(
+    return _monolithic_predict(
         model,
         input_channels,
         image_mpp=image_mpp,
@@ -340,12 +393,11 @@ def batch_predict(model, tiles, batch_size):
     return output_tiles
 
 
-def _predict(
+def _monolithic_predict(
     model,
     image,
     batch_size=4,
     image_mpp=None,
-    preprocess_kwargs={},
     compartment="whole-cell",
     pad_mode="constant",
     postprocess_kwargs_whole_cell={},
@@ -426,43 +478,13 @@ def _predict(
     # Require dimension 1 larger than model_input_shape due to addition of batch dimension
     required_rank = len(model_image_shape) + 1
 
-    # Check input size of image
-    if len(image.shape) != required_rank:
-        raise ValueError(
-            f"Input data must have {required_rank} dimensions. "
-            f"Input data only has {len(image.shape)} dimensions"
-        )
-
-    if image.shape[-1] != model.input_shape[-1]:
-        raise ValueError(
-            f"Input data must have {model.input_shape[-1]} channels. "
-            f"Input data has {image.shape[-1]} channels"
-        )
-
-    # Scale the image if mpp defined & different from the model mpp
-    if image_mpp not in {None, MESMER_MODEL_MPP}:
-        shape = image.shape
-        scale_factor = image_mpp / MESMER_MODEL_MPP
-        new_shape = (int(shape[1] * scale_factor), int(shape[2] * scale_factor))
-        image = resize(image, new_shape, data_format="channels_last")
-        logger.debug("Resized input from %s to %s", shape, new_shape)
+    validate_image(model, image)
 
     # -----------------------------
     # Preprocessing
-    t = timeit.default_timer()
-    logger.debug(
-        "Pre-processing data with %s and kwargs: %s",
-        mesmer_preprocess.__name__,
-        **preprocess_kwargs,
-    )
 
-    image = mesmer_preprocess(image, **preprocess_kwargs)
+    image = preprocess_image(model, image, image_mpp)
 
-    logger.debug(
-        "Pre-processed data with %s in %s s",
-        mesmer_preprocess.__name__,
-        timeit.default_timer() - t,
-    )
     # End preprocessing
     # -----------------------------
     # Start inference
