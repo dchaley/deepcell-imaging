@@ -25,7 +25,6 @@
 # ==============================================================================
 """Mesmer application"""
 
-
 from pathlib import Path
 
 import logging
@@ -75,7 +74,6 @@ model_path = os.path.splitext(downloaded_file_path)[0]
 
 def predict(input_channels, image_mpp, compartment, batch_size):
     model = tf.keras.models.load_model(model_path)
-    app = Mesmer(model=model)
 
     # In the end result, we don't have app.predict.
     # We have:
@@ -83,7 +81,7 @@ def predict(input_channels, image_mpp, compartment, batch_size):
     #  (2) predict(...)
     #  (3) postprocess(...)
 
-    return app.predict(
+    return _predict(
         model,
         input_channels,
         image_mpp=image_mpp,
@@ -253,7 +251,7 @@ def format_output_mesmer(output_list):
 
 
 def mesmer_postprocess(
-    model_output, compartment="whole-cell", whole_cell_kwargs=None, nuclear_kwargs=None
+        model_output, compartment="whole-cell", whole_cell_kwargs=None, nuclear_kwargs=None
 ):
     """Postprocess Mesmer output to generate predictions for distinct cellular compartments
 
@@ -321,7 +319,7 @@ def batch_predict(model, tiles, batch_size):
 
     # loop through each batch
     for i in range(0, tiles.shape[0], batch_size):
-        batch_inputs = tiles[i : i + batch_size, ...]
+        batch_inputs = tiles[i: i + batch_size, ...]
 
         batch_outputs = model.predict(batch_inputs, batch_size=batch_size)
 
@@ -337,254 +335,180 @@ def batch_predict(model, tiles, batch_size):
 
         # save each batch to corresponding index in output list
         for j, batch_out in enumerate(batch_outputs):
-            output_tiles[j][i : i + batch_size, ...] = batch_out
+            output_tiles[j][i: i + batch_size, ...] = batch_out
 
     return output_tiles
 
 
-class Mesmer(Application):
-    """Loads a :mod:`deepcell.model_zoo.panopticnet.PanopticNet` model for
-    tissue segmentation with pretrained weights.
+def _predict(
+    model,
+    image,
+    batch_size=4,
+    image_mpp=None,
+    preprocess_kwargs={},
+    compartment="whole-cell",
+    pad_mode="constant",
+    postprocess_kwargs_whole_cell={},
+    postprocess_kwargs_nuclear={},
+):
+    """Generates a labeled image of the input running prediction with
+    appropriate pre and post processing functions.
 
-    The ``predict`` method handles prep and post processing steps
-    to return a labeled image.
-
-    Example:
-
-    .. code-block:: python
-
-        from skimage.io import imread
-        from deepcell.applications import Mesmer
-
-        # Load the images
-        im1 = imread('TNBC_DNA.tiff')
-        im2 = imread('TNBC_Membrane.tiff')
-
-        # Combined together and expand to 4D
-        im = np.stack((im1, im2), axis=-1)
-        im = np.expand_dims(im,0)
-
-        # Create the application
-        app = Mesmer()
-
-        # create the lab
-        labeled_image = app.predict(image)
+    Input images are required to have 4 dimensions
+    ``[batch, x, y, channel]``.
+    Additional empty dimensions can be added using ``np.expand_dims``.
 
     Args:
-        model (tf.keras.Model): The model to load. If ``None``,
-            a pre-trained model will be downloaded.
+        image (numpy.array): Input image with shape
+            ``[batch, x, y, channel]``.
+        batch_size (int): Number of images to predict on per batch.
+        image_mpp (float): Microns per pixel for ``image``.
+        compartment (str): Specify type of segmentation to predict.
+            Must be one of ``"whole-cell"``, ``"nuclear"``, ``"both"``.
+        preprocess_kwargs (dict): Keyword arguments to pass to the
+            pre-processing function.
+        postprocess_kwargs (dict): Keyword arguments to pass to the
+            post-processing function.
+
+    Raises:
+        ValueError: Input data must match required rank of the application,
+            calculated as one dimension more (batch dimension) than expected
+            by the model.
+
+        ValueError: Input data must match required number of channels.
+
+    Returns:
+        numpy.array: Instance segmentation mask.
     """
+    logger = logging.getLogger(__name__)
 
-    #: Metadata for the dataset used to train the model
-    dataset_metadata = {
-        "name": "20200315_IF_Training_6.npz",
-        "other": "Pooled whole-cell data across tissue types",
+    default_kwargs_cell = {
+        "maxima_threshold": 0.075,
+        "maxima_smooth": 0,
+        "interior_threshold": 0.2,
+        "interior_smooth": 2,
+        "small_objects_threshold": 15,
+        "fill_holes_threshold": 15,
+        "radius": 2,
     }
 
-    #: Metadata for the model and training process
-    model_metadata = {
-        "batch_size": 1,
-        "lr": 1e-5,
-        "lr_decay": 0.99,
-        "training_seed": 0,
-        "n_epochs": 30,
-        "training_steps_per_epoch": 1739 // 1,
-        "validation_steps_per_epoch": 193 // 1,
+    default_kwargs_nuc = {
+        "maxima_threshold": 0.1,
+        "maxima_smooth": 0,
+        "interior_threshold": 0.2,
+        "interior_smooth": 2,
+        "small_objects_threshold": 15,
+        "fill_holes_threshold": 15,
+        "radius": 2,
     }
 
-    def __init__(self, model=None):
-        if model is None:
-            cache_subdir = "models"
-            model_dir = Path.home() / ".deepcell" / "models"
-            archive_path = fetch_data(
-                asset_key=MODEL_KEY, cache_subdir=cache_subdir, file_hash=MODEL_HASH
-            )
-            extract_archive(archive_path, model_dir)
-            model_path = model_dir / MODEL_NAME
-            model = tf.keras.models.load_model(model_path)
+    # overwrite defaults with any user-provided values
+    postprocess_kwargs_whole_cell = {
+        **default_kwargs_cell,
+        **postprocess_kwargs_whole_cell,
+    }
 
-        model_image_shape = model.input_shape[1:]
-        dataset_metadata = self.dataset_metadata
-        model_metadata = self.model_metadata
+    postprocess_kwargs_nuclear = {
+        **default_kwargs_nuc,
+        **postprocess_kwargs_nuclear,
+    }
 
-        self.model = model
+    # create dict to hold all of the post-processing kwargs
+    postprocess_kwargs = {
+        "whole_cell_kwargs": postprocess_kwargs_whole_cell,
+        "nuclear_kwargs": postprocess_kwargs_nuclear,
+        "compartment": compartment,
+    }
 
-        self.model_image_shape = model_image_shape
+    # The 1st dimension is the batch dimension, remove it.
+    model_image_shape = model.input_shape[1:]
 
-        self.dataset_metadata = dataset_metadata
-        self.model_metadata = model_metadata
+    # Require dimension 1 larger than model_input_shape due to addition of batch dimension
+    required_rank = len(model_image_shape) + 1
 
-
-    def predict(
-        self,
-        model,
-        image,
-        batch_size=4,
-        image_mpp=None,
-        preprocess_kwargs={},
-        compartment="whole-cell",
-        pad_mode="constant",
-        postprocess_kwargs_whole_cell={},
-        postprocess_kwargs_nuclear={},
-    ):
-        """Generates a labeled image of the input running prediction with
-        appropriate pre and post processing functions.
-
-        Input images are required to have 4 dimensions
-        ``[batch, x, y, channel]``.
-        Additional empty dimensions can be added using ``np.expand_dims``.
-
-        Args:
-            image (numpy.array): Input image with shape
-                ``[batch, x, y, channel]``.
-            batch_size (int): Number of images to predict on per batch.
-            image_mpp (float): Microns per pixel for ``image``.
-            compartment (str): Specify type of segmentation to predict.
-                Must be one of ``"whole-cell"``, ``"nuclear"``, ``"both"``.
-            preprocess_kwargs (dict): Keyword arguments to pass to the
-                pre-processing function.
-            postprocess_kwargs (dict): Keyword arguments to pass to the
-                post-processing function.
-
-        Raises:
-            ValueError: Input data must match required rank of the application,
-                calculated as one dimension more (batch dimension) than expected
-                by the model.
-
-            ValueError: Input data must match required number of channels.
-
-        Returns:
-            numpy.array: Instance segmentation mask.
-        """
-        logger = logging.getLogger(__name__)
-
-        default_kwargs_cell = {
-            "maxima_threshold": 0.075,
-            "maxima_smooth": 0,
-            "interior_threshold": 0.2,
-            "interior_smooth": 2,
-            "small_objects_threshold": 15,
-            "fill_holes_threshold": 15,
-            "radius": 2,
-        }
-
-        default_kwargs_nuc = {
-            "maxima_threshold": 0.1,
-            "maxima_smooth": 0,
-            "interior_threshold": 0.2,
-            "interior_smooth": 2,
-            "small_objects_threshold": 15,
-            "fill_holes_threshold": 15,
-            "radius": 2,
-        }
-
-        # overwrite defaults with any user-provided values
-        postprocess_kwargs_whole_cell = {
-            **default_kwargs_cell,
-            **postprocess_kwargs_whole_cell,
-        }
-
-        postprocess_kwargs_nuclear = {
-            **default_kwargs_nuc,
-            **postprocess_kwargs_nuclear,
-        }
-
-        # create dict to hold all of the post-processing kwargs
-        postprocess_kwargs = {
-            "whole_cell_kwargs": postprocess_kwargs_whole_cell,
-            "nuclear_kwargs": postprocess_kwargs_nuclear,
-            "compartment": compartment,
-        }
-
-        # The 1st dimension is the batch dimension, remove it.
-        model_image_shape = model.input_shape[1:]
-
-        # Require dimension 1 larger than model_input_shape due to addition of batch dimension
-        required_rank = len(model_image_shape) + 1
-
-        # Check input size of image
-        if len(image.shape) != required_rank:
-            raise ValueError(
-                f"Input data must have {required_rank} dimensions. "
-                f"Input data only has {len(image.shape)} dimensions"
-            )
-
-        if image.shape[-1] != model.input_shape[-1]:
-            raise ValueError(
-                f"Input data must have {model.input_shape[-1]} channels. "
-                f"Input data has {image.shape[-1]} channels"
-            )
-
-        # Scale the image if mpp defined & different from the model mpp
-        if image_mpp not in {None, MESMER_MODEL_MPP}:
-            shape = image.shape
-            scale_factor = image_mpp / MESMER_MODEL_MPP
-            new_shape = (int(shape[1] * scale_factor), int(shape[2] * scale_factor))
-            image = resize(image, new_shape, data_format="channels_last")
-            logger.debug("Resized input from %s to %s", shape, new_shape)
-
-        # -----------------------------
-        # Preprocessing
-        t = timeit.default_timer()
-        logger.debug(
-            "Pre-processing data with %s and kwargs: %s",
-            mesmer_preprocess.__name__,
-            **preprocess_kwargs,
+    # Check input size of image
+    if len(image.shape) != required_rank:
+        raise ValueError(
+            f"Input data must have {required_rank} dimensions. "
+            f"Input data only has {len(image.shape)} dimensions"
         )
 
-        image = mesmer_preprocess(image, **preprocess_kwargs)
-
-        logger.debug(
-            "Pre-processed data with %s in %s s",
-            mesmer_preprocess.__name__,
-            timeit.default_timer() - t,
-        )
-        # End preprocessing
-        # -----------------------------
-        # Start inference
-
-        # Tile images, raises error if the image is not 4d
-        tiles, tiles_info = tile_input(image, model_image_shape, pad_mode=pad_mode)
-
-        # Run images through model
-        t = timeit.default_timer()
-        output_tiles = batch_predict(
-            model=model, tiles=tiles, batch_size=batch_size
-        )
-        logger.debug(
-            "Model inference finished in %s s", timeit.default_timer() - t
+    if image.shape[-1] != model.input_shape[-1]:
+        raise ValueError(
+            f"Input data must have {model.input_shape[-1]} channels. "
+            f"Input data has {image.shape[-1]} channels"
         )
 
-        # Untile images
-        output_images = _untile_output(output_tiles, tiles_info, model_image_shape)
+    # Scale the image if mpp defined & different from the model mpp
+    if image_mpp not in {None, MESMER_MODEL_MPP}:
+        shape = image.shape
+        scale_factor = image_mpp / MESMER_MODEL_MPP
+        new_shape = (int(shape[1] * scale_factor), int(shape[2] * scale_factor))
+        image = resize(image, new_shape, data_format="channels_last")
+        logger.debug("Resized input from %s to %s", shape, new_shape)
 
-        # restructure outputs into a dict if function provided
-        output_images = format_output_mesmer(output_images)
+    # -----------------------------
+    # Preprocessing
+    t = timeit.default_timer()
+    logger.debug(
+        "Pre-processing data with %s and kwargs: %s",
+        mesmer_preprocess.__name__,
+        **preprocess_kwargs,
+    )
 
-        # End inference
-        # -----------------------------
+    image = mesmer_preprocess(image, **preprocess_kwargs)
 
-        # Postprocess predictions to create label image
-        t = timeit.default_timer()
-        logger.debug(
-            "Post-processing results with %s and kwargs: %s",
-            mesmer_postprocess.__name__,
-            **postprocess_kwargs,
-        )
+    logger.debug(
+        "Pre-processed data with %s in %s s",
+        mesmer_preprocess.__name__,
+        timeit.default_timer() - t,
+    )
+    # End preprocessing
+    # -----------------------------
+    # Start inference
 
-        label_image = mesmer_postprocess(output_images, **postprocess_kwargs)
+    # Tile images, raises error if the image is not 4d
+    tiles, tiles_info = tile_input(image, model_image_shape, pad_mode=pad_mode)
 
-        # Restore channel dimension if not already there
-        if len(label_image.shape) == required_rank - 1:
-            label_image = np.expand_dims(label_image, axis=-1)
+    # Run images through model
+    t = timeit.default_timer()
+    output_tiles = batch_predict(
+        model=model, tiles=tiles, batch_size=batch_size
+    )
+    logger.debug(
+        "Model inference finished in %s s", timeit.default_timer() - t
+    )
 
-        logger.debug(
-            "Post-processed results with %s in %s s",
-            mesmer_postprocess.__name__,
-            timeit.default_timer() - t,
-        )
+    # Untile images
+    output_images = _untile_output(output_tiles, tiles_info, model_image_shape)
 
-        # Resize label_image back to original resolution if necessary
-        label_image = _resize_output(label_image, image.shape)
+    # restructure outputs into a dict if function provided
+    output_images = format_output_mesmer(output_images)
 
-        return label_image
+    # End inference
+    # -----------------------------
+
+    # Postprocess predictions to create label image
+    t = timeit.default_timer()
+    logger.debug(
+        "Post-processing results with %s and kwargs: %s",
+        mesmer_postprocess.__name__,
+        **postprocess_kwargs,
+    )
+
+    label_image = mesmer_postprocess(output_images, **postprocess_kwargs)
+
+    # Restore channel dimension if not already there
+    if len(label_image.shape) == required_rank - 1:
+        label_image = np.expand_dims(label_image, axis=-1)
+
+    logger.debug(
+        "Post-processed results with %s in %s s",
+        mesmer_postprocess.__name__,
+        timeit.default_timer() - t,
+    )
+
+    # Resize label_image back to original resolution if necessary
+    label_image = _resize_output(label_image, image.shape)
+
+    return label_image
