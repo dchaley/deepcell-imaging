@@ -149,6 +149,77 @@ def infer(model, image, batch_size):
     return format_output_mesmer(output_images)
 
 
+def postprocess(model, output_images, input_shape, compartment="whole-cell", whole_cell_kwargs=None, nuclear_kwargs=None):
+    logger = logging.getLogger(__name__)
+
+    default_kwargs_cell = {
+        "maxima_threshold": 0.075,
+        "maxima_smooth": 0,
+        "interior_threshold": 0.2,
+        "interior_smooth": 2,
+        "small_objects_threshold": 15,
+        "fill_holes_threshold": 15,
+        "radius": 2,
+    }
+
+    default_kwargs_nuc = {
+        "maxima_threshold": 0.1,
+        "maxima_smooth": 0,
+        "interior_threshold": 0.2,
+        "interior_smooth": 2,
+        "small_objects_threshold": 15,
+        "fill_holes_threshold": 15,
+        "radius": 2,
+    }
+
+    # overwrite defaults with any user-provided values
+    postprocess_kwargs_whole_cell = {
+        **default_kwargs_cell,
+        **whole_cell_kwargs,
+    }
+
+    postprocess_kwargs_nuclear = {
+        **default_kwargs_nuc,
+        **nuclear_kwargs,
+    }
+
+    # create dict to hold all of the post-processing kwargs
+    postprocess_kwargs = {
+        "whole_cell_kwargs": postprocess_kwargs_whole_cell,
+        "nuclear_kwargs": postprocess_kwargs_nuclear,
+        "compartment": compartment,
+    }
+
+    # The 1st dimension is the batch dimension, remove it.
+    model_image_shape = model.input_shape[1:]
+
+    # Require dimension 1 larger than model_input_shape due to addition of batch dimension
+    required_rank = len(model_image_shape) + 1
+
+    # Postprocess predictions to create label image
+    t = timeit.default_timer()
+    logger.debug(
+        "Post-processing results with %s and kwargs: %s",
+        mesmer_postprocess.__name__,
+        **postprocess_kwargs,
+    )
+
+    label_image = mesmer_postprocess(output_images, **postprocess_kwargs)
+
+    # Restore channel dimension if not already there
+    if len(label_image.shape) == required_rank - 1:
+        label_image = np.expand_dims(label_image, axis=-1)
+
+    logger.debug(
+        "Post-processed results with %s in %s s",
+        mesmer_postprocess.__name__,
+        timeit.default_timer() - t,
+        )
+
+    # Resize label_image back to original resolution if necessary
+    return _resize_output(label_image, input_shape)
+
+
 def predict(input_channels, image_mpp, compartment, batch_size):
     model = tf.keras.models.load_model(model_path)
 
@@ -456,82 +527,12 @@ def _monolithic_predict(
     Returns:
         numpy.array: Instance segmentation mask.
     """
-    logger = logging.getLogger(__name__)
-
-    default_kwargs_cell = {
-        "maxima_threshold": 0.075,
-        "maxima_smooth": 0,
-        "interior_threshold": 0.2,
-        "interior_smooth": 2,
-        "small_objects_threshold": 15,
-        "fill_holes_threshold": 15,
-        "radius": 2,
-    }
-
-    default_kwargs_nuc = {
-        "maxima_threshold": 0.1,
-        "maxima_smooth": 0,
-        "interior_threshold": 0.2,
-        "interior_smooth": 2,
-        "small_objects_threshold": 15,
-        "fill_holes_threshold": 15,
-        "radius": 2,
-    }
-
-    # overwrite defaults with any user-provided values
-    postprocess_kwargs_whole_cell = {
-        **default_kwargs_cell,
-        **postprocess_kwargs_whole_cell,
-    }
-
-    postprocess_kwargs_nuclear = {
-        **default_kwargs_nuc,
-        **postprocess_kwargs_nuclear,
-    }
-
-    # create dict to hold all of the post-processing kwargs
-    postprocess_kwargs = {
-        "whole_cell_kwargs": postprocess_kwargs_whole_cell,
-        "nuclear_kwargs": postprocess_kwargs_nuclear,
-        "compartment": compartment,
-    }
-
-    # The 1st dimension is the batch dimension, remove it.
-    model_image_shape = model.input_shape[1:]
-
-    # Require dimension 1 larger than model_input_shape due to addition of batch dimension
-    required_rank = len(model_image_shape) + 1
-
     validate_image(model, image)
 
     # -----------------------------
     image = preprocess_image(model, image, image_mpp)
     output_images = infer(model, image, batch_size)
-
-    # End inference
+    label_image = postprocess(model, output_images, image.shape, compartment=compartment, whole_cell_kwargs=postprocess_kwargs_whole_cell, nuclear_kwargs=postprocess_kwargs_nuclear)
     # -----------------------------
-
-    # Postprocess predictions to create label image
-    t = timeit.default_timer()
-    logger.debug(
-        "Post-processing results with %s and kwargs: %s",
-        mesmer_postprocess.__name__,
-        **postprocess_kwargs,
-    )
-
-    label_image = mesmer_postprocess(output_images, **postprocess_kwargs)
-
-    # Restore channel dimension if not already there
-    if len(label_image.shape) == required_rank - 1:
-        label_image = np.expand_dims(label_image, axis=-1)
-
-    logger.debug(
-        "Post-processed results with %s in %s s",
-        mesmer_postprocess.__name__,
-        timeit.default_timer() - t,
-    )
-
-    # Resize label_image back to original resolution if necessary
-    label_image = _resize_output(label_image, image.shape)
 
     return label_image
