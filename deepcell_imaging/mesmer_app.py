@@ -72,9 +72,9 @@ downloaded_file_path = cached_open.get_file(
 model_path = os.path.splitext(downloaded_file_path)[0]
 
 
-def validate_image(model, image):
+def validate_image(model_input_shape, image):
     # The 1st dimension is the batch dimension, remove it.
-    model_image_shape = model.input_shape[1:]
+    model_image_shape = model_input_shape[1:]
 
     # Require dimension 1 larger than model_input_shape due to addition of batch dimension
     required_rank = len(model_image_shape) + 1
@@ -86,18 +86,18 @@ def validate_image(model, image):
             f"Input data only has {len(image.shape)} dimensions"
         )
 
-    if image.shape[-1] != model.input_shape[-1]:
+    if image.shape[-1] != model_input_shape[-1]:
         raise ValueError(
-            f"Input data must have {model.input_shape[-1]} channels. "
+            f"Input data must have {model_input_shape[-1]} channels. "
             f"Input data has {image.shape[-1]} channels"
         )
 
 
-def preprocess_image(model, image, image_mpp):
+def preprocess_image(model_input_shape, image, image_mpp):
     logger = logging.getLogger(__name__)
     preprocess_kwargs = {}
 
-    validate_image(model, image)
+    validate_image(model_input_shape, image)
 
     t = timeit.default_timer()
     logger.debug(
@@ -149,7 +149,7 @@ def infer(model, image, batch_size):
     return format_output_mesmer(output_images)
 
 
-def postprocess(model, output_images, input_shape, compartment="whole-cell", whole_cell_kwargs=None, nuclear_kwargs=None):
+def postprocess(output_images, input_shape, compartment="whole-cell", whole_cell_kwargs=None, nuclear_kwargs=None):
     logger = logging.getLogger(__name__)
 
     default_kwargs_cell = {
@@ -183,18 +183,12 @@ def postprocess(model, output_images, input_shape, compartment="whole-cell", who
         **nuclear_kwargs,
     }
 
-    # create dict to hold all of the post-processing kwargs
+    # create dict to hold all the post-processing kwargs
     postprocess_kwargs = {
         "whole_cell_kwargs": postprocess_kwargs_whole_cell,
         "nuclear_kwargs": postprocess_kwargs_nuclear,
         "compartment": compartment,
     }
-
-    # The 1st dimension is the batch dimension, remove it.
-    model_image_shape = model.input_shape[1:]
-
-    # Require dimension 1 larger than model_input_shape due to addition of batch dimension
-    required_rank = len(model_image_shape) + 1
 
     # Postprocess predictions to create label image
     t = timeit.default_timer()
@@ -205,10 +199,6 @@ def postprocess(model, output_images, input_shape, compartment="whole-cell", who
     )
 
     label_image = mesmer_postprocess(output_images, **postprocess_kwargs)
-
-    # Restore channel dimension if not already there
-    if len(label_image.shape) == required_rank - 1:
-        label_image = np.expand_dims(label_image, axis=-1)
 
     logger.debug(
         "Post-processed results with %s in %s s",
@@ -527,12 +517,12 @@ def _monolithic_predict(
     Returns:
         numpy.array: Instance segmentation mask.
     """
-    validate_image(model, image)
+    validate_image(model.input_shape, image)
 
     # -----------------------------
-    image = preprocess_image(model, image, image_mpp)
+    image = preprocess_image(model.input_shape, image, image_mpp)
     output_images = infer(model, image, batch_size)
-    label_image = postprocess(model, output_images, image.shape, compartment=compartment, whole_cell_kwargs=postprocess_kwargs_whole_cell, nuclear_kwargs=postprocess_kwargs_nuclear)
+    label_image = postprocess(output_images, image.shape, compartment=compartment, whole_cell_kwargs=postprocess_kwargs_whole_cell, nuclear_kwargs=postprocess_kwargs_nuclear)
     # -----------------------------
 
     return label_image
