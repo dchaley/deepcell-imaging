@@ -125,6 +125,30 @@ def preprocess_image(model, image, image_mpp):
     return image
 
 
+def infer(model, image, batch_size):
+    logger = logging.getLogger(__name__)
+    model_image_shape = model.input_shape[1:]
+    pad_mode = 'constant'
+
+    # Tile images, raises error if the image is not 4d
+    tiles, tiles_info = tile_input(image, model_image_shape, pad_mode=pad_mode)
+
+    # Run images through model
+    t = timeit.default_timer()
+    output_tiles = batch_predict(
+        model=model, tiles=tiles, batch_size=batch_size
+    )
+    logger.debug(
+        "Model inference finished in %s s", timeit.default_timer() - t
+    )
+
+    # Untile images
+    output_images = _untile_output(output_tiles, tiles_info, model_image_shape)
+
+    # restructure outputs into a dict if function provided
+    return format_output_mesmer(output_images)
+
+
 def predict(input_channels, image_mpp, compartment, batch_size):
     model = tf.keras.models.load_model(model_path)
 
@@ -481,31 +505,8 @@ def _monolithic_predict(
     validate_image(model, image)
 
     # -----------------------------
-    # Preprocessing
-
     image = preprocess_image(model, image, image_mpp)
-
-    # End preprocessing
-    # -----------------------------
-    # Start inference
-
-    # Tile images, raises error if the image is not 4d
-    tiles, tiles_info = tile_input(image, model_image_shape, pad_mode=pad_mode)
-
-    # Run images through model
-    t = timeit.default_timer()
-    output_tiles = batch_predict(
-        model=model, tiles=tiles, batch_size=batch_size
-    )
-    logger.debug(
-        "Model inference finished in %s s", timeit.default_timer() - t
-    )
-
-    # Untile images
-    output_images = _untile_output(output_tiles, tiles_info, model_image_shape)
-
-    # restructure outputs into a dict if function provided
-    output_images = format_output_mesmer(output_images)
+    output_images = infer(model, image, batch_size)
 
     # End inference
     # -----------------------------
