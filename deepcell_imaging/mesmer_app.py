@@ -31,16 +31,12 @@ import logging
 import numpy as np
 import os
 import sys
-import tensorflow as tf
 import timeit
 
 from deepcell_toolbox.deep_watershed import deep_watershed
 from deepcell_toolbox.processing import percentile_threshold
 from deepcell_toolbox.processing import histogram_normalization
 from deepcell_toolbox.utils import resize, tile_image, untile_image
-
-from deepcell.applications import Application
-from deepcell.utils import fetch_data, extract_archive
 
 import importlib
 
