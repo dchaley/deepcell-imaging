@@ -210,22 +210,18 @@ def postprocess(output_images, input_shape, compartment="whole-cell", whole_cell
     return _resize_output(label_image, input_shape)
 
 
-def predict(input_channels, image_mpp, compartment, batch_size):
+def predict(image, image_mpp=None, compartment='whole-cell', batch_size=4, postprocess_kwargs_whole_cell={}, postprocess_kwargs_nuclear={}):
     model = tf.keras.models.load_model(model_path)
 
-    # In the end result, we don't have app.predict.
-    # We have:
-    #  (1) preprocess(...)
-    #  (2) predict(...)
-    #  (3) postprocess(...)
+    validate_image(model.input_shape, image)
 
-    return _monolithic_predict(
-        model,
-        input_channels,
-        image_mpp=image_mpp,
-        compartment=compartment,
-        batch_size=batch_size,
-    )
+    original_image_shape = image.shape
+
+    image = preprocess_image(model.input_shape, image, image_mpp)
+    output_images = infer(model, image, batch_size)
+    label_image = postprocess(output_images, original_image_shape, compartment, whole_cell_kwargs=postprocess_kwargs_whole_cell, nuclear_kwargs=postprocess_kwargs_nuclear)
+
+    return label_image
 
 
 # pre- and post-processing functions
@@ -477,52 +473,3 @@ def batch_predict(model, tiles, batch_size):
 
     return output_tiles
 
-
-def _monolithic_predict(
-    model,
-    image,
-    batch_size=4,
-    image_mpp=None,
-    compartment="whole-cell",
-    pad_mode="constant",
-    postprocess_kwargs_whole_cell={},
-    postprocess_kwargs_nuclear={},
-):
-    """Generates a labeled image of the input running prediction with
-    appropriate pre and post processing functions.
-
-    Input images are required to have 4 dimensions
-    ``[batch, x, y, channel]``.
-    Additional empty dimensions can be added using ``np.expand_dims``.
-
-    Args:
-        image (numpy.array): Input image with shape
-            ``[batch, x, y, channel]``.
-        batch_size (int): Number of images to predict on per batch.
-        image_mpp (float): Microns per pixel for ``image``.
-        compartment (str): Specify type of segmentation to predict.
-            Must be one of ``"whole-cell"``, ``"nuclear"``, ``"both"``.
-        preprocess_kwargs (dict): Keyword arguments to pass to the
-            pre-processing function.
-        postprocess_kwargs (dict): Keyword arguments to pass to the
-            post-processing function.
-
-    Raises:
-        ValueError: Input data must match required rank of the application,
-            calculated as one dimension more (batch dimension) than expected
-            by the model.
-
-        ValueError: Input data must match required number of channels.
-
-    Returns:
-        numpy.array: Instance segmentation mask.
-    """
-    validate_image(model.input_shape, image)
-
-    # -----------------------------
-    image = preprocess_image(model.input_shape, image, image_mpp)
-    output_images = infer(model, image, batch_size)
-    label_image = postprocess(output_images, image.shape, compartment=compartment, whole_cell_kwargs=postprocess_kwargs_whole_cell, nuclear_kwargs=postprocess_kwargs_nuclear)
-    # -----------------------------
-
-    return label_image
