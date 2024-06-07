@@ -4,6 +4,7 @@ import importlib
 import numpy as np
 import smart_open
 import sys
+import tensorflow as tf
 
 
 file_path = "./deepcell_imaging/__init__.py"
@@ -22,12 +23,10 @@ with smart_open.open(input_channels_path, "rb") as input_channel_file:
         # An array of shape [height, width, channel] containing intensity of nuclear & membrane channels
         input_channels = loader["input_channels"]
 
-predictions = mesmer_app.predict(
-    input_channels[np.newaxis, ...],
-    image_mpp=0.5,
-    compartment="whole-cell",
-    batch_size=4,
-)
+model = tf.keras.models.load_model(mesmer_app.model_path)
+preprocessed_image = mesmer_app.preprocess_image(model.input_shape, input_channels[np.newaxis, ...], image_mpp=None)
+inferred_images = mesmer_app.infer(model, preprocessed_image, batch_size=4)
+predictions = mesmer_app.postprocess(inferred_images, input_channels[np.newaxis, ...].shape, compartment='whole-cell')
 
 print(input_channels.shape)
 print(predictions.shape)

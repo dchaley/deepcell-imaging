@@ -130,6 +130,8 @@ def infer(model, image, batch_size):
     model_image_shape = model.input_shape[1:]
     pad_mode = 'constant'
 
+    # TODO: we need to validate the input. But what validations?
+
     # Tile images, raises error if the image is not 4d
     tiles, tiles_info = tile_input(image, model_image_shape, pad_mode=pad_mode)
 
@@ -149,8 +151,10 @@ def infer(model, image, batch_size):
     return format_output_mesmer(output_images)
 
 
-def postprocess(output_images, input_shape, compartment="whole-cell", whole_cell_kwargs=None, nuclear_kwargs=None):
+def postprocess(output_images, input_shape, compartment="whole-cell", whole_cell_kwargs={}, nuclear_kwargs={}):
     logger = logging.getLogger(__name__)
+
+    # TODO: We need to validate the input (the output_images parameter)
 
     default_kwargs_cell = {
         "maxima_threshold": 0.075,
@@ -208,20 +212,6 @@ def postprocess(output_images, input_shape, compartment="whole-cell", whole_cell
 
     # Resize label_image back to original resolution if necessary
     return _resize_output(label_image, input_shape)
-
-
-def predict(image, image_mpp=None, compartment='whole-cell', batch_size=4, postprocess_kwargs_whole_cell={}, postprocess_kwargs_nuclear={}):
-    model = tf.keras.models.load_model(model_path)
-
-    validate_image(model.input_shape, image)
-
-    original_image_shape = image.shape
-
-    image = preprocess_image(model.input_shape, image, image_mpp)
-    output_images = infer(model, image, batch_size)
-    label_image = postprocess(output_images, original_image_shape, compartment, whole_cell_kwargs=postprocess_kwargs_whole_cell, nuclear_kwargs=postprocess_kwargs_nuclear)
-
-    return label_image
 
 
 # pre- and post-processing functions
