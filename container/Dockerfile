@@ -26,6 +26,9 @@ WORKDIR "/deepcell-imaging"
 # Install python requirements
 RUN pip install --user --upgrade -r requirements.txt
 
+# Install our own module
+RUN pip install .
+
 # The container entrypoint is the benchmark script.
 # Command-line arguments go to the script.
 ENTRYPOINT ["python", "benchmarking/deepcell-e2e/benchmark.py"]

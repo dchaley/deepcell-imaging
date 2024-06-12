@@ -1,0 +1,11 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deepcell-imaging"
+dynamic = ["version"]
+
+[tool.setuptools]
+packages = ["deepcell_imaging"]
+py-modules = ["__init__"] # dash, not underscore
