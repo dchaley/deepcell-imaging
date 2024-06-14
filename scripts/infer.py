@@ -98,6 +98,18 @@ infer_time_s = timeit.default_timer() - t
 
 print("Ran inference in %s s" % infer_time_s)
 
+print("Running inference again")
+
+t = timeit.default_timer()
+model_output = mesmer_app.infer(
+    model,
+    preprocessed_image,
+    batch_size=batch_size,
+)
+infer_time_s = timeit.default_timer() - t
+
+print("Ran inference again in %s s" % infer_time_s)
+
 print("Saving inference output to %s" % output_uri)
 
 t = timeit.default_timer()
