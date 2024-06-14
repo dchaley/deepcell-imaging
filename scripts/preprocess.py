@@ -8,7 +8,8 @@ Writes preprocessed image to a URI (typically on cloud storage).
 """
 
 import argparse
-from deepcell_imaging import mesmer_app
+from deepcell_imaging import benchmark_utils, mesmer_app
+import json
 import numpy as np
 import smart_open
 import timeit
@@ -40,6 +41,12 @@ parser.add_argument(
     type=str,
     required=True,
 )
+parser.add_argument(
+    "--benchmark_output_uri",
+    help="Where to write preprocessing benchmarking data.",
+    type=str,
+    required=False,
+)
 
 args = parser.parse_args()
 
@@ -47,6 +54,7 @@ image_uri = args.image_uri
 image_array_name = args.image_array_name
 image_mpp = args.image_mpp
 output_uri = args.output_uri
+benchmark_output_uri = args.benchmark_output_uri
 
 # This is hard-coded from the only model-id we support.
 model_input_shape = (None, 256, 256, 2)
@@ -60,25 +68,56 @@ with smart_open.open(image_uri, "rb") as image_file:
         input_channels = loader[image_array_name]
 input_load_time_s = timeit.default_timer() - t
 
-print("Loaded input in %s s" % input_load_time_s)
+print("Loaded input in %s s" % round(input_load_time_s, 2))
 
 print("Preprocessing input")
 
 t = timeit.default_timer()
-preprocessed_image = mesmer_app.preprocess_image(
-    model_input_shape,
-    input_channels[np.newaxis, ...],
-    image_mpp=image_mpp
-)
+
+try:
+    preprocessed_image = mesmer_app.preprocess_image(
+        model_input_shape,
+        input_channels[np.newaxis, ...],
+        image_mpp=image_mpp
+    )
+    success = True
+except Exception as e:
+    success = False
+    print("Preprocessing failed with error: %s" % e)
+
 preprocessing_time_s = timeit.default_timer() - t
+print("Preprocessed input in %s s; success: %s" % (round(preprocessing_time_s, 2), success))
 
-print("Preprocessed input in %s s" % preprocessing_time_s)
+if success:
+    print("Saving output")
+    t = timeit.default_timer()
+    with smart_open.open(output_uri, "wb") as output_file:
+        np.savez_compressed(output_file, image=preprocessed_image)
+    output_time_s = timeit.default_timer() - t
 
-print("Saving output")
+    print("Saved output in %s s" % round(output_time_s, 2))
+else:
+    print("Not saving failed preprocessing output.")
+    output_time_s = 0.0
 
-t = timeit.default_timer()
-with smart_open.open(output_uri, "wb") as output_file:
-    np.savez_compressed(output_file, image=preprocessed_image)
-output_time_s = timeit.default_timer() - t
+# Gather & output timing information
 
-print("Saved output in %s s" % output_time_s)
+if benchmark_output_uri:
+    gpu_info = benchmark_utils.get_gpu_info()
+
+    timing_info = {
+        "preprocessing_instance_type": benchmark_utils.get_gce_instance_type(),
+        "preprocessing_gpu_type": gpu_info[0],
+        "preprocessing_num_gpus": gpu_info[1],
+        "preprocessing_success": success,
+        "preprocessing_peak_memory_gb": benchmark_utils.get_peak_memory(),
+        "preprocessing_is_preemptible": benchmark_utils.get_gce_is_preemptible(),
+        "preprocessing_input_load_time_s": input_load_time_s,
+        "preprocessing_time_s": preprocessing_time_s,
+        "preprocessing_output_write_time_s": output_time_s,
+    }
+
+    with smart_open.open(benchmark_output_uri, "w") as benchmark_output_file:
+        json.dump(timing_info, benchmark_output_file)
+
+    print("Wrote benchmarking data to %s" % benchmark_output_uri)

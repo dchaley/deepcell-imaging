@@ -14,7 +14,8 @@ batch_size : string
 """
 
 import argparse
-from deepcell_imaging import cached_open, mesmer_app
+from deepcell_imaging import benchmark_utils, cached_open, mesmer_app
+import json
 import numpy as np
 import os
 import smart_open
@@ -42,12 +43,19 @@ parser.add_argument(
     type=str,
     required=True,
 )
+parser.add_argument(
+    "--benchmark_output_uri",
+    help="Where to write preprocessing benchmarking data.",
+    type=str,
+    required=False,
+)
 
 args = parser.parse_args()
 
 image_uri = args.image_uri
 batch_size = args.batch_size
 output_uri = args.output_uri
+benchmark_output_uri = args.benchmark_output_uri
 
 # Hard-code remote path & hash based on model_id
 # THIS IS IN US-CENTRAL1
@@ -73,7 +81,7 @@ t = timeit.default_timer()
 model = tf.keras.models.load_model(model_path)
 model_load_time_s = timeit.default_timer() - t
 
-print("Loaded model in %s s" % model_load_time_s)
+print("Loaded model in %s s" % round(model_load_time_s, 2))
 
 print("Loading preprocessed image")
 
@@ -84,43 +92,65 @@ with smart_open.open(image_uri, "rb") as image_file:
         preprocessed_image = loader["image"]
 input_load_time_s = timeit.default_timer() - t
 
-print("Loaded preprocessed image in %s s" % input_load_time_s)
+print("Loaded preprocessed image in %s s" % round(input_load_time_s, 2))
 
 print("Running inference")
 
 t = timeit.default_timer()
-model_output = mesmer_app.infer(
-    model,
-    preprocessed_image,
-    batch_size=batch_size,
-)
-infer_time_s = timeit.default_timer() - t
-
-print("Ran inference in %s s" % infer_time_s)
-
-print("Running inference again")
-
-t = timeit.default_timer()
-model_output = mesmer_app.infer(
-    model,
-    preprocessed_image,
-    batch_size=batch_size,
-)
-infer_time_s = timeit.default_timer() - t
-
-print("Ran inference again in %s s" % infer_time_s)
-
-print("Saving inference output to %s" % output_uri)
-
-t = timeit.default_timer()
-with smart_open.open(output_uri, "wb") as output_file:
-    np.savez_compressed(
-        output_file,
-        arr_0=model_output['whole-cell'][0],
-        arr_1=model_output['whole-cell'][1],
-        arr_2=model_output['nuclear'][0],
-        arr_3=model_output['nuclear'][1],
+try:
+    model_output = mesmer_app.infer(
+        model,
+        preprocessed_image,
+        batch_size=batch_size,
     )
-output_time_s = timeit.default_timer() - t
+    success = True
+except Exception as e:
+    success = False
+    print("Inference failed with error: %s" % e)
 
-print("Saved output in %s s" % output_time_s)
+infer_time_s = timeit.default_timer() - t
+
+print("Ran inference in %s s; success: %s" % (round(infer_time_s, 2), success))
+
+if success:
+    print("Saving inference output to %s" % output_uri)
+
+    t = timeit.default_timer()
+    with smart_open.open(output_uri, "wb") as output_file:
+        np.savez_compressed(
+            output_file,
+            arr_0=model_output['whole-cell'][0],
+            arr_1=model_output['whole-cell'][1],
+            arr_2=model_output['nuclear'][0],
+            arr_3=model_output['nuclear'][1],
+        )
+    output_time_s = timeit.default_timer() - t
+
+    print("Saved output in %s s" % round(output_time_s, 2))
+else:
+    print("Not saving failed inference output.")
+    output_time_s = 0.0
+
+# Gather & output timing information
+
+if benchmark_output_uri:
+    gpu_info = benchmark_utils.get_gpu_info()
+
+    timing_info = {
+        "prediction_instance_type": benchmark_utils.get_gce_instance_type(),
+        "prediction_gpu_type": gpu_info[0],
+        "prediction_num_gpus": gpu_info[1],
+        "prediction_success": success,
+        "prediction_peak_memory_gb": benchmark_utils.get_peak_memory(),
+        "prediction_is_preemptible": benchmark_utils.get_gce_is_preemptible(),
+        "prediction_model_load_time_s": model_load_time_s,
+        "prediction_input_load_time_s": input_load_time_s,
+        "prediction_batch_size": batch_size,
+        "prediction_time_s": infer_time_s,
+        "prediction_output_write_time_s": output_time_s,
+    }
+
+    with smart_open.open(benchmark_output_uri, "w") as benchmark_output_file:
+        json.dump(timing_info, benchmark_output_file)
+
+    print("Wrote benchmarking data to %s" % benchmark_output_uri)
