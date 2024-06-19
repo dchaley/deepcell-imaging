@@ -8,11 +8,13 @@ Writes preprocessed image to a URI (typically on cloud storage).
 """
 
 import argparse
+from datetime import datetime, timezone
 from deepcell_imaging import benchmark_utils, mesmer_app
 import json
 import numpy as np
 import smart_open
 import timeit
+import urllib
 
 parser = argparse.ArgumentParser("preprocess")
 
@@ -89,7 +91,7 @@ preprocessing_time_s = timeit.default_timer() - t
 print("Preprocessed input in %s s; success: %s" % (round(preprocessing_time_s, 2), success))
 
 if success:
-    print("Saving output")
+    print("Saving preprocessing output to %s" % output_uri)
     t = timeit.default_timer()
     with smart_open.open(output_uri, "wb") as output_file:
         np.savez_compressed(output_file, image=preprocessed_image)
@@ -105,7 +107,17 @@ else:
 if benchmark_output_uri:
     gpu_info = benchmark_utils.get_gpu_info()
 
+    parsed_url = urllib.parse.urlparse(image_uri)
+    filename = parsed_url.path.split("/")[-2]
+
+    # BigQuery datetimes don't have a timezone.
+    benchmark_time = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+
     timing_info = {
+        "input_file_id": image_uri,
+        "numpy_size_mb": round(input_channels.nbytes / 1e6, 2),
+        "pixels_m": input_channels.shape[0] * input_channels.shape[1],
+        "benchmark_datetime_utc": benchmark_time,
         "preprocessing_instance_type": benchmark_utils.get_gce_instance_type(),
         "preprocessing_gpu_type": gpu_info[0],
         "preprocessing_num_gpus": gpu_info[1],

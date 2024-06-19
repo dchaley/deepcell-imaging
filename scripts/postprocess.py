@@ -59,6 +59,7 @@ args = parser.parse_args()
 raw_predictions_uri = args.raw_predictions_uri
 input_rows = args.input_rows
 input_cols = args.input_cols
+compartment = args.compartment
 output_uri = args.output_uri
 benchmark_output_uri = args.benchmark_output_uri
 
@@ -83,7 +84,7 @@ try:
     segmentation = mesmer_app.postprocess(
         raw_predictions,
         (1, input_rows, input_cols, 2),
-        compartment='whole-cell'
+        compartment=compartment
     )
     success = True
 except Exception as e:
@@ -95,7 +96,7 @@ postprocessing_time_s = timeit.default_timer() - t
 print("Postprocessed raw predictions in %s s; success: %s" % (round(postprocessing_time_s, 2), success))
 
 if success:
-    print("Saving output")
+    print("Saving postprocessed output to %s" % output_uri)
     t = timeit.default_timer()
     with smart_open.open(output_uri, "wb") as output_file:
         np.savez_compressed(output_file, image=segmentation)
@@ -112,13 +113,14 @@ if benchmark_output_uri:
     gpu_info = benchmark_utils.get_gpu_info()
 
     timing_info = {
+        "compartment": compartment,
         "postprocessing_instance_type": benchmark_utils.get_gce_instance_type(),
         "postprocessing_gpu_type": gpu_info[0],
         "postprocessing_num_gpus": gpu_info[1],
         "postprocessing_success": success,
         "postprocessing_peak_memory_gb": benchmark_utils.get_peak_memory(),
         "postprocessing_is_preemptible": benchmark_utils.get_gce_is_preemptible(),
-        "prediction_input_load_time_s": raw_predictions_load_time_s,
+        "postprocessing_input_load_time_s": raw_predictions_load_time_s,
         "postprocessing_time_s": postprocessing_time_s,
         "postprocessing_output_write_time_s": output_time_s,
     }
