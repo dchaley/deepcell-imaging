@@ -1,6 +1,7 @@
 from itertools import groupby
 import logging
 import platform
+import re
 import requests
 import resource
 import traceback
@@ -18,6 +19,22 @@ def get_gce_instance_type():
     except Exception as e:
         exception_string = traceback.format_exc()
         logging.warning("Error getting machine type: " + exception_string)
+        return "error"
+
+
+def get_gce_region():
+    # Call the metadata server.
+    try:
+        metadata_server = "http://metadata/computeMetadata/v1/instance/zone"
+        metadata_flavor = {"Metadata-Flavor": "Google"}
+
+        # This comes back like this: projects/projectnumber/zones/europe-west4-b
+        region = requests.get(metadata_server, headers=metadata_flavor).text
+        m = re.search("zones/(.*)-[^-]*$", region)
+        return m.group(1)
+    except Exception as e:
+        exception_string = traceback.format_exc()
+        logging.warning("Error getting region: " + exception_string)
         return "error"
 
 
