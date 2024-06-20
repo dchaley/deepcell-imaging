@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Script to run inference on a preprocessed input image for a Mesmer model.
+Script to run prediction on a preprocessed input image for a Mesmer model.
 
 Reads preprocessed image from a URI (typically on cloud storage).
 
@@ -32,7 +32,7 @@ parser.add_argument(
 )
 parser.add_argument(
     "--batch_size",
-    help="Optional integer representing batch size to use for inference. Default is 16.",
+    help="Optional integer representing batch size to use for prediction. Default is 16.",
     type=int,
     required=False,
     default=16
@@ -94,11 +94,11 @@ input_load_time_s = timeit.default_timer() - t
 
 print("Loaded preprocessed image in %s s" % round(input_load_time_s, 2))
 
-print("Running inference")
+print("Running prediction")
 
 t = timeit.default_timer()
 try:
-    model_output = mesmer_app.infer(
+    model_output = mesmer_app.predict(
         model,
         preprocessed_image,
         batch_size=batch_size,
@@ -106,14 +106,14 @@ try:
     success = True
 except Exception as e:
     success = False
-    print("Inference failed with error: %s" % e)
+    print("Prediction failed with error: %s" % e)
 
-infer_time_s = timeit.default_timer() - t
+predict_time_s = timeit.default_timer() - t
 
-print("Ran inference in %s s; success: %s" % (round(infer_time_s, 2), success))
+print("Ran prediction in %s s; success: %s" % (round(predict_time_s, 2), success))
 
 if success:
-    print("Saving inference output to %s" % output_uri)
+    print("Saving raw predictions output to %s" % output_uri)
 
     t = timeit.default_timer()
     with smart_open.open(output_uri, "wb") as output_file:
@@ -128,7 +128,7 @@ if success:
 
     print("Saved output in %s s" % round(output_time_s, 2))
 else:
-    print("Not saving failed inference output.")
+    print("Not saving failed prediction output.")
     output_time_s = 0.0
 
 # Gather & output timing information
@@ -146,7 +146,7 @@ if benchmark_output_uri:
         "prediction_model_load_time_s": model_load_time_s,
         "prediction_input_load_time_s": input_load_time_s,
         "prediction_batch_size": batch_size,
-        "prediction_time_s": infer_time_s,
+        "prediction_time_s": predict_time_s,
         "prediction_output_write_time_s": output_time_s,
     }
 

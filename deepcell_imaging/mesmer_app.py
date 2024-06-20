@@ -96,7 +96,7 @@ def preprocess_image(model_input_shape, image, image_mpp):
     return image
 
 
-def infer(model, image, batch_size):
+def predict(model, image, batch_size):
     logger = logging.getLogger(__name__)
     model_image_shape = model.input_shape[1:]
     pad_mode = 'constant'
@@ -112,7 +112,7 @@ def infer(model, image, batch_size):
         model=model, tiles=tiles, batch_size=batch_size
     )
     logger.debug(
-        "Model inference finished in %s s", timeit.default_timer() - t
+        "Model prediction finished in %s s", timeit.default_timer() - t
     )
 
     # Untile images

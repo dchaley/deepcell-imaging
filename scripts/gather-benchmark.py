@@ -25,8 +25,8 @@ parser.add_argument(
     required=True,
 )
 parser.add_argument(
-    "--infer_benchmarking_uri",
-    help="URI to benchmarking data for the inference step.",
+    "--prediction_benchmarking_uri",
+    help="URI to benchmarking data for the prediction step.",
     type=str,
     required=True,
 )
@@ -46,7 +46,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 preprocess_benchmarking_uri = args.preprocess_benchmarking_uri
-infer_benchmarking_uri = args.infer_benchmarking_uri
+prediction_benchmarking_uri = args.prediction_benchmarking_uri
 postprocess_benchmarking_uri = args.postprocess_benchmarking_uri
 bigquery_benchmarking_table = args.bigquery_benchmarking_table
 
@@ -58,7 +58,7 @@ print("Loading benchmarking data")
 
 t = timeit.default_timer()
 
-for data_uri in [preprocess_benchmarking_uri, infer_benchmarking_uri, postprocess_benchmarking_uri]:
+for data_uri in [preprocess_benchmarking_uri, prediction_benchmarking_uri, postprocess_benchmarking_uri]:
     with smart_open.open(data_uri, "r") as data_file:
         data = json.load(data_file)
         benchmarking_data.update(data)
