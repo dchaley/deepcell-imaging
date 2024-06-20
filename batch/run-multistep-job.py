@@ -38,117 +38,117 @@ input_image_shape = input_file_contents[0][1]
 # Need to escape the curly braces in the JSON template
 base_json = """
 {{
-    "taskGroups": [
-        {{
-            "taskSpec": {{
-                "runnables": [
-                    {{
-                        "container": {{
-                            "imageUri": "{container_image}",
-                            "entrypoint": "python",
-                            "commands": [
-                                "scripts/preprocess.py",
-                                "--image_uri={input_channels_path}",
-                                "--benchmark_output_uri={output_path}/preprocess_benchmark.json",
-                                "--output_uri={output_path}/preprocessed.npz"
-                            ]
-                        }}
-                    }},
-                    {{
-                        "container": {{
-                            "imageUri": "{container_image}",
-                            "entrypoint": "python",
-                            "commands": [
-                                "scripts/predict.py",
-                                "--image_uri={output_path}/preprocessed.npz",
-                                "--benchmark_output_uri={output_path}/prediction_benchmark.json",
-                                "--output_uri={output_path}/raw_predictions.npz"
-                            ]
-                        }}
-                    }},
-                    {{
-                        "container": {{
-                            "imageUri": "{container_image}",
-                            "entrypoint": "python",
-                            "commands": [
-                                "scripts/postprocess.py",
-                                "--raw_predictions_uri={output_path}/raw_predictions.npz",
-                                "--input_rows={input_image_rows}",
-                                "--input_cols={input_image_cols}",
-                                "--benchmark_output_uri={output_path}/postprocess_benchmark.json",
-                                "--output_uri={output_path}/predictions.npz"
-                            ]
-                        }}
-                    }},
-                    {{
-                        "container": {{
-                            "imageUri": "{container_image}",
-                            "entrypoint": "python",
-                            "commands": [
-                                "scripts/gather-benchmark.py",
-                                "--preprocess_benchmarking_uri={output_path}/preprocess_benchmark.json",
-                                "--prediction_benchmarking_uri={output_path}/prediction_benchmark.json",
-                                "--postprocess_benchmarking_uri={output_path}/postprocess_benchmark.json",
-                                "--bigquery_benchmarking_table=deepcell-on-batch.benchmarking.results_batch"
-                            ]
-                        }}
-                    }},
-                    {{
-                        "container": {{
-                            "imageUri": "{container_image}",
-                            "entrypoint": "python",
-                            "commands": [
-                                "scripts/visualize.py",
-                                "--image_uri={input_channels_path}",
-                                "--predictions_uri={output_path}/predictions.npz",
-                                "--visualized_input_uri={output_path}/visualized_input.png",
-                                "--visualized_predictions_uri={output_path}/visualized_predictions.png"
-                            ]
-                        }}
-                    }}
-                ],
-                "computeResource": {{
-                    "memoryMib": 26000
-                }},
-                "maxRetryCount": 3,
-                "lifecyclePolicies": [
-                  {{
-                    "action": "RETRY_TASK",
-                    "actionCondition": {{
-                      "exitCodes": [50001]
-                    }}
-                  }}
-                ]
-            }},
-            "taskCount": 1,
-            "parallelism": 1
-        }}
-    ],
-    "allocationPolicy": {{
-        "instances": [
-            {{
-                "installGpuDrivers": true,
-                "policy": {{
-                  "machineType": "n1-standard-8",
-                  "provisioningModel": "SPOT",
-                    "accelerators": [
-                        {{
-                            "type": "nvidia-tesla-t4",
-                            "count": 1
-                        }}
-                    ]
-                }}
+  "taskGroups": [
+    {{
+      "taskSpec": {{
+        "runnables": [
+          {{
+            "container": {{
+              "imageUri": "{container_image}",
+              "entrypoint": "python",
+              "commands": [
+                "scripts/preprocess.py",
+                "--image_uri={input_channels_path}",
+                "--benchmark_output_uri={output_path}/preprocess_benchmark.json",
+                "--output_uri={output_path}/preprocessed.npz"
+              ]
             }}
+          }},
+          {{
+            "container": {{
+              "imageUri": "{container_image}",
+              "entrypoint": "python",
+              "commands": [
+                "scripts/predict.py",
+                "--image_uri={output_path}/preprocessed.npz",
+                "--benchmark_output_uri={output_path}/prediction_benchmark.json",
+                "--output_uri={output_path}/raw_predictions.npz"
+              ]
+            }}
+          }},
+          {{
+            "container": {{
+              "imageUri": "{container_image}",
+              "entrypoint": "python",
+              "commands": [
+                "scripts/postprocess.py",
+                "--raw_predictions_uri={output_path}/raw_predictions.npz",
+                "--input_rows={input_image_rows}",
+                "--input_cols={input_image_cols}",
+                "--benchmark_output_uri={output_path}/postprocess_benchmark.json",
+                "--output_uri={output_path}/predictions.npz"
+              ]
+            }}
+          }},
+          {{
+            "container": {{
+              "imageUri": "{container_image}",
+              "entrypoint": "python",
+              "commands": [
+                "scripts/gather-benchmark.py",
+                "--preprocess_benchmarking_uri={output_path}/preprocess_benchmark.json",
+                "--prediction_benchmarking_uri={output_path}/prediction_benchmark.json",
+                "--postprocess_benchmarking_uri={output_path}/postprocess_benchmark.json",
+                "--bigquery_benchmarking_table=deepcell-on-batch.benchmarking.results_batch"
+              ]
+            }}
+          }},
+          {{
+            "container": {{
+              "imageUri": "{container_image}",
+              "entrypoint": "python",
+              "commands": [
+                "scripts/visualize.py",
+                "--image_uri={input_channels_path}",
+                "--predictions_uri={output_path}/predictions.npz",
+                "--visualized_input_uri={output_path}/visualized_input.png",
+                "--visualized_predictions_uri={output_path}/visualized_predictions.png"
+              ]
+            }}
+          }}
         ],
-        "location": {{
-            "allowedLocations": [
-                "regions/{region}"
-            ]
-        }}
-    }},
-    "logsPolicy": {{
-        "destination": "CLOUD_LOGGING"
+        "computeResource": {{
+          "memoryMib": 26000
+        }},
+        "maxRetryCount": 3,
+        "lifecyclePolicies": [
+          {{
+            "action": "RETRY_TASK",
+            "actionCondition": {{
+              "exitCodes": [50001]
+            }}
+          }}
+        ]
+      }},
+      "taskCount": 1,
+      "parallelism": 1
     }}
+  ],
+  "allocationPolicy": {{
+    "instances": [
+      {{
+        "installGpuDrivers": true,
+        "policy": {{
+          "machineType": "n1-standard-8",
+          "provisioningModel": "SPOT",
+          "accelerators": [
+            {{
+              "type": "nvidia-tesla-t4",
+              "count": 1
+            }}
+          ]
+        }}
+      }}
+    ],
+    "location": {{
+      "allowedLocations": [
+        "regions/{region}"
+      ]
+    }}
+  }},
+  "logsPolicy": {{
+    "destination": "CLOUD_LOGGING"
+  }}
 }}
 """
 
