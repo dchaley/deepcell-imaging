@@ -14,7 +14,7 @@ batch_size : string
 """
 
 import argparse
-from deepcell_imaging import benchmark_utils, cached_open, mesmer_app
+from deepcell_imaging import benchmark_utils, cached_open, gcloud_storage_utils, mesmer_app
 import json
 import numpy as np
 import os
@@ -22,7 +22,7 @@ import smart_open
 import tensorflow as tf
 import timeit
 
-parser = argparse.ArgumentParser("preprocess")
+parser = argparse.ArgumentParser("predict")
 
 parser.add_argument(
     "--image_uri",
@@ -86,10 +86,9 @@ print("Loaded model in %s s" % round(model_load_time_s, 2))
 print("Loading preprocessed image")
 
 t = timeit.default_timer()
-with smart_open.open(image_uri, "rb") as image_file:
-    with np.load(image_file) as loader:
-        # An array of shape [height, width, channel] containing intensity of nuclear & membrane channels
-        preprocessed_image = loader["image"]
+
+with np.load(gcloud_storage_utils.fetch_file(image_uri)) as loader:
+    preprocessed_image = loader["image"]
 input_load_time_s = timeit.default_timer() - t
 
 print("Loaded preprocessed image in %s s" % round(input_load_time_s, 2))
@@ -116,14 +115,13 @@ if success:
     print("Saving raw predictions output to %s" % output_uri)
 
     t = timeit.default_timer()
-    with smart_open.open(output_uri, "wb") as output_file:
-        np.savez_compressed(
-            output_file,
-            arr_0=model_output['whole-cell'][0],
-            arr_1=model_output['whole-cell'][1],
-            arr_2=model_output['nuclear'][0],
-            arr_3=model_output['nuclear'][1],
-        )
+    gcloud_storage_utils.write_npz_file(
+        output_uri,
+        arr_0=model_output['whole-cell'][0],
+        arr_1=model_output['whole-cell'][1],
+        arr_2=model_output['nuclear'][0],
+        arr_3=model_output['nuclear'][1],
+    )
     output_time_s = timeit.default_timer() - t
 
     print("Saved output in %s s" % round(output_time_s, 2))

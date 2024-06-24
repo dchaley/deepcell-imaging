@@ -9,7 +9,7 @@ Writes preprocessed image to a URI (typically on cloud storage).
 
 import argparse
 from datetime import datetime, timezone
-from deepcell_imaging import benchmark_utils, mesmer_app
+from deepcell_imaging import benchmark_utils, gcloud_storage_utils, mesmer_app
 import json
 import numpy as np
 import smart_open
@@ -64,10 +64,9 @@ model_input_shape = (None, 256, 256, 2)
 print("Loading input")
 
 t = timeit.default_timer()
-with smart_open.open(image_uri, "rb") as image_file:
-    with np.load(image_file) as loader:
-        # An array of shape [height, width, channel] containing intensity of nuclear & membrane channels
-        input_channels = loader[image_array_name]
+with np.load(gcloud_storage_utils.fetch_file(image_uri)) as loader:
+    input_channels = loader[image_array_name]
+
 input_load_time_s = timeit.default_timer() - t
 
 print("Loaded input in %s s" % round(input_load_time_s, 2))
@@ -93,8 +92,9 @@ print("Preprocessed input in %s s; success: %s" % (round(preprocessing_time_s, 2
 if success:
     print("Saving preprocessing output to %s" % output_uri)
     t = timeit.default_timer()
-    with smart_open.open(output_uri, "wb") as output_file:
-        np.savez_compressed(output_file, image=preprocessed_image)
+
+    gcloud_storage_utils.write_npz_file(output_uri, image=preprocessed_image)
+
     output_time_s = timeit.default_timer() - t
 
     print("Saved output in %s s" % round(output_time_s, 2))
