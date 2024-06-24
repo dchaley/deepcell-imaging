@@ -12,11 +12,20 @@ parser.add_argument(
     type=str,
     required=True,
 )
+parser.add_argument(
+    "--model_path",
+    help="Path to the model archive",
+    type=str,
+    required=False,
+    default="gs://davids-genomics-data-public/cellular-segmentation/deep-cell/vanvalenlab-tf-model-multiplex-downloaded-20230706/MultiplexSegmentation.tar.gz",
+)
 
 args = parser.parse_args()
 
 job_id = "j" + str(uuid.uuid4())
 input_channels_path = args.input_channels_path
+
+model_path = args.model_path
 
 CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:gce"
 OUTPUT_BASE_PATH = "gs://deepcell-batch-jobs_us-central1/job-runs"
@@ -40,6 +49,7 @@ base_json = """
                             "commands": [
                                 "--input_channels_path={input_channels_path}",
                                 "--output_path={output_path}",
+                                "--model_path={model_path}",
                                 "--visualize_input",
                                 "--visualize_predictions",
                                 "--provisioning_model=spot"
@@ -97,6 +107,7 @@ job_json_str = base_json.format(
     input_channels_path=input_channels_path,
     container_image=CONTAINER_IMAGE,
     region=REGION,
+    model_path=model_path,
 )
 
 job_json_file = tempfile.NamedTemporaryFile()
