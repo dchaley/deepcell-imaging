@@ -15,7 +15,7 @@ from PIL import Image
 import smart_open
 import timeit
 
-parser = argparse.ArgumentParser("preprocess")
+parser = argparse.ArgumentParser("visualize")
 
 parser.add_argument(
     "--image_uri",
@@ -82,7 +82,7 @@ print("Loaded predictions in %s s" % predictions_load_time_s)
 nuclear_color = "green"
 membrane_color = "blue"
 
-print("Rendering input")
+print("Rendering input to %s" % visualized_input_uri)
 
 t = timeit.default_timer()
 
@@ -101,7 +101,7 @@ input_render_time_s = timeit.default_timer() - t
 
 print("Rendered input in %s s" % input_render_time_s)
 
-print("Rendering predictions")
+print("Rendering predictions to %s" % visualized_predictions_uri)
 
 t = timeit.default_timer()
 overlay_data = make_outline_overlay(

@@ -14,7 +14,7 @@ import numpy as np
 import smart_open
 import timeit
 
-parser = argparse.ArgumentParser("preprocess")
+parser = argparse.ArgumentParser("postprocess")
 
 parser.add_argument(
     "--raw_predictions_uri",

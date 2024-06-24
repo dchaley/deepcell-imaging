@@ -22,7 +22,7 @@ import smart_open
 import tensorflow as tf
 import timeit
 
-parser = argparse.ArgumentParser("preprocess")
+parser = argparse.ArgumentParser("predict")
 
 parser.add_argument(
     "--image_uri",
