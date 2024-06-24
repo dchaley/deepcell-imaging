@@ -9,7 +9,7 @@ Writes preprocessed image to a URI (typically on cloud storage).
 
 import argparse
 from deepcell.utils.plot_utils import create_rgb_image, make_outline_overlay
-from deepcell_imaging import mesmer_app
+from deepcell_imaging import gcloud_storage_utils
 import numpy as np
 from PIL import Image
 import smart_open
@@ -60,10 +60,9 @@ visualized_predictions_uri = args.visualized_predictions_uri
 print("Loading input")
 
 t = timeit.default_timer()
-with smart_open.open(image_uri, "rb") as image_file:
-    with np.load(image_file) as loader:
-        # An array of shape [height, width, channel] containing intensity of nuclear & membrane channels
-        input_channels = loader[image_array_name]
+with np.load(gcloud_storage_utils.fetch_file(image_uri)) as loader:
+    # An array of shape [height, width, channel] containing intensity of nuclear & membrane channels
+    input_channels = loader[image_array_name]
 input_load_time_s = timeit.default_timer() - t
 
 print("Loaded input in %s s" % input_load_time_s)
@@ -71,10 +70,9 @@ print("Loaded input in %s s" % input_load_time_s)
 print("Loading predictions")
 
 t = timeit.default_timer()
-with smart_open.open(predictions_uri, "rb") as predictions_file:
-    with np.load(predictions_file) as loader:
-        # An array of shape [height, width, channel] containing intensity of nuclear & membrane channels
-        predictions = loader["image"]
+with np.load(gcloud_storage_utils.fetch_file(predictions_uri)) as loader:
+    # An array of shape [height, width, channel] containing intensity of nuclear & membrane channels
+    predictions = loader["image"]
 predictions_load_time_s = timeit.default_timer() - t
 
 print("Loaded predictions in %s s" % predictions_load_time_s)

@@ -8,7 +8,7 @@ Writes segmented image npz to a URI (typically on cloud storage).
 """
 
 import argparse
-from deepcell_imaging import benchmark_utils, mesmer_app
+from deepcell_imaging import benchmark_utils, gcloud_storage_utils, mesmer_app
 import json
 import numpy as np
 import smart_open
@@ -66,13 +66,14 @@ benchmark_output_uri = args.benchmark_output_uri
 print("Loading raw predictions")
 
 t = timeit.default_timer()
-with smart_open.open(raw_predictions_uri, "rb") as raw_predictions_file:
-    with np.load(raw_predictions_file) as loader:
-        # An array of shape [height, width, channel] containing intensity of nuclear & membrane channels
-        raw_predictions = {
-            'whole-cell': [loader["arr_0"], loader["arr_1"]],
-            'nuclear': [loader["arr_2"], loader["arr_3"]],
-        }
+
+with np.load(gcloud_storage_utils.fetch_file(raw_predictions_uri)) as loader:
+    # An array of shape [height, width, channel] containing intensity of nuclear & membrane channels
+    raw_predictions = {
+        'whole-cell': [loader["arr_0"], loader["arr_1"]],
+        'nuclear': [loader["arr_2"], loader["arr_3"]],
+    }
+
 raw_predictions_load_time_s = timeit.default_timer() - t
 
 print("Loaded raw predictions in %s s" % round(raw_predictions_load_time_s, 2))
@@ -98,8 +99,7 @@ print("Postprocessed raw predictions in %s s; success: %s" % (round(postprocessi
 if success:
     print("Saving postprocessed output to %s" % output_uri)
     t = timeit.default_timer()
-    with smart_open.open(output_uri, "wb") as output_file:
-        np.savez_compressed(output_file, image=segmentation)
+    gcloud_storage_utils.write_npz_file(output_uri, image=segmentation)
     output_time_s = timeit.default_timer() - t
     print("Saved output in %s s" % round(output_time_s, 2))
 else:
