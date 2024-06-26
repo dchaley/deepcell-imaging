@@ -17,10 +17,17 @@ def fetch_file(gs_uri):
     parallel/chunked transfers).
     """
     with tempfile.TemporaryDirectory() as tmp:
-        path = os.path.join(tmp, 'downloaded_file')
+        if gs_uri.endswith('.gz'):
+            path = os.path.join(tmp, 'downloaded_file.gz')
+        else:
+            path = os.path.join(tmp, 'downloaded_file')
 
         # TODO: handle errors
         subprocess.run(["gcloud", "storage", "cp", gs_uri, path])
+
+        if path.endswith('.gz'):
+            subprocess.run(["unpigz", path])
+            path = path[:-3]
 
         with open(path, 'rb') as f:
             return io.BytesIO(f.read())
@@ -34,9 +41,13 @@ def write_npz_file(gs_uri, **named_arrays):
     which has optimized performance for large data transfers (for example,
     parallel/chunked transfers).
     """
-    with tempfile.NamedTemporaryFile() as tmp:
-        np.savez_compressed(tmp, **named_arrays)
-        tmp.flush()
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, 'file_to_upload.npz')
+        np.savez(path, **named_arrays)
+
+        if gs_uri.endswith(".gz"):
+            subprocess.run(["pigz", path])
+            path = path + ".gz"
 
         # TODO: handle errors
-        subprocess.run(["gcloud", "storage", "cp", tmp.name, gs_uri])
+        subprocess.run(["gcloud", "storage", "cp", path, gs_uri])
