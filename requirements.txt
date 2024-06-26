@@ -1,5 +1,4 @@
 deepcell==0.12.9
-google-cloud-aiplatform
 google-cloud-bigquery
 google-cloud-notebooks
 imagecodecs
