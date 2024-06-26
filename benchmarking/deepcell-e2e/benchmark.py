@@ -21,21 +21,6 @@ import traceback
 import timeit
 import urllib.parse
 
-# We need to import the cached_open module at the repository root.
-
-# But because we're not shipping the deepcell_imaging module as a proper python package,
-# we need to import the module a bit bluntly. This loads the module direct filename,
-# relative to this notebook. Then, it's available like usual.
-
-import importlib
-
-file_path = "./deepcell_imaging/__init__.py"
-module_name = "deepcell_imaging"
-spec = importlib.util.spec_from_file_location(module_name, file_path)
-module = importlib.util.module_from_spec(spec)
-sys.modules[module_name] = module
-spec.loader.exec_module(module)
-
 from deepcell_imaging import cached_open
 
 BIGQUERY_RESULTS_TABLE = "deepcell-401920.benchmarking.results_batch"
