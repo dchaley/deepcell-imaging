@@ -1,8 +1,8 @@
 #!/bin/sh
 
-tmp_preprocess_output="gs://deepcell-batch-jobs_us-central1/job-runs/tmp-pipeline/preprocessed.npz"
-tmp_predict_output="gs://deepcell-batch-jobs_us-central1/job-runs/tmp-pipeline/raw_predictions.npz"
-tmp_postprocess_output="gs://deepcell-batch-jobs_us-central1/job-runs/tmp-pipeline/postprocessed.npz"
+tmp_preprocess_output="gs://deepcell-batch-jobs_us-central1/job-runs/tmp-pipeline/preprocessed.npz.gz"
+tmp_predict_output="gs://deepcell-batch-jobs_us-central1/job-runs/tmp-pipeline/raw_predictions.npz.gz"
+tmp_postprocess_output="gs://deepcell-batch-jobs_us-central1/job-runs/tmp-pipeline/postprocessed.npz.gz"
 
 input_png_uri="gs://deepcell-batch-jobs_us-central1/job-runs/tmp-pipeline/input.png"
 predictions_png_uri="gs://deepcell-batch-jobs_us-central1/job-runs/tmp-pipeline/predictions.png"
