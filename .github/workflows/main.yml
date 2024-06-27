@@ -1,0 +1,42 @@
+name: Build and Push to Artifact Registry
+
+on:
+  push:
+    branches: ["main"]
+  # I don't think we need to do this for PRs into main
+  # pull_request:
+    # branches: ["main"]
+
+env:
+  PROJECT_ID: deepcell-on-batch
+  REGION: us-central1
+  GAR_LOCATION: us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking
+
+jobs:
+  build-push-artifact:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout"
+        uses: "actions/checkout@v4"
+
+      - id: "auth"
+        uses: "google-github-actions/auth@v2"
+        with:
+          credentials_json: "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}"
+
+      - name: "Set up Cloud SDK"
+        uses: "google-github-actions/setup-gcloud@v2"
+
+      - name: "Use gcloud CLI"
+        run: "gcloud info"
+
+      - name: "Docker auth"
+        run: |-
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Build image
+        run: docker build . --file Dockerfile --tag ${{ env.GAR_LOCATION }}
+        working-directory: container
+
+      - name: Push image
+        run: docker push ${{ env.GAR_LOCATION }}
