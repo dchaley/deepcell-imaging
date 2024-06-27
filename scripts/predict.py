@@ -87,8 +87,9 @@ print("Loading preprocessed image")
 
 t = timeit.default_timer()
 
-with np.load(gcloud_storage_utils.fetch_file(image_uri)) as loader:
-    preprocessed_image = loader["image"]
+with gcloud_storage_utils.reader(image_uri) as image_file:
+    with np.load(image_file) as loader:
+        preprocessed_image = loader["image"]
 input_load_time_s = timeit.default_timer() - t
 
 print("Loaded preprocessed image in %s s" % round(input_load_time_s, 2))

@@ -67,12 +67,13 @@ print("Loading raw predictions")
 
 t = timeit.default_timer()
 
-with np.load(gcloud_storage_utils.fetch_file(raw_predictions_uri)) as loader:
-    # An array of shape [height, width, channel] containing intensity of nuclear & membrane channels
-    raw_predictions = {
-        'whole-cell': [loader["arr_0"], loader["arr_1"]],
-        'nuclear': [loader["arr_2"], loader["arr_3"]],
-    }
+with gcloud_storage_utils.reader(raw_predictions_uri) as raw_predictions_file:
+    with np.load(raw_predictions_file) as loader:
+        # An array of shape [height, width, channel] containing intensity of nuclear & membrane channels
+        raw_predictions = {
+            'whole-cell': [loader["arr_0"], loader["arr_1"]],
+            'nuclear': [loader["arr_2"], loader["arr_3"]],
+        }
 
 raw_predictions_load_time_s = timeit.default_timer() - t
 

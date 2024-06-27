@@ -64,9 +64,9 @@ model_input_shape = (None, 256, 256, 2)
 print("Loading input")
 
 t = timeit.default_timer()
-with np.load(gcloud_storage_utils.fetch_file(image_uri)) as loader:
-    input_channels = loader[image_array_name]
-
+with gcloud_storage_utils.reader(image_uri) as input_file:
+    with np.load(input_file) as loader:
+        input_channels = loader[image_array_name]
 input_load_time_s = timeit.default_timer() - t
 
 print("Loaded input in %s s" % round(input_load_time_s, 2))
