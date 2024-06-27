@@ -50,7 +50,7 @@ base_json = """
                 "scripts/preprocess.py",
                 "--image_uri={input_channels_path}",
                 "--benchmark_output_uri={output_path}/preprocess_benchmark.json",
-                "--output_uri={output_path}/preprocessed.npz"
+                "--output_uri={output_path}/preprocessed.npz.gz"
               ]
             }}
           }},
@@ -60,9 +60,9 @@ base_json = """
               "entrypoint": "python",
               "commands": [
                 "scripts/predict.py",
-                "--image_uri={output_path}/preprocessed.npz",
+                "--image_uri={output_path}/preprocessed.npz.gz",
                 "--benchmark_output_uri={output_path}/prediction_benchmark.json",
-                "--output_uri={output_path}/raw_predictions.npz"
+                "--output_uri={output_path}/raw_predictions.npz.gz"
               ]
             }}
           }},
@@ -72,11 +72,11 @@ base_json = """
               "entrypoint": "python",
               "commands": [
                 "scripts/postprocess.py",
-                "--raw_predictions_uri={output_path}/raw_predictions.npz",
+                "--raw_predictions_uri={output_path}/raw_predictions.npz.gz",
                 "--input_rows={input_image_rows}",
                 "--input_cols={input_image_cols}",
                 "--benchmark_output_uri={output_path}/postprocess_benchmark.json",
-                "--output_uri={output_path}/predictions.npz"
+                "--output_uri={output_path}/predictions.npz.gz"
               ]
             }}
           }},
@@ -100,7 +100,7 @@ base_json = """
               "commands": [
                 "scripts/visualize.py",
                 "--image_uri={input_channels_path}",
-                "--predictions_uri={output_path}/predictions.npz",
+                "--predictions_uri={output_path}/predictions.npz.gz",
                 "--visualized_input_uri={output_path}/visualized_input.png",
                 "--visualized_predictions_uri={output_path}/visualized_predictions.png"
               ]
