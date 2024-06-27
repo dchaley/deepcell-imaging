@@ -60,9 +60,10 @@ visualized_predictions_uri = args.visualized_predictions_uri
 print("Loading input")
 
 t = timeit.default_timer()
-with np.load(gcloud_storage_utils.fetch_file(image_uri)) as loader:
-    # An array of shape [height, width, channel] containing intensity of nuclear & membrane channels
-    input_channels = loader[image_array_name]
+with gcloud_storage_utils.reader(image_uri) as file:
+    with np.load(file) as loader:
+        # An array of shape [height, width, channel] containing intensity of nuclear & membrane channels
+        input_channels = loader[image_array_name]
 input_load_time_s = timeit.default_timer() - t
 
 print("Loaded input in %s s" % input_load_time_s)
@@ -70,9 +71,10 @@ print("Loaded input in %s s" % input_load_time_s)
 print("Loading predictions")
 
 t = timeit.default_timer()
-with np.load(gcloud_storage_utils.fetch_file(predictions_uri)) as loader:
-    # An array of shape [height, width, channel] containing intensity of nuclear & membrane channels
-    predictions = loader["image"]
+with gcloud_storage_utils.reader(predictions_uri) as file:
+    with np.load(file) as loader:
+        # An array of shape [height, width, channel] containing intensity of nuclear & membrane channels
+        predictions = loader["image"]
 predictions_load_time_s = timeit.default_timer() - t
 
 print("Loaded predictions in %s s" % predictions_load_time_s)

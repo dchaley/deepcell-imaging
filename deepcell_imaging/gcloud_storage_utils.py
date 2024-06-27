@@ -1,21 +1,24 @@
 
 from contextlib import contextmanager
-import io
-import numpy as np
 import os
 import subprocess
 import tempfile
 
 
-def fetch_file(gs_uri):
+@contextmanager
+def reader(gs_uri):
     """
-    Fetch a file from Google Cloud Storage using its URI.
+    Context manager for reading a file from Google Cloud Storage.
 
-    Returns it as a BytesIO object.
+    Usage:
+    ```
+    with reader('gs://my-bucket/my-file.npz') as f:
+        npz = np.load(f)
+    ```
 
-    Under the hood, calls out to the `gcloud storage` command-line tool,
-    which has optimized performance for large data transfers (for example,
-    parallel/chunked transfers).
+    This will download the file to a temporary directory, and
+    open it for reading. When the 'with' block exits, the file
+    will be closed and the temporary directory will be deleted.
     """
     with tempfile.TemporaryDirectory() as tmp:
         if gs_uri.endswith('.gz'):
@@ -23,15 +26,19 @@ def fetch_file(gs_uri):
         else:
             path = os.path.join(tmp, 'downloaded_file')
 
+        # Transfer the file.
         # TODO: handle errors
         subprocess.run(["gcloud", "storage", "cp", gs_uri, path])
 
+        # If necessary, decompress the file before reading.
+        # unpigz is a parallel gunzip implementation that's
+        # much faster when hardware is available.
         if path.endswith('.gz'):
             subprocess.run(["unpigz", path])
             path = path[:-3]
 
         with open(path, 'rb') as f:
-            return io.BytesIO(f.read())
+            yield f
 
 
 @contextmanager
