@@ -93,7 +93,8 @@ if success:
     print("Saving preprocessing output to %s" % output_uri)
     t = timeit.default_timer()
 
-    gcloud_storage_utils.write_npz_file(output_uri, image=preprocessed_image)
+    with gcloud_storage_utils.writer(output_uri) as output_writer:
+        np.savez(output_writer, image=preprocessed_image)
 
     output_time_s = timeit.default_timer() - t
 

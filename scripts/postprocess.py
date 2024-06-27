@@ -99,7 +99,8 @@ print("Postprocessed raw predictions in %s s; success: %s" % (round(postprocessi
 if success:
     print("Saving postprocessed output to %s" % output_uri)
     t = timeit.default_timer()
-    gcloud_storage_utils.write_npz_file(output_uri, image=segmentation)
+    with gcloud_storage_utils.writer(output_uri) as output_writer:
+        np.savez(output_writer, image=segmentation)
     output_time_s = timeit.default_timer() - t
     print("Saved output in %s s" % round(output_time_s, 2))
 else:
