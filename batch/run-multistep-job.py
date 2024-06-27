@@ -14,11 +14,19 @@ parser.add_argument(
     type=str,
     required=True,
 )
+parser.add_argument(
+    "--bigquery_benchmarking_table",
+    help="BigQuery table to write benchmarking results to",
+    type=str,
+    required=False,
+    default="deepcell-on-batch.benchmarking.results_batch",
+)
 
 args = parser.parse_args()
 
 job_id = "j" + str(uuid.uuid4())
 input_channels_path = args.input_channels_path
+bigquery_benchmarking_table = args.bigquery_benchmarking_table
 
 CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:gce"
 OUTPUT_BASE_PATH = "gs://deepcell-batch-jobs_us-central1/job-runs"
@@ -89,7 +97,7 @@ base_json = """
                 "--preprocess_benchmarking_uri={output_path}/preprocess_benchmark.json",
                 "--prediction_benchmarking_uri={output_path}/prediction_benchmark.json",
                 "--postprocess_benchmarking_uri={output_path}/postprocess_benchmark.json",
-                "--bigquery_benchmarking_table=deepcell-on-batch.benchmarking.results_batch"
+                "--bigquery_benchmarking_table={bigquery_benchmarking_table}"
               ]
             }}
           }},
@@ -152,13 +160,8 @@ base_json = """
 }}
 """
 
-#    "labels": {{
-#        "goog-batch-job-group": "my-test-pool",
-#        "goog-batch-node-pool-max-idle-time": "20min",
-#        "goog-batch-node-pool-max-size": "4"
-#    }},
-
 job_json_str = base_json.format(
+    bigquery_benchmarking_table=bigquery_benchmarking_table or "''",
     output_path=output_path,
     input_channels_path=input_channels_path,
     container_image=CONTAINER_IMAGE,
