@@ -1,4 +1,5 @@
 
+from contextlib import contextmanager
 import io
 import numpy as np
 import os
@@ -33,21 +34,25 @@ def fetch_file(gs_uri):
             return io.BytesIO(f.read())
 
 
-def write_npz_file(gs_uri, **named_arrays):
-    """
-    Write a BytesIO object to Google Cloud Storage using its URI.
+@contextmanager
+def writer(gs_uri):
+    # Create a temporary scratch directory.
+    # Will be deleted when the 'with' closes.
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        # We need an actual filename within the scratch directory.
+        buffer_file_name = os.path.join(tmp_dir, 'file_to_upload')
 
-    Under the hood, calls out to the `gcloud storage` command-line tool,
-    which has optimized performance for large data transfers (for example,
-    parallel/chunked transfers).
-    """
-    with tempfile.TemporaryDirectory() as tmp:
-        path = os.path.join(tmp, 'file_to_upload.npz')
-        np.savez(path, **named_arrays)
+        # Yield the file object for the caller to write.
+        with open(buffer_file_name, 'wb') as tmp_file:
+            yield tmp_file
 
-        if gs_uri.endswith(".gz"):
-            subprocess.run(["pigz", path])
-            path = path + ".gz"
+        # If requested, compress the file before uploading.
+        # pigz is a parallel gzip implementation that's
+        # much faster than numpy's savez_compressed.
+        if gs_uri.endswith('.gz'):
+            # TODO: handle errors
+            subprocess.run(["pigz", buffer_file_name])
+            buffer_file_name += '.gz'
 
         # TODO: handle errors
-        subprocess.run(["gcloud", "storage", "cp", path, gs_uri])
+        subprocess.run(["gcloud", "storage", "cp", buffer_file_name, gs_uri])

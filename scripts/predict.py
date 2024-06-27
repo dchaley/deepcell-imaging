@@ -115,13 +115,14 @@ if success:
     print("Saving raw predictions output to %s" % output_uri)
 
     t = timeit.default_timer()
-    gcloud_storage_utils.write_npz_file(
-        output_uri,
-        arr_0=model_output['whole-cell'][0],
-        arr_1=model_output['whole-cell'][1],
-        arr_2=model_output['nuclear'][0],
-        arr_3=model_output['nuclear'][1],
-    )
+    with gcloud_storage_utils.writer(output_uri) as output_writer:
+        np.savez(
+            output_writer,
+            arr_0=model_output['whole-cell'][0],
+            arr_1=model_output['whole-cell'][1],
+            arr_2=model_output['nuclear'][0],
+            arr_3=model_output['nuclear'][1],
+        )
     output_time_s = timeit.default_timer() - t
 
     print("Saved output in %s s" % round(output_time_s, 2))
