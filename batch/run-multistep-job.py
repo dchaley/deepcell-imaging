@@ -161,7 +161,7 @@ base_json = """
 """
 
 job_json_str = base_json.format(
-    bigquery_benchmarking_table=bigquery_benchmarking_table or "''",
+    bigquery_benchmarking_table=bigquery_benchmarking_table,
     output_path=output_path,
     input_channels_path=input_channels_path,
     container_image=CONTAINER_IMAGE,
