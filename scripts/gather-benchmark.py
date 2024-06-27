@@ -50,6 +50,10 @@ prediction_benchmarking_uri = args.prediction_benchmarking_uri
 postprocess_benchmarking_uri = args.postprocess_benchmarking_uri
 bigquery_benchmarking_table = args.bigquery_benchmarking_table
 
+if not bigquery_benchmarking_table:
+    print("Nothing to do; empty bigquery_benchmarking_table")
+    exit()
+
 benchmarking_data = {
     "cloud_region": benchmark_utils.get_gce_region(),
 }
