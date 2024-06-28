@@ -31,5 +31,5 @@ jobs:
         run: "gcloud info"
 
       - name: Trigger cloud build
-        run: ./cloud-build.sh
+        run: "gcloud builds submit --region=us-central1 --config=build-batch-container.yaml ."
         working-directory: container

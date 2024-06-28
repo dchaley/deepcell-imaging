@@ -12,7 +12,7 @@ RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/
 RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
     curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg && \
     apt-get update -y && \
-    apt-get install -y graphviz git google-cloud-sdk google-cloud-cli pigz && \
+    apt-get install -y git google-cloud-sdk google-cloud-cli pigz && \
     rm -rf /var/lib/apt/lists/* && \
     /usr/bin/python3 -m pip install --no-cache-dir --upgrade pip && \
     gcloud config set storage/parallel_composite_upload_enabled True
