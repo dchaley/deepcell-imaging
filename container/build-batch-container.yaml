@@ -1,0 +1,22 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args: [ '-c', 'echo "$$PASSWORD" | docker login --username=$$USERNAME --password-stdin' ]
+    secretEnv: [ 'USERNAME', 'PASSWORD' ]
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-t', 'us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:batch',
+      '-t', 'dchaley/deepcell-imaging:batch',
+      '.',
+    ]
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [ 'push', 'us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:batch' ]
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [ 'push', 'dchaley/deepcell-imaging:batch' ]
+availableSecrets:
+  secretManager:
+    - versionName: projects/deepcell-on-batch/secrets/dockerhub-password/versions/1
+      env: 'PASSWORD'
+    - versionName: projects/deepcell-on-batch/secrets/dockerhub-username/versions/2
+      env: 'USERNAME'
