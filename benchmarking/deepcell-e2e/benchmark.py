@@ -69,6 +69,16 @@ parser.add_argument(
     default=None,
 )
 parser.add_argument(
+    "--output_tiff",
+    help="If true, write the predictions as predictions.tiff in the output path.",
+    action="store_true",
+)
+parser.add_argument(
+    "--squeeze_output_tiff",
+    help="If true, remove axes of length 1 from predictions before writing the output tiff.",
+    action="store_true",
+)
+parser.add_argument(
     "--visualize_input",
     help="If true, visualize the input as input.png in the output path.",
     action="store_true",
@@ -101,13 +111,18 @@ model_hash = args.model_hash
 model_extract_directory = args.model_extract_directory
 output_path = args.output_path or ""
 output_path = output_path.rstrip("/")  # remove trailing slashes
+output_tiff = args.output_tiff
+squeeze_output_tiff = args.squeeze_output_tiff
 visualize_input = args.visualize_input
 visualize_predictions = args.visualize_predictions
 provisioning_model = args.provisioning_model
 bigquery_table = args.bigquery_table
 
-if (visualize_input or visualize_predictions) and not output_path:
-    raise ValueError("Can't visualize without an output path")
+if (visualize_input or visualize_predictions or output_tiff) and not output_path:
+    raise ValueError("Can't output/visualize without an output path")
+
+if squeeze_output_tiff and not output_tiff:
+    raise ValueError("Can't squeeze output tiff without outputting a tiff")
 
 # Import these here, to speed up startup & arg parsing
 import deepcell
@@ -218,7 +233,12 @@ if output_path:
     with smart_open.open("%s/predictions.npz" % output_path, "wb") as predictions_file:
         np.savez_compressed(predictions_file, predictions=segmentation_predictions)
 
-if visualize_input:
+    if output_tiff:
+        import tifffile
+        with smart_open.open("%s/predictions.tiff" % output_path, "wb") as predictions_tiff_file:
+            tifffile.imwrite(predictions_tiff_file, np.squeeze(segmentation_predictions) if squeeze_output_tiff else segmentation_predictions)
+
+if visualize_input or visualize_predictions:
     from deepcell.utils.plot_utils import create_rgb_image
     from PIL import Image
 
@@ -231,6 +251,7 @@ if visualize_input:
         input_channels[np.newaxis, ...], channel_colors=[nuclear_color, membrane_color]
     )[0]
 
+if visualize_input:
     # The png needs to normalize rgb values from 0..1, so normalize to 0..255
     im = Image.fromarray((input_rgb * 255).astype(np.uint8))
     with smart_open.open("%s/input.png" % output_path, "wb") as input_png_file:

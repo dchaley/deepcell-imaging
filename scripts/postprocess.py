@@ -48,6 +48,17 @@ parser.add_argument(
     required=True,
 )
 parser.add_argument(
+    "--tiff_output_uri",
+    help="Where to write postprocessed segment predictions TIFF file containing a segment number for each pixel",
+    type=str,
+    required=False,
+)
+parser.add_argument(
+    "--squeeze_output_tiff",
+    help="If true, remove axes of length 1 from predictions before writing the output tiff.",
+    action="store_true",
+)
+parser.add_argument(
     "--benchmark_output_uri",
     help="Where to write preprocessing benchmarking data.",
     type=str,
@@ -102,6 +113,9 @@ if success:
     t = timeit.default_timer()
     with gcloud_storage_utils.writer(output_uri) as output_writer:
         np.savez(output_writer, image=segmentation)
+
+    # TODO (#253): save tiff output.
+
     output_time_s = timeit.default_timer() - t
     print("Saved output in %s s" % round(output_time_s, 2))
 else:
