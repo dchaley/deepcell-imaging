@@ -234,6 +234,7 @@ if output_path:
 
     if output_tiff:
         import tifffile
+
         data_to_write = np.squeeze(segmentation_predictions) if squeeze_output_tiff else segmentation_predictions
         # smart_open doesn't support seeking on GCP, which tifffile uses.
         if output_path.startswith("gs://"):
@@ -274,7 +275,7 @@ if visualize_predictions:
     # The rgb values are 0..1, so normalize to 0..255
     im = Image.fromarray((overlay_data * 255).astype(np.uint8))
     with smart_open.open(
-        "%s/predictions.png" % output_path, "wb"
+            "%s/predictions.png" % output_path, "wb"
     ) as predictions_png_file:
         im.save(predictions_png_file, mode="RGB")
 
@@ -417,7 +418,7 @@ else:
 peak_mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 
 prediction_overhead_s = (
-    prediction_time_s - preprocess_time_s - inference_time_s - postprocess_time_s
+        prediction_time_s - preprocess_time_s - inference_time_s - postprocess_time_s
 )
 
 if gpu_count == 0:
