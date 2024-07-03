@@ -54,11 +54,6 @@ parser.add_argument(
     required=False,
 )
 parser.add_argument(
-    "--squeeze_output_tiff",
-    help="If true, remove axes of length 1 from predictions before writing the output tiff.",
-    action="store_true",
-)
-parser.add_argument(
     "--benchmark_output_uri",
     help="Where to write preprocessing benchmarking data.",
     type=str,

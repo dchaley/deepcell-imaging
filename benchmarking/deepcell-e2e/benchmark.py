@@ -73,11 +73,6 @@ parser.add_argument(
     action="store_true",
 )
 parser.add_argument(
-    "--squeeze_output_tiff",
-    help="If true, remove axes of length 1 from predictions before writing the output tiff.",
-    action="store_true",
-)
-parser.add_argument(
     "--visualize_input",
     help="If true, visualize the input as input.png in the output path.",
     action="store_true",
@@ -111,7 +106,6 @@ model_extract_directory = args.model_extract_directory
 output_path = args.output_path or ""
 output_path = output_path.rstrip("/")  # remove trailing slashes
 output_tiff = args.output_tiff
-squeeze_output_tiff = args.squeeze_output_tiff
 visualize_input = args.visualize_input
 visualize_predictions = args.visualize_predictions
 provisioning_model = args.provisioning_model
@@ -119,9 +113,6 @@ bigquery_table = args.bigquery_table
 
 if (visualize_input or visualize_predictions or output_tiff) and not output_path:
     raise ValueError("Can't output/visualize without an output path")
-
-if squeeze_output_tiff and not output_tiff:
-    raise ValueError("Can't squeeze output tiff without outputting a tiff")
 
 # Import these here, to speed up startup & arg parsing
 import deepcell
@@ -235,14 +226,13 @@ if output_path:
     if output_tiff:
         import tifffile
 
-        data_to_write = np.squeeze(segmentation_predictions) if squeeze_output_tiff else segmentation_predictions
         # smart_open doesn't support seeking on GCP, which tifffile uses.
         if output_path.startswith("gs://"):
             with gcloud_storage_utils.writer("%s/predictions.tiff" % output_path) as predictions_tiff_file:
-                tifffile.imwrite(predictions_tiff_file, data_to_write)
+                tifffile.imwrite(predictions_tiff_file, segmentation_predictions)
         else:
             with smart_open.open("%s/predictions.tiff" % output_path, "wb") as predictions_tiff_file:
-                tifffile.imwrite(predictions_tiff_file, data_to_write)
+                tifffile.imwrite(predictions_tiff_file, segmentation_predictions)
 
 if visualize_input or visualize_predictions:
     from deepcell.utils.plot_utils import create_rgb_image
