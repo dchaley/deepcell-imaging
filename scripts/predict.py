@@ -17,9 +17,9 @@ import argparse
 from deepcell_imaging import (
     benchmark_utils,
     cached_open,
-    gcloud_storage_utils,
     mesmer_app,
 )
+import gs_fastcopy
 import json
 import numpy as np
 import os
@@ -94,7 +94,7 @@ def main():
 
     t = timeit.default_timer()
 
-    with gcloud_storage_utils.reader(image_uri) as image_file:
+    with gs_fastcopy.read(image_uri) as image_file:
         with np.load(image_file) as loader:
             preprocessed_image = loader["image"]
     input_load_time_s = timeit.default_timer() - t
@@ -123,7 +123,7 @@ def main():
         print("Saving raw predictions output to %s" % output_uri)
 
         t = timeit.default_timer()
-        with gcloud_storage_utils.writer(output_uri) as output_writer:
+        with gs_fastcopy.write(output_uri) as output_writer:
             np.savez(
                 output_writer,
                 arr_0=model_output["whole-cell"][0],

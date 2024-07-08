@@ -9,7 +9,8 @@ Writes preprocessed image to a URI (typically on cloud storage).
 
 import argparse
 from datetime import datetime, timezone
-from deepcell_imaging import benchmark_utils, gcloud_storage_utils, mesmer_app
+from deepcell_imaging import benchmark_utils, mesmer_app
+import gs_fastcopy
 import json
 import numpy as np
 import smart_open
@@ -66,7 +67,7 @@ def main():
     print("Loading input")
 
     t = timeit.default_timer()
-    with gcloud_storage_utils.reader(image_uri) as input_file:
+    with gs_fastcopy.read(image_uri) as input_file:
         with np.load(input_file) as loader:
             input_channels = loader[image_array_name]
     input_load_time_s = timeit.default_timer() - t
@@ -96,7 +97,7 @@ def main():
         print("Saving preprocessing output to %s" % output_uri)
         t = timeit.default_timer()
 
-        with gcloud_storage_utils.writer(output_uri) as output_writer:
+        with gs_fastcopy.write(output_uri) as output_writer:
             np.savez(output_writer, image=preprocessed_image)
 
         output_time_s = timeit.default_timer() - t

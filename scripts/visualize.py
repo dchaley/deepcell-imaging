@@ -9,7 +9,7 @@ Writes preprocessed image to a URI (typically on cloud storage).
 
 import argparse
 from deepcell.utils.plot_utils import create_rgb_image, make_outline_overlay
-from deepcell_imaging import gcloud_storage_utils
+import gs_fastcopy
 import numpy as np
 from PIL import Image
 import smart_open
@@ -62,7 +62,7 @@ def main():
     print("Loading input")
 
     t = timeit.default_timer()
-    with gcloud_storage_utils.reader(image_uri) as file:
+    with gs_fastcopy.read(image_uri) as file:
         with np.load(file) as loader:
             # An array of shape [height, width, channel] containing intensity of nuclear & membrane channels
             input_channels = loader[image_array_name]
@@ -73,7 +73,7 @@ def main():
     print("Loading predictions")
 
     t = timeit.default_timer()
-    with gcloud_storage_utils.reader(predictions_uri) as file:
+    with gs_fastcopy.read(predictions_uri) as file:
         with np.load(file) as loader:
             # An array of shape [height, width, channel] containing intensity of nuclear & membrane channels
             predictions = loader["image"]

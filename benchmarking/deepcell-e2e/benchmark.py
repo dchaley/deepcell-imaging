@@ -4,6 +4,7 @@ import argparse
 import csv
 from datetime import datetime, timezone
 from google.cloud import bigquery
+import gs_fastcopy
 import io
 from itertools import groupby
 import logging
@@ -20,7 +21,7 @@ import traceback
 import timeit
 import urllib.parse
 
-from deepcell_imaging import cached_open, gcloud_storage_utils
+from deepcell_imaging import cached_open
 
 BIGQUERY_RESULTS_TABLE = "deepcell-401920.benchmarking.results_batch"
 
@@ -232,7 +233,7 @@ def main():
 
             # smart_open doesn't support seeking on GCP, which tifffile uses.
             if output_path.startswith("gs://"):
-                with gcloud_storage_utils.writer(
+                with gs_fastcopy.write(
                     "%s/predictions.tiff" % output_path
                 ) as predictions_tiff_file:
                     tifffile.imwrite(predictions_tiff_file, segmentation_predictions)

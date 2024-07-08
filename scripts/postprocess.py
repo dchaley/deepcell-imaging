@@ -8,7 +8,8 @@ Writes segmented image npz to a URI (typically on cloud storage).
 """
 
 import argparse
-from deepcell_imaging import benchmark_utils, gcloud_storage_utils, mesmer_app
+from deepcell_imaging import benchmark_utils, mesmer_app
+import gs_fastcopy
 import json
 import numpy as np
 import smart_open
@@ -75,7 +76,7 @@ def main():
 
     t = timeit.default_timer()
 
-    with gcloud_storage_utils.reader(raw_predictions_uri) as raw_predictions_file:
+    with gs_fastcopy.read(raw_predictions_uri) as raw_predictions_file:
         with np.load(raw_predictions_file) as loader:
             # An array of shape [height, width, channel] containing intensity of nuclear & membrane channels
             raw_predictions = {
@@ -109,7 +110,7 @@ def main():
     if success:
         print("Saving postprocessed output to %s" % output_uri)
         t = timeit.default_timer()
-        with gcloud_storage_utils.writer(output_uri) as output_writer:
+        with gs_fastcopy.write(output_uri) as output_writer:
             np.savez(output_writer, image=segmentation)
 
         # TODO (#253): save tiff output.
