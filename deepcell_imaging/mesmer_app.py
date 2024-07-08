@@ -99,7 +99,7 @@ def preprocess_image(model_input_shape, image, image_mpp):
 def predict(model, image, batch_size):
     logger = logging.getLogger(__name__)
     model_image_shape = model.input_shape[1:]
-    pad_mode = 'constant'
+    pad_mode = "constant"
 
     # TODO: we need to validate the input. But what validations?
 
@@ -108,12 +108,8 @@ def predict(model, image, batch_size):
 
     # Run images through model
     t = timeit.default_timer()
-    output_tiles = batch_predict(
-        model=model, tiles=tiles, batch_size=batch_size
-    )
-    logger.debug(
-        "Model prediction finished in %s s", timeit.default_timer() - t
-    )
+    output_tiles = batch_predict(model=model, tiles=tiles, batch_size=batch_size)
+    logger.debug("Model prediction finished in %s s", timeit.default_timer() - t)
 
     # Untile images
     output_images = _untile_output(output_tiles, tiles_info, model_image_shape)
@@ -122,7 +118,13 @@ def predict(model, image, batch_size):
     return format_output_mesmer(output_images)
 
 
-def postprocess(output_images, input_shape, compartment="whole-cell", whole_cell_kwargs={}, nuclear_kwargs={}):
+def postprocess(
+    output_images,
+    input_shape,
+    compartment="whole-cell",
+    whole_cell_kwargs={},
+    nuclear_kwargs={},
+):
     logger = logging.getLogger(__name__)
 
     # TODO: We need to validate the input (the output_images parameter)
@@ -179,7 +181,7 @@ def postprocess(output_images, input_shape, compartment="whole-cell", whole_cell
         "Post-processed results with %s in %s s",
         mesmer_postprocess.__name__,
         timeit.default_timer() - t,
-        )
+    )
 
     # Resize label_image back to original resolution if necessary
     return _resize_output(label_image, input_shape)
@@ -346,7 +348,7 @@ def format_output_mesmer(output_list):
 
 
 def mesmer_postprocess(
-        model_output, compartment="whole-cell", whole_cell_kwargs=None, nuclear_kwargs=None
+    model_output, compartment="whole-cell", whole_cell_kwargs=None, nuclear_kwargs=None
 ):
     """Postprocess Mesmer output to generate predictions for distinct cellular compartments
 
@@ -414,7 +416,7 @@ def batch_predict(model, tiles, batch_size):
 
     # loop through each batch
     for i in range(0, tiles.shape[0], batch_size):
-        batch_inputs = tiles[i: i + batch_size, ...]
+        batch_inputs = tiles[i : i + batch_size, ...]
 
         batch_outputs = model.predict(batch_inputs, batch_size=batch_size)
 
@@ -430,7 +432,6 @@ def batch_predict(model, tiles, batch_size):
 
         # save each batch to corresponding index in output list
         for j, batch_out in enumerate(batch_outputs):
-            output_tiles[j][i: i + batch_size, ...] = batch_out
+            output_tiles[j][i : i + batch_size, ...] = batch_out
 
     return output_tiles
-

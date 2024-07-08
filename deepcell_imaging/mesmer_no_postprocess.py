@@ -1,9 +1,10 @@
-
 from deepcell.applications import Application, Mesmer
 from deepcell.applications.mesmer import mesmer_preprocess, format_output_mesmer
 
+
 def noop(model_output, *args, **kwargs):
-    return model_output['whole-cell'][-1]
+    return model_output["whole-cell"][-1]
+
 
 class MesmerNoPostprocess(Mesmer):
     def __init__(self, model):
@@ -20,4 +21,5 @@ class MesmerNoPostprocess(Mesmer):
             postprocessing_fn=noop,
             format_model_output_fn=format_output_mesmer,
             dataset_metadata=Mesmer.dataset_metadata,
-            model_metadata=Mesmer.model_metadata)
+            model_metadata=Mesmer.model_metadata,
+        )
