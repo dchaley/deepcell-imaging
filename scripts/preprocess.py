@@ -119,7 +119,7 @@ def main():
         benchmark_time = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
         timing_info = {
-            "input_file_id": image_uri,
+            "input_file_id": filename,
             "numpy_size_mb": round(input_channels.nbytes / 1e6, 2),
             "pixels_m": input_channels.shape[0] * input_channels.shape[1],
             "benchmark_datetime_utc": benchmark_time,
