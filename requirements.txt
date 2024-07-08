@@ -1,6 +1,7 @@
 deepcell==0.12.9
 google-cloud-bigquery
 google-cloud-notebooks
+gs-fastcopy
 imagecodecs
 numpy
 protobuf==3.20.3
