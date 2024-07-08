@@ -148,7 +148,7 @@ def main():
             "prediction_gpu_type": gpu_info[0],
             "prediction_num_gpus": gpu_info[1],
             "prediction_success": success,
-            "prediction_peak_memory_gb": benchmark_utils.get_peak_memory(),
+            "prediction_peak_memory_gb": benchmark_utils.get_peak_memory_gb(),
             "prediction_is_preemptible": benchmark_utils.get_gce_is_preemptible(),
             "prediction_model_load_time_s": model_load_time_s,
             "prediction_input_load_time_s": input_load_time_s,

@@ -80,7 +80,7 @@ def get_gpu_info():
         raise "Dunno how to handle multiple gpu types"
 
 
-def get_peak_memory():
+def get_peak_memory_gb():
     # The getrusage call returns different units on mac & linux.
     # Get the OS type from the platform library,
     # then set the memory unit factor accordingly.

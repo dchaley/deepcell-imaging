@@ -127,7 +127,7 @@ def main():
             "preprocessing_gpu_type": gpu_info[0],
             "preprocessing_num_gpus": gpu_info[1],
             "preprocessing_success": success,
-            "preprocessing_peak_memory_gb": benchmark_utils.get_peak_memory(),
+            "preprocessing_peak_memory_gb": benchmark_utils.get_peak_memory_gb(),
             "preprocessing_is_preemptible": benchmark_utils.get_gce_is_preemptible(),
             "preprocessing_input_load_time_s": input_load_time_s,
             "preprocessing_time_s": preprocessing_time_s,
