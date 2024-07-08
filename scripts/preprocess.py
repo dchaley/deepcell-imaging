@@ -77,9 +77,7 @@ t = timeit.default_timer()
 
 try:
     preprocessed_image = mesmer_app.preprocess_image(
-        model_input_shape,
-        input_channels[np.newaxis, ...],
-        image_mpp=image_mpp
+        model_input_shape, input_channels[np.newaxis, ...], image_mpp=image_mpp
     )
     success = True
 except Exception as e:
@@ -87,7 +85,10 @@ except Exception as e:
     print("Preprocessing failed with error: %s" % e)
 
 preprocessing_time_s = timeit.default_timer() - t
-print("Preprocessed input in %s s; success: %s" % (round(preprocessing_time_s, 2), success))
+print(
+    "Preprocessed input in %s s; success: %s"
+    % (round(preprocessing_time_s, 2), success)
+)
 
 if success:
     print("Saving preprocessing output to %s" % output_uri)

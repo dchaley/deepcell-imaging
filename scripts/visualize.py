@@ -111,9 +111,7 @@ overlay_data = make_outline_overlay(
 
 # The rgb values are 0..1, so normalize to 0..255
 im = Image.fromarray((overlay_data * 255).astype(np.uint8))
-with smart_open.open(
-        visualized_predictions_uri, "wb"
-) as predictions_png_file:
+with smart_open.open(visualized_predictions_uri, "wb") as predictions_png_file:
     im.save(predictions_png_file, mode="RGB")
 
 predictions_render_time_s = timeit.default_timer() - t

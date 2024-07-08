@@ -9,9 +9,9 @@ def npz_headers(npz):
     """Takes a path to an .npz file, which is a Zip archive of .npy files.
     Generates a sequence of (name, shape, np.dtype).
     """
-    with zipfile.ZipFile(smart_open.open(npz, mode='rb')) as archive:
+    with zipfile.ZipFile(smart_open.open(npz, mode="rb")) as archive:
         for name in archive.namelist():
-            if not name.endswith('.npy'):
+            if not name.endswith(".npy"):
                 continue
 
             npy = archive.open(name)

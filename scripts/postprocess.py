@@ -77,8 +77,8 @@ with gcloud_storage_utils.reader(raw_predictions_uri) as raw_predictions_file:
     with np.load(raw_predictions_file) as loader:
         # An array of shape [height, width, channel] containing intensity of nuclear & membrane channels
         raw_predictions = {
-            'whole-cell': [loader["arr_0"], loader["arr_1"]],
-            'nuclear': [loader["arr_2"], loader["arr_3"]],
+            "whole-cell": [loader["arr_0"], loader["arr_1"]],
+            "nuclear": [loader["arr_2"], loader["arr_3"]],
         }
 
 raw_predictions_load_time_s = timeit.default_timer() - t
@@ -90,9 +90,7 @@ print("Postprocessing raw predictions")
 t = timeit.default_timer()
 try:
     segmentation = mesmer_app.postprocess(
-        raw_predictions,
-        (1, input_rows, input_cols, 2),
-        compartment=compartment
+        raw_predictions, (1, input_rows, input_cols, 2), compartment=compartment
     )
     success = True
 except Exception as e:
@@ -101,7 +99,10 @@ except Exception as e:
 
 postprocessing_time_s = timeit.default_timer() - t
 
-print("Postprocessed raw predictions in %s s; success: %s" % (round(postprocessing_time_s, 2), success))
+print(
+    "Postprocessed raw predictions in %s s; success: %s"
+    % (round(postprocessing_time_s, 2), success)
+)
 
 if success:
     print("Saving postprocessed output to %s" % output_uri)

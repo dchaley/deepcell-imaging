@@ -14,7 +14,12 @@ batch_size : string
 """
 
 import argparse
-from deepcell_imaging import benchmark_utils, cached_open, gcloud_storage_utils, mesmer_app
+from deepcell_imaging import (
+    benchmark_utils,
+    cached_open,
+    gcloud_storage_utils,
+    mesmer_app,
+)
 import json
 import numpy as np
 import os
@@ -35,7 +40,7 @@ parser.add_argument(
     help="Optional integer representing batch size to use for prediction. Default is 16.",
     type=int,
     required=False,
-    default=16
+    default=16,
 )
 parser.add_argument(
     "--output_uri",
@@ -119,10 +124,10 @@ if success:
     with gcloud_storage_utils.writer(output_uri) as output_writer:
         np.savez(
             output_writer,
-            arr_0=model_output['whole-cell'][0],
-            arr_1=model_output['whole-cell'][1],
-            arr_2=model_output['nuclear'][0],
-            arr_3=model_output['nuclear'][1],
+            arr_0=model_output["whole-cell"][0],
+            arr_1=model_output["whole-cell"][1],
+            arr_2=model_output["nuclear"][0],
+            arr_3=model_output["nuclear"][1],
         )
     output_time_s = timeit.default_timer() - t
 

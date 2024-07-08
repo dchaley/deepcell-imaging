@@ -41,7 +41,9 @@ def get_gce_region():
 def get_gce_is_preemptible():
     # Call the metadata server.
     try:
-        metadata_server = "http://metadata/computeMetadata/v1/instance/scheduling/preemptible"
+        metadata_server = (
+            "http://metadata/computeMetadata/v1/instance/scheduling/preemptible"
+        )
         metadata_flavor = {"Metadata-Flavor": "Google"}
 
         # This comes back like this: projects/1234567890/machineTypes/n2-standard-8
@@ -49,7 +51,9 @@ def get_gce_is_preemptible():
         return preemptible_str.lower() == "true"
     except Exception as e:
         exception_string = traceback.format_exc()
-        logging.warning("Error getting preemptible, assuming false. Error: " + exception_string)
+        logging.warning(
+            "Error getting preemptible, assuming false. Error: " + exception_string
+        )
         return False
 
 
@@ -58,7 +62,9 @@ def get_gpu_info():
     import tensorflow as tf
 
     gpu_devices = tf.config.experimental.list_physical_devices("GPU")
-    gpu_details = [tf.config.experimental.get_device_details(gpu) for gpu in gpu_devices]
+    gpu_details = [
+        tf.config.experimental.get_device_details(gpu) for gpu in gpu_devices
+    ]
 
     gpus_by_name = {
         k: list(v) for k, v in groupby(gpu_details, key=lambda x: x["device_name"])

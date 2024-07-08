@@ -62,7 +62,11 @@ print("Loading benchmarking data")
 
 t = timeit.default_timer()
 
-for data_uri in [preprocess_benchmarking_uri, prediction_benchmarking_uri, postprocess_benchmarking_uri]:
+for data_uri in [
+    preprocess_benchmarking_uri,
+    prediction_benchmarking_uri,
+    postprocess_benchmarking_uri,
+]:
     with smart_open.open(data_uri, "r") as data_file:
         data = json.load(data_file)
         benchmarking_data.update(data)
@@ -72,7 +76,11 @@ data_load_time_s = timeit.default_timer() - t
 print("Loaded benchmarking data in %s s" % data_load_time_s)
 
 # Update the overall success to the logical AND of the individual steps
-benchmarking_data['success'] = benchmarking_data['preprocessing_success'] and benchmarking_data['prediction_success'] and benchmarking_data['postprocessing_success']
+benchmarking_data["success"] = (
+    benchmarking_data["preprocessing_success"]
+    and benchmarking_data["prediction_success"]
+    and benchmarking_data["postprocessing_success"]
+)
 
 print("Sending data to BigQuery")
 
