@@ -16,10 +16,24 @@ parser.add_argument(
 )
 parser.add_argument(
     "--bigquery_benchmarking_table",
-    help="BigQuery table to write benchmarking results to",
+    help="BigQuery table to write benchmarking results to (empty for none)",
     type=str,
     required=False,
     default="deepcell-on-batch.benchmarking.results_batch",
+)
+parser.add_argument(
+    "--model_path",
+    help="Path to the model archive",
+    type=str,
+    required=False,
+    default="gs://genomics-data-public-central1/cellular-segmentation/vanvalenlab/deep-cell/vanvalenlab-tf-model-multiplex-downloaded-20230706/MultiplexSegmentation.tar.gz",
+)
+parser.add_argument(
+    "--model_hash",
+    help="Hash of the model archive",
+    type=str,
+    required=False,
+    default="a1dfbce2594f927b9112f23a0a1739e0",
 )
 
 args = parser.parse_args()
@@ -70,6 +84,8 @@ base_json = """
                 "scripts/predict.py",
                 "--image_uri={output_path}/preprocessed.npz.gz",
                 "--benchmark_output_uri={output_path}/prediction_benchmark.json",
+                "--model_path={model_path}",
+                "--model_hash={model_hash}",
                 "--output_uri={output_path}/raw_predictions.npz.gz"
               ]
             }}
@@ -162,6 +178,8 @@ base_json = """
 
 job_json_str = base_json.format(
     bigquery_benchmarking_table=bigquery_benchmarking_table,
+    model_path=args.model_path,
+    model_hash=args.model_hash,
     output_path=output_path,
     input_channels_path=input_channels_path,
     container_image=CONTAINER_IMAGE,

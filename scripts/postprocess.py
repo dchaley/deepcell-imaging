@@ -132,7 +132,7 @@ def main():
             "postprocessing_gpu_type": gpu_info[0],
             "postprocessing_num_gpus": gpu_info[1],
             "postprocessing_success": success,
-            "postprocessing_peak_memory_gb": benchmark_utils.get_peak_memory(),
+            "postprocessing_peak_memory_gb": benchmark_utils.get_peak_memory_gb(),
             "postprocessing_is_preemptible": benchmark_utils.get_gce_is_preemptible(),
             "postprocessing_input_load_time_s": raw_predictions_load_time_s,
             "postprocessing_time_s": postprocessing_time_s,

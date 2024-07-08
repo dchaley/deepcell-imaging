@@ -51,6 +51,18 @@ def main():
         required=True,
     )
     parser.add_argument(
+        "--model_path",
+        help="Path to the model archive",
+        type=str,
+        required=True,
+    )
+    parser.add_argument(
+        "--model_hash",
+        help="The hash of the model archive",
+        type=str,
+        required=True,
+    )
+    parser.add_argument(
         "--benchmark_output_uri",
         help="Where to write preprocessing benchmarking data.",
         type=str,
@@ -64,11 +76,10 @@ def main():
     output_uri = args.output_uri
     benchmark_output_uri = args.benchmark_output_uri
 
-    # Hard-code remote path & hash based on model_id
-    # THIS IS IN US-CENTRAL1
+    # THE DEFAULT MODEL PATH IS IN US-CENTRAL1
     # If you are running outside us-central1 you should make a copy to avoid egress.
-    model_remote_path = "gs://genomics-data-public-central1/cellular-segmentation/vanvalenlab/deep-cell/vanvalenlab-tf-model-multiplex-downloaded-20230706/MultiplexSegmentation.tar.gz"
-    model_hash = "a1dfbce2594f927b9112f23a0a1739e0"
+    model_remote_path = args.model_path
+    model_hash = args.model_hash
 
     print("Loading model")
 
@@ -148,7 +159,7 @@ def main():
             "prediction_gpu_type": gpu_info[0],
             "prediction_num_gpus": gpu_info[1],
             "prediction_success": success,
-            "prediction_peak_memory_gb": benchmark_utils.get_peak_memory(),
+            "prediction_peak_memory_gb": benchmark_utils.get_peak_memory_gb(),
             "prediction_is_preemptible": benchmark_utils.get_gce_is_preemptible(),
             "prediction_model_load_time_s": model_load_time_s,
             "prediction_input_load_time_s": input_load_time_s,
