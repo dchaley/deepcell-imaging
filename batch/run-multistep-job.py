@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
 import argparse
+import pathlib
 import subprocess
 import tempfile
+import urllib
 import uuid
 
 from deepcell_imaging.numpy_utils import npz_headers
@@ -54,6 +56,9 @@ if len(input_file_contents) != 1:
     raise ValueError("Expected exactly one array in the input file")
 input_image_shape = input_file_contents[0][1]
 
+parsed_input_path = urllib.parse.urlparse(input_channels_path)
+input_file_stem = pathlib.Path(parsed_input_path.path).stem
+
 # A lot of stuff gets hardcoded in this json.
 # See the README for limitations.
 
@@ -101,7 +106,7 @@ base_json = """
                 "--input_cols={input_image_cols}",
                 "--benchmark_output_uri={output_path}/postprocess_benchmark.json",
                 "--output_uri={output_path}/predictions.npz.gz",
-                "--tiff_output_uri={output_path}/predictions.tiff"
+                "--tiff_output_uri={output_path}/{predictions_tiff_filename_stem}.tiff"
               ]
             }}
           }},
@@ -182,6 +187,7 @@ job_json_str = base_json.format(
     model_path=args.model_path,
     model_hash=args.model_hash,
     output_path=output_path,
+    predictions_tiff_filename_stem=input_file_stem,
     input_channels_path=input_channels_path,
     container_image=CONTAINER_IMAGE,
     region=REGION,
