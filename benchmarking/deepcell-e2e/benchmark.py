@@ -231,17 +231,19 @@ def main():
         if output_tiff:
             import tifffile
 
+            segments_int32 = segmentation_predictions.astype(np.int32)
+
             # smart_open doesn't support seeking on GCP, which tifffile uses.
             if output_path.startswith("gs://"):
                 with gs_fastcopy.write(
                     "%s/predictions.tiff" % output_path
                 ) as predictions_tiff_file:
-                    tifffile.imwrite(predictions_tiff_file, segmentation_predictions)
+                    tifffile.imwrite(predictions_tiff_file, segments_int32)
             else:
                 with smart_open.open(
                     "%s/predictions.tiff" % output_path, "wb"
                 ) as predictions_tiff_file:
-                    tifffile.imwrite(predictions_tiff_file, segmentation_predictions)
+                    tifffile.imwrite(predictions_tiff_file, segments_int32)
 
     if visualize_input or visualize_predictions:
         from deepcell.utils.plot_utils import create_rgb_image

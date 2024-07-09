@@ -184,7 +184,8 @@ def postprocess(
     )
 
     # Resize label_image back to original resolution if necessary
-    return _resize_output(label_image, input_shape)
+    # But, remove the 1st dimension: batch num.
+    return _resize_output(label_image, input_shape)[0]
 
 
 # pre- and post-processing functions

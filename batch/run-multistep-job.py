@@ -100,7 +100,8 @@ base_json = """
                 "--input_rows={input_image_rows}",
                 "--input_cols={input_image_cols}",
                 "--benchmark_output_uri={output_path}/postprocess_benchmark.json",
-                "--output_uri={output_path}/predictions.npz.gz"
+                "--output_uri={output_path}/predictions.npz.gz",
+                "--tiff_output_uri={output_path}/predictions.tiff"
               ]
             }}
           }},
