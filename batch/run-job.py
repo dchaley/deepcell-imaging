@@ -27,7 +27,7 @@ input_channels_path = args.input_channels_path
 
 model_path = args.model_path
 
-CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:gce"
+CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:batch"
 OUTPUT_BASE_PATH = "gs://deepcell-batch-jobs_us-central1/job-runs"
 REGION = "us-central1"
 
