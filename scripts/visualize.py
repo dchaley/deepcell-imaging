@@ -108,7 +108,7 @@ def main():
     t = timeit.default_timer()
     overlay_data = make_outline_overlay(
         rgb_data=input_rgb[np.newaxis, ...],
-        predictions=predictions,
+        predictions=predictions[np.newaxis, ...],
     )[0]
 
     # The rgb values are 0..1, so normalize to 0..255
