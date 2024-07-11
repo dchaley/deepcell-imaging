@@ -8,16 +8,25 @@ Writes preprocessed image to a URI (typically on cloud storage).
 """
 
 import argparse
-from deepcell.utils.plot_utils import create_rgb_image, make_outline_overlay
+import logging
+import timeit
+
 import gs_fastcopy
 import numpy as np
-from PIL import Image
 import smart_open
-import timeit
+from PIL import Image
+from deepcell.utils.plot_utils import create_rgb_image, make_outline_overlay
+
+import deepcell_imaging
+from deepcell_imaging import gcp_logging
 
 
 def main():
     parser = argparse.ArgumentParser("visualize")
+
+    logger = logging.getLogger(deepcell_imaging.__name__)
+    logger.setLevel(logging.INFO)
+    deepcell_imaging.gcp_logging.add_gcp_logging_handler(logger)
 
     parser.add_argument(
         "--image_uri",
@@ -59,7 +68,7 @@ def main():
     visualized_input_uri = args.visualized_input_uri
     visualized_predictions_uri = args.visualized_predictions_uri
 
-    print("Loading input")
+    logger.info("Loading input")
 
     t = timeit.default_timer()
     with gs_fastcopy.read(image_uri) as file:
@@ -68,9 +77,9 @@ def main():
             input_channels = loader[image_array_name]
     input_load_time_s = timeit.default_timer() - t
 
-    print("Loaded input in %s s" % input_load_time_s)
+    logger.info("Loaded input in %s s" % input_load_time_s)
 
-    print("Loading predictions")
+    logger.info("Loading predictions")
 
     t = timeit.default_timer()
     with gs_fastcopy.read(predictions_uri) as file:
@@ -79,12 +88,12 @@ def main():
             predictions = loader["image"]
     predictions_load_time_s = timeit.default_timer() - t
 
-    print("Loaded predictions in %s s" % predictions_load_time_s)
+    logger.info("Loaded predictions in %s s" % predictions_load_time_s)
 
     nuclear_color = "green"
     membrane_color = "blue"
 
-    print("Rendering input to %s" % visualized_input_uri)
+    logger.info("Rendering input to %s" % visualized_input_uri)
 
     t = timeit.default_timer()
 
@@ -101,9 +110,9 @@ def main():
 
     input_render_time_s = timeit.default_timer() - t
 
-    print("Rendered input in %s s" % input_render_time_s)
+    logger.info("Rendered input in %s s" % input_render_time_s)
 
-    print("Rendering predictions to %s" % visualized_predictions_uri)
+    logger.info("Rendering predictions to %s" % visualized_predictions_uri)
 
     t = timeit.default_timer()
     overlay_data = make_outline_overlay(
@@ -118,7 +127,7 @@ def main():
 
     predictions_render_time_s = timeit.default_timer() - t
 
-    print("Rendered predictions in %s s" % predictions_render_time_s)
+    logger.info("Rendered predictions in %s s" % predictions_render_time_s)
 
 
 if __name__ == "__main__":

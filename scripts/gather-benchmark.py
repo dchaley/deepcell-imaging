@@ -8,17 +8,25 @@ Writes preprocessed image to a URI (typically on cloud storage).
 """
 
 import argparse
-from deepcell_imaging import benchmark_utils
-from google.cloud import bigquery
 import io
 import json
-import smart_open
-from tenacity import retry, retry_if_exception_message, wait_random_exponential
+import logging
 import timeit
+
+import smart_open
+from google.cloud import bigquery
+from tenacity import retry, retry_if_exception_message, wait_random_exponential
+
+import deepcell_imaging
+from deepcell_imaging import benchmark_utils, gcp_logging
 
 
 def main():
     parser = argparse.ArgumentParser("preprocess")
+
+    logger = logging.getLogger(deepcell_imaging.__name__)
+    logger.setLevel(logging.INFO)
+    deepcell_imaging.gcp_logging.add_gcp_logging_handler(logger)
 
     parser.add_argument(
         "--preprocess_benchmarking_uri",
@@ -53,14 +61,14 @@ def main():
     bigquery_benchmarking_table = args.bigquery_benchmarking_table
 
     if not bigquery_benchmarking_table:
-        print("Nothing to do; empty bigquery_benchmarking_table")
+        logger.info("Nothing to do; empty bigquery_benchmarking_table")
         exit()
 
     benchmarking_data = {
         "cloud_region": benchmark_utils.get_gce_region(),
     }
 
-    print("Loading benchmarking data")
+    logger.info("Loading benchmarking data")
 
     t = timeit.default_timer()
 
@@ -75,7 +83,7 @@ def main():
 
     data_load_time_s = timeit.default_timer() - t
 
-    print("Loaded benchmarking data in %s s" % data_load_time_s)
+    logger.info("Loaded benchmarking data in %s s" % data_load_time_s)
 
     # Update the overall success to the logical AND of the individual steps
     benchmarking_data["success"] = (
@@ -84,7 +92,7 @@ def main():
         and benchmarking_data["postprocessing_success"]
     )
 
-    print("Sending data to BigQuery")
+    logger.info("Sending data to BigQuery")
 
     t = timeit.default_timer()
 
@@ -111,7 +119,7 @@ def main():
 
     bigquery_upload_time_s = timeit.default_timer() - t
 
-    print("Send data to BigQuery in %s s" % bigquery_upload_time_s)
+    logger.info("Send data to BigQuery in %s s" % bigquery_upload_time_s)
 
 
 if __name__ == "__main__":

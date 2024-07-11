@@ -15,6 +15,7 @@ batch_size : string
 
 import argparse
 import json
+import logging
 import os
 import timeit
 
@@ -24,7 +25,9 @@ import smart_open
 import tensorflow as tf
 from deepcell.layers.location import Location2D
 
+import deepcell_imaging
 from deepcell_imaging import (
+    gcp_logging,
     benchmark_utils,
     cached_open,
     mesmer_app,
@@ -33,6 +36,10 @@ from deepcell_imaging import (
 
 def main():
     parser = argparse.ArgumentParser("predict")
+
+    logger = logging.getLogger(deepcell_imaging.__name__)
+    logger.setLevel(logging.INFO)
+    deepcell_imaging.gcp_logging.add_gcp_logging_handler(logger)
 
     parser.add_argument(
         "--image_uri",
@@ -84,7 +91,7 @@ def main():
     model_remote_path = args.model_path
     model_hash = args.model_hash
 
-    print("Fetching model from: %s" % model_remote_path)
+    logger.info("Fetching model from: %s" % model_remote_path)
 
     model_file_name = os.path.basename(model_remote_path)
     model_file_extension = os.path.splitext(model_file_name)[1]
@@ -111,7 +118,7 @@ def main():
     # - (new) .keras which doesn't extract
     model_path = downloaded_file_path.removesuffix(".tar.gz")
 
-    print("Loading model from: {}".format(model_path))
+    logger.info("Loading model from: {}".format(model_path))
 
     t = timeit.default_timer()
 
@@ -121,9 +128,9 @@ def main():
     )
     model_load_time_s = timeit.default_timer() - t
 
-    print("Loaded model in %s s" % round(model_load_time_s, 2))
+    logger.info("Loaded model in %s s" % round(model_load_time_s, 2))
 
-    print("Loading preprocessed image")
+    logger.info("Loading preprocessed image")
 
     t = timeit.default_timer()
 
@@ -132,9 +139,9 @@ def main():
             preprocessed_image = loader["image"]
     input_load_time_s = timeit.default_timer() - t
 
-    print("Loaded preprocessed image in %s s" % round(input_load_time_s, 2))
+    logger.info("Loaded preprocessed image in %s s" % round(input_load_time_s, 2))
 
-    print("Running prediction")
+    logger.info("Running prediction")
 
     t = timeit.default_timer()
     try:
@@ -146,14 +153,16 @@ def main():
         success = True
     except Exception as e:
         success = False
-        print("Prediction failed with error: %s" % e)
+        logger.error("Prediction failed with error: %s" % e)
 
     predict_time_s = timeit.default_timer() - t
 
-    print("Ran prediction in %s s; success: %s" % (round(predict_time_s, 2), success))
+    logger.info(
+        "Ran prediction in %s s; success: %s" % (round(predict_time_s, 2), success)
+    )
 
     if success:
-        print("Saving raw predictions output to %s" % output_uri)
+        logger.info("Saving raw predictions output to %s" % output_uri)
 
         t = timeit.default_timer()
         with gs_fastcopy.write(output_uri) as output_writer:
@@ -166,9 +175,9 @@ def main():
             )
         output_time_s = timeit.default_timer() - t
 
-        print("Saved output in %s s" % round(output_time_s, 2))
+        logger.info("Saved output in %s s" % round(output_time_s, 2))
     else:
-        print("Not saving failed prediction output.")
+        logger.warning("Not saving failed prediction output.")
         output_time_s = 0.0
 
     # Gather & output timing information
@@ -193,7 +202,7 @@ def main():
         with smart_open.open(benchmark_output_uri, "w") as benchmark_output_file:
             json.dump(timing_info, benchmark_output_file)
 
-        print("Wrote benchmarking data to %s" % benchmark_output_uri)
+        logger.info("Wrote benchmarking data to %s" % benchmark_output_uri)
 
 
 if __name__ == "__main__":
