@@ -8,18 +8,26 @@ Writes preprocessed image to a URI (typically on cloud storage).
 """
 
 import argparse
-from datetime import datetime, timezone
-from deepcell_imaging import benchmark_utils, mesmer_app
-import gs_fastcopy
 import json
-import numpy as np
-import smart_open
+import logging
 import timeit
 import urllib
+from datetime import datetime, timezone
+
+import gs_fastcopy
+import numpy as np
+import smart_open
+
+import deepcell_imaging
+from deepcell_imaging import gcp_logging, benchmark_utils, mesmer_app
 
 
 def main():
     parser = argparse.ArgumentParser("preprocess")
+
+    logger = logging.getLogger(deepcell_imaging.__name__)
+    logger.setLevel(logging.INFO)
+    deepcell_imaging.gcp_logging.add_gcp_logging_handler(logger)
 
     parser.add_argument(
         "--image_uri",
@@ -64,7 +72,7 @@ def main():
     # This is hard-coded from the only model-id we support.
     model_input_shape = (None, 256, 256, 2)
 
-    print("Loading input")
+    logger.info("Loading input")
 
     t = timeit.default_timer()
     with gs_fastcopy.read(image_uri) as input_file:
@@ -72,9 +80,9 @@ def main():
             input_channels = loader[image_array_name]
     input_load_time_s = timeit.default_timer() - t
 
-    print("Loaded input in %s s" % round(input_load_time_s, 2))
+    logger.info("Loaded input in %s s", round(input_load_time_s, 2))
 
-    print("Preprocessing input")
+    logger.info("Preprocessing input")
 
     t = timeit.default_timer()
 
@@ -85,16 +93,16 @@ def main():
         success = True
     except Exception as e:
         success = False
-        print("Preprocessing failed with error: %s" % e)
+        logger.error("Preprocessing failed with error: %s", e)
 
     preprocessing_time_s = timeit.default_timer() - t
-    print(
+    logger.info(
         "Preprocessed input in %s s; success: %s"
         % (round(preprocessing_time_s, 2), success)
     )
 
     if success:
-        print("Saving preprocessing output to %s" % output_uri)
+        logger.info("Saving preprocessing output to %s" % output_uri)
         t = timeit.default_timer()
 
         with gs_fastcopy.write(output_uri) as output_writer:
@@ -102,9 +110,9 @@ def main():
 
         output_time_s = timeit.default_timer() - t
 
-        print("Saved output in %s s" % round(output_time_s, 2))
+        logger.info("Saved output in %s s" % round(output_time_s, 2))
     else:
-        print("Not saving failed preprocessing output.")
+        logger.warning("Not saving failed preprocessing output.")
         output_time_s = 0.0
 
     # Gather & output timing information
@@ -137,7 +145,7 @@ def main():
         with smart_open.open(benchmark_output_uri, "w") as benchmark_output_file:
             json.dump(timing_info, benchmark_output_file)
 
-        print("Wrote benchmarking data to %s" % benchmark_output_uri)
+        logger.info("Wrote benchmarking data to %s" % benchmark_output_uri)
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@ google-cloud-bigquery
 google-cloud-notebooks
 gs-fastcopy
 imagecodecs
+JSON-log-formatter
 numpy
 protobuf==3.20.3
 pytest

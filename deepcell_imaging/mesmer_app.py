@@ -51,7 +51,7 @@ def preprocess_image(model_input_shape, image, image_mpp):
     logger.debug(
         "Pre-processing data with %s and kwargs: %s",
         mesmer_preprocess.__name__,
-        **preprocess_kwargs,
+        preprocess_kwargs,
     )
 
     # Scale the image if mpp defined & different from the model mpp

@@ -8,9 +8,11 @@ Writes segmented image npz to a URI (typically on cloud storage).
 """
 
 import argparse
-from deepcell_imaging import benchmark_utils, mesmer_app
+import deepcell_imaging
+from deepcell_imaging import gcp_logging, benchmark_utils, mesmer_app
 import gs_fastcopy
 import json
+import logging
 import numpy as np
 import smart_open
 import tifffile
@@ -19,6 +21,10 @@ import timeit
 
 def main():
     parser = argparse.ArgumentParser("postprocess")
+
+    logger = logging.getLogger(deepcell_imaging.__name__)
+    logger.setLevel(logging.INFO)
+    deepcell_imaging.gcp_logging.add_gcp_logging_handler(logger)
 
     parser.add_argument(
         "--raw_predictions_uri",
@@ -74,7 +80,7 @@ def main():
     tiff_output_uri = args.tiff_output_uri
     benchmark_output_uri = args.benchmark_output_uri
 
-    print("Loading raw predictions")
+    logger.info("Loading raw predictions")
 
     t = timeit.default_timer()
 
@@ -88,9 +94,11 @@ def main():
 
     raw_predictions_load_time_s = timeit.default_timer() - t
 
-    print("Loaded raw predictions in %s s" % round(raw_predictions_load_time_s, 2))
+    logger.info(
+        "Loaded raw predictions in %s s" % round(raw_predictions_load_time_s, 2)
+    )
 
-    print("Postprocessing raw predictions")
+    logger.info("Postprocessing raw predictions")
 
     t = timeit.default_timer()
     try:
@@ -99,36 +107,36 @@ def main():
         )
         success = True
     except Exception as e:
-        print("Postprocessing failed with error: %s" % e)
+        logger.error("Postprocessing failed with error: %s" % e)
         success = False
 
     postprocessing_time_s = timeit.default_timer() - t
 
-    print(
+    logger.info(
         "Postprocessed raw predictions in %s s; success: %s"
         % (round(postprocessing_time_s, 2), success)
     )
 
     if success:
-        print("Saving postprocessed npz output to %s" % output_uri)
+        logger.info("Saving postprocessed npz output to %s" % output_uri)
         t = timeit.default_timer()
         with gs_fastcopy.write(output_uri) as output_writer:
             np.savez(output_writer, image=segmentation)
 
         output_time_s = timeit.default_timer() - t
-        print("Saved output in %s s" % round(output_time_s, 2))
+        logger.info("Saved output in %s s" % round(output_time_s, 2))
 
         if tiff_output_uri:
-            print("Saving postprocessed TIFF output to %s" % tiff_output_uri)
+            logger.info("Saving postprocessed TIFF output to %s" % tiff_output_uri)
             t = timeit.default_timer()
             segments_int32 = segmentation.astype(np.int32)
             with gs_fastcopy.write(tiff_output_uri) as output_writer:
                 tifffile.imwrite(output_writer, segments_int32)
 
             tiff_output_time_s = timeit.default_timer() - t
-            print("Saved tiff output in %s s" % round(tiff_output_time_s, 2))
+            logger.info("Saved tiff output in %s s" % round(tiff_output_time_s, 2))
     else:
-        print("Not saving failed postprocessing output.")
+        logger.warning("Not saving failed postprocessing output.")
         output_time_s = 0.0
 
     # Gather & output timing information
@@ -152,7 +160,7 @@ def main():
         with smart_open.open(benchmark_output_uri, "w") as benchmark_output_file:
             json.dump(timing_info, benchmark_output_file)
 
-        print("Wrote benchmarking data to %s" % benchmark_output_uri)
+        logger.info("Wrote benchmarking data to %s" % benchmark_output_uri)
 
 
 if __name__ == "__main__":
