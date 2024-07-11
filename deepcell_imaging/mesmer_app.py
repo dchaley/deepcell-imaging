@@ -1,46 +1,23 @@
-"""Mesmer application in pieces"""
+"""
+The Mesmer application, in pieces.
 
-from pathlib import Path
+This was extracted from the DeepCell Mesmer Application, and modified to
+remove the stateful class object. Instead, each function is a standalone
+function that can be called independently.
+"""
 
 import logging
-import numpy as np
-import os
-import sys
 import timeit
 
+import numpy as np
 from deepcell_toolbox.deep_watershed import deep_watershed
-from deepcell_toolbox.processing import percentile_threshold
 from deepcell_toolbox.processing import histogram_normalization
+from deepcell_toolbox.processing import percentile_threshold
 from deepcell_toolbox.utils import resize, tile_image, untile_image
-
-import importlib
-
-file_path = "./deepcell_imaging/__init__.py"
-module_name = "deepcell_imaging"
-spec = importlib.util.spec_from_file_location(module_name, file_path)
-module = importlib.util.module_from_spec(spec)
-sys.modules[module_name] = module
-spec.loader.exec_module(module)
-
-from deepcell_imaging import cached_open
 
 MODEL_REMOTE_PATH = "gs://davids-genomics-data-public/cellular-segmentation/deep-cell/vanvalenlab-tf-model-multiplex-downloaded-20230706/MultiplexSegmentation.tar.gz"
 
-MODEL_KEY = "models/MultiplexSegmentation-9.tar.gz"
-MODEL_NAME = "MultiplexSegmentation"
-MODEL_HASH = "a1dfbce2594f927b9112f23a0a1739e0"
-
 MESMER_MODEL_MPP = 0.5
-
-downloaded_file_path = cached_open.get_file(
-    "MultiplexSegmentation.tgz",
-    MODEL_REMOTE_PATH,
-    file_hash=MODEL_HASH,
-    extract=True,
-    cache_subdir="models",
-)
-# Remove the .tgz extension to get the model directory path
-model_path = os.path.splitext(downloaded_file_path)[0]
 
 
 def validate_image(model_input_shape, image):

@@ -8,8 +8,13 @@ tmp_tiff_output="gs://deepcell-batch-jobs_us-central1/job-runs/tmp-pipeline/pred
 input_png_uri="gs://deepcell-batch-jobs_us-central1/job-runs/tmp-pipeline/input.png"
 predictions_png_uri="gs://deepcell-batch-jobs_us-central1/job-runs/tmp-pipeline/predictions.png"
 
-model_path="gs://genomics-data-public-central1/cellular-segmentation/vanvalenlab/deep-cell/vanvalenlab-tf-model-multiplex-downloaded-20230706/MultiplexSegmentation.tar.gz"
-model_hash="a1dfbce2594f927b9112f23a0a1739e0"
+# Classic model (SavedModel format)
+# model_path="gs://genomics-data-public-central1/cellular-segmentation/vanvalenlab/deep-cell/vanvalenlab-tf-model-multiplex-downloaded-20230706/MultiplexSegmentation.tar.gz"
+# model_hash="a1dfbce2594f927b9112f23a0a1739e0"
+
+# New model (Keras format)
+model_path="gs://genomics-data-public-central1/cellular-segmentation/vanvalenlab/deep-cell/vanvalenlab-tf-model-multiplex-downloaded-20230706/MultiplexSegmentation-resaved-20240710.keras"
+model_hash="56b0f246081fe6b730ca74eab8a37d60"
 
 python scripts/preprocess.py --image_uri $1 --output_uri $tmp_preprocess_output
 python scripts/predict.py --image_uri $tmp_preprocess_output --model_path $model_path --model_hash $model_hash --output_uri $tmp_predict_output

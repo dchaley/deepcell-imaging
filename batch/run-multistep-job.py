@@ -28,14 +28,14 @@ parser.add_argument(
     help="Path to the model archive",
     type=str,
     required=False,
-    default="gs://genomics-data-public-central1/cellular-segmentation/vanvalenlab/deep-cell/vanvalenlab-tf-model-multiplex-downloaded-20230706/MultiplexSegmentation.tar.gz",
+    default="gs://genomics-data-public-central1/cellular-segmentation/vanvalenlab/deep-cell/vanvalenlab-tf-model-multiplex-downloaded-20230706/MultiplexSegmentation-resaved-20240710.keras",
 )
 parser.add_argument(
     "--model_hash",
     help="Hash of the model archive",
     type=str,
     required=False,
-    default="a1dfbce2594f927b9112f23a0a1739e0",
+    default="56b0f246081fe6b730ca74eab8a37d60",
 )
 
 args = parser.parse_args()

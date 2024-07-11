@@ -14,18 +14,21 @@ batch_size : string
 """
 
 import argparse
+import json
+import os
+import timeit
+
+import gs_fastcopy
+import numpy as np
+import smart_open
+import tensorflow as tf
+from deepcell.layers.location import Location2D
+
 from deepcell_imaging import (
     benchmark_utils,
     cached_open,
     mesmer_app,
 )
-import gs_fastcopy
-import json
-import numpy as np
-import os
-import smart_open
-import tensorflow as tf
-import timeit
 
 
 def main():
@@ -81,22 +84,41 @@ def main():
     model_remote_path = args.model_path
     model_hash = args.model_hash
 
-    print("Loading model")
+    print("Fetching model from: %s" % model_remote_path)
+
+    model_file_name = os.path.basename(model_remote_path)
+    model_file_extension = os.path.splitext(model_file_name)[1]
 
     downloaded_file_path = cached_open.get_file(
-        "MultiplexSegmentation.tgz",
+        model_file_name,
         model_remote_path,
         file_hash=model_hash,
-        extract=True,
+        extract=(model_file_extension in [".tgz", ".gz", ".zip"]),
         cache_subdir="models",
     )
-    # Remove the .tgz extension to get the model directory path
-    model_path = os.path.splitext(downloaded_file_path)[0]
 
-    print("Reading model from {}.".format(model_path))
+    # NOTE: what we really mean to do here is identify the extracted
+    # contents of the archive, if we downloaded an archive. The tricky
+    # thing is that we don't know the name in advance, it depends on
+    # the archive. What we *should* do is:
+    # - look inside the archive to get the path
+    #   - if so, all files must have the same base path
+    # - require the model user (aka, here, predict.py) to know the
+    #   base path. This means, predict.py callers also need to know.
+
+    # For now, we'll hard-code this for the models we support:
+    # - (classic) .tar.gz which removes the .tar.gz extension
+    # - (new) .keras which doesn't extract
+    model_path = downloaded_file_path.removesuffix(".tar.gz")
+
+    print("Loading model from: {}".format(model_path))
 
     t = timeit.default_timer()
-    model = tf.keras.models.load_model(model_path)
+
+    model = tf.keras.models.load_model(
+        model_path,
+        custom_objects={"Location2D": Location2D},
+    )
     model_load_time_s = timeit.default_timer() - t
 
     print("Loaded model in %s s" % round(model_load_time_s, 2))
