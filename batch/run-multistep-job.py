@@ -28,7 +28,7 @@ parser.add_argument(
     help="Path to the model archive",
     type=str,
     required=False,
-    default="gs://genomics-data-public-central1/cellular-segmentation/vanvalenlab/deep-cell/vanvalenlab-tf-model-multiplex-downloaded-20230706/MultiplexSegmentation-resaved-20240710.keras",
+    default="gs://genomics-data-public-central1/cellular-segmentation/vanvalenlab/deep-cell/vanvalenlab-tf-model-multiplex-downloaded-20230706/MultiplexSegmentation-resaved-20240710.h5",
 )
 parser.add_argument(
     "--model_hash",
