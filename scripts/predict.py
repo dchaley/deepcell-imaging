@@ -37,9 +37,8 @@ from deepcell_imaging import (
 def main():
     parser = argparse.ArgumentParser("predict")
 
-    logger = logging.getLogger(deepcell_imaging.__name__)
-    logger.setLevel(logging.INFO)
-    deepcell_imaging.gcp_logging.add_gcp_logging_handler(logger)
+    deepcell_imaging.gcp_logging.initialize_gcp_logging()
+    logger = logging.getLogger(__name__)
 
     parser.add_argument(
         "--image_uri",
