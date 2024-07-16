@@ -1,21 +1,34 @@
 #!/usr/bin/env python
 
 import argparse
-import pathlib
+import datetime
 import subprocess
 import tempfile
-import urllib
 import uuid
 
 from deepcell_imaging.gcp_batch_jobs import make_job_json
 from deepcell_imaging.numpy_utils import npz_headers
 
+CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:batch"
+REGION = "us-central1"
+
 parser = argparse.ArgumentParser("deepcell-on-batch")
 parser.add_argument(
-    "--input_channels_path",
-    help="Path to the input channels npz file",
+    "--dataset",
+    help="Path to the dataset root directory (containing subfolders OMETIFF, SEGMASK, etc)",
     type=str,
     required=True,
+)
+parser.add_argument(
+    "--prefix",
+    help="Input prefix, eg ROI01. Input will be: <dataset>/NPZ_INTERMEDIATE/<prefix>.npz",
+)
+parser.add_argument(
+    "--compartment",
+    help="Which predictions to generate: whole-cell (default), nuclear, or both",
+    type=str,
+    choices=["whole-cell", "nuclear", "both"],
+    default="whole-cell",
 )
 parser.add_argument(
     "--bigquery_benchmarking_table",
@@ -41,24 +54,24 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-job_id = "j" + str(uuid.uuid4())
-input_channels_path = args.input_channels_path
+dataset = args.dataset.rstrip("/")
+prefix = args.prefix
+compartment = args.compartment
+
+input_channels_path = "{}/NPZ_INTERMEDIATE/{}.npz".format(dataset, prefix)
+job_intermediate_path = "{}/jobs/{}_{}".format(
+    dataset, prefix, datetime.datetime.now().isoformat()
+)
+
 bigquery_benchmarking_table = args.bigquery_benchmarking_table
 
-CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:batch"
-OUTPUT_BASE_PATH = "gs://deepcell-batch-jobs_us-central1/job-runs"
-REGION = "us-central1"
-
-output_path = "{}/{}".format(OUTPUT_BASE_PATH, job_id)
+tiff_output_uri = "{}/SEGMASK/{}_{}.tiff".format(dataset, prefix, compartment)
 
 # For now, assume there's only one file in the input.
 input_file_contents = list(npz_headers(input_channels_path))
 if len(input_file_contents) != 1:
     raise ValueError("Expected exactly one array in the input file")
 input_image_shape = input_file_contents[0][1]
-
-parsed_input_path = urllib.parse.urlparse(input_channels_path)
-input_file_stem = pathlib.Path(parsed_input_path.path).stem
 
 job_json_str = make_job_json(
     region=REGION,
@@ -67,8 +80,8 @@ job_json_str = make_job_json(
     model_hash=args.model_hash,
     bigquery_benchmarking_table=bigquery_benchmarking_table,
     input_channels_path=input_channels_path,
-    working_directory=output_path,
-    tiff_output_uri="{}/{}.tiff".format(output_path, input_file_stem),
+    working_directory=job_intermediate_path,
+    tiff_output_uri=tiff_output_uri,
     input_image_rows=input_image_shape[0],
     input_image_cols=input_image_shape[1],
 )
@@ -77,10 +90,19 @@ job_json_file = tempfile.NamedTemporaryFile()
 with open(job_json_file.name, "w") as f:
     f.write(job_json_str)
 
+# The batch job id must be unique, and can only contain lowercase letters,
+# numbers, and hyphens. It must also be 63 characters or fewer.
+# We're doing 62 to be safe.
+#
+# Regex: ^[a-z]([a-z0-9-]{0,61}[a-z0-9])?$
+batch_job_id = "deepcell-{}".format(str(uuid.uuid4()))
+batch_job_id = batch_job_id[0:62].lower()
+
 cmd = "gcloud batch jobs submit {job_id} --location {location} --config {job_filename}".format(
-    job_id=job_id, location=REGION, job_filename=job_json_file.name
+    job_id=batch_job_id, location=REGION, job_filename=job_json_file.name
 )
 subprocess.run(cmd, shell=True)
 
-print("Job submitted with ID: {}".format(job_id))
-print("Output: {}".format(output_path))
+print("Job submitted with ID: {}".format(batch_job_id))
+print("Intermediate output: {}".format(job_intermediate_path))
+print("Final output: {}".format(tiff_output_uri))
