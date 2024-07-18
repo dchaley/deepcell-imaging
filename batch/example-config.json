@@ -1,0 +1,17 @@
+{
+  "allocationPolicy": {
+    "location": {
+      "allowedLocations": [
+        "regions/us-central1"
+      ]
+    },
+    "network": {
+      "networkInterfaces": [
+        {
+        }
+      ]
+    },
+    "serviceAccount": {
+    }
+  }
+}
