@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import json
 import pathlib
 import subprocess
 import tempfile
@@ -38,6 +39,12 @@ parser.add_argument(
     required=False,
     default="56b0f246081fe6b730ca74eab8a37d60",
 )
+parser.add_argument(
+    "--configuration",
+    help="Path to the Batch configuration file",
+    type=str,
+    required=False,
+)
 
 args = parser.parse_args()
 
@@ -60,7 +67,11 @@ input_image_shape = input_file_contents[0][1]
 parsed_input_path = urllib.parse.urlparse(input_channels_path)
 input_file_stem = pathlib.Path(parsed_input_path.path).stem
 
-job_json_str = make_job_json(
+if args.configuration:
+    with open(args.configuration, "r") as f:
+        config = json.load(f)
+
+job_json = make_job_json(
     region=REGION,
     container_image=CONTAINER_IMAGE,
     model_path=args.model_path,
@@ -71,11 +82,12 @@ job_json_str = make_job_json(
     tiff_output_uri="{}/{}.tiff".format(output_path, input_file_stem),
     input_image_rows=input_image_shape[0],
     input_image_cols=input_image_shape[1],
+    config=config,
 )
 
 job_json_file = tempfile.NamedTemporaryFile()
 with open(job_json_file.name, "w") as f:
-    f.write(job_json_str)
+    json.dump(job_json, f)
 
 cmd = "gcloud batch jobs submit {job_id} --location {location} --config {job_filename}".format(
     job_id=job_id, location=REGION, job_filename=job_json_file.name

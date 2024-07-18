@@ -2,9 +2,12 @@
 This module contains functions for creating and submitting batch jobs to GCP.
 """
 
+import json
+
 # A lot of stuff gets hardcoded in this json.
 # See the README for limitations.
-# Need to escape the curly braces in the JSON template
+
+# Note: Need to escape the curly braces in the JSON template
 BASE_MULTISTEP_TEMPLATE = """
 {{
     "taskGroups": [
@@ -136,8 +139,9 @@ def make_job_json(
     tiff_output_uri: str,
     input_image_rows: int,
     input_image_cols: int,
-):
-    return BASE_MULTISTEP_TEMPLATE.format(
+    config: dict = None,
+) -> dict:
+    json_str = BASE_MULTISTEP_TEMPLATE.format(
         container_image=container_image,
         model_path=model_path,
         model_hash=model_hash,
@@ -149,3 +153,10 @@ def make_job_json(
         region=region,
         bigquery_benchmarking_table=bigquery_benchmarking_table,
     )
+
+    job_json = json.loads(json_str)
+
+    if config:
+        job_json.update(config)
+
+    return job_json

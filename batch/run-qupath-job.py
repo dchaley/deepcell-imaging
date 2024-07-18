@@ -2,6 +2,7 @@
 
 import argparse
 import datetime
+import json
 import subprocess
 import tempfile
 import uuid
@@ -51,6 +52,12 @@ parser.add_argument(
     required=False,
     default="56b0f246081fe6b730ca74eab8a37d60",
 )
+parser.add_argument(
+    "--configuration",
+    help="Path to the Batch configuration file",
+    type=str,
+    required=False,
+)
 
 args = parser.parse_args()
 
@@ -73,7 +80,11 @@ if len(input_file_contents) != 1:
     raise ValueError("Expected exactly one array in the input file")
 input_image_shape = input_file_contents[0][1]
 
-job_json_str = make_job_json(
+if args.configuration:
+    with open(args.configuration, "r") as f:
+        config = json.load(f)
+
+job_json = make_job_json(
     region=REGION,
     container_image=CONTAINER_IMAGE,
     model_path=args.model_path,
@@ -84,11 +95,12 @@ job_json_str = make_job_json(
     tiff_output_uri=tiff_output_uri,
     input_image_rows=input_image_shape[0],
     input_image_cols=input_image_shape[1],
+    config=config,
 )
 
 job_json_file = tempfile.NamedTemporaryFile()
 with open(job_json_file.name, "w") as f:
-    f.write(job_json_str)
+    json.dump(job_json, f)
 
 # The batch job id must be unique, and can only contain lowercase letters,
 # numbers, and hyphens. It must also be 63 characters or fewer.
