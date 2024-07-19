@@ -91,6 +91,7 @@ job_json = make_job_json(
     model_hash=args.model_hash,
     bigquery_benchmarking_table=bigquery_benchmarking_table,
     input_channels_path=input_channels_path,
+    compartment=compartment,
     working_directory=job_intermediate_path,
     tiff_output_uri=tiff_output_uri,
     input_image_rows=input_image_shape[0],
