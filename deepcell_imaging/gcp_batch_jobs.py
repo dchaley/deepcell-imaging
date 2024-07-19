@@ -49,6 +49,7 @@ BASE_MULTISTEP_TEMPLATE = """
                                 "--raw_predictions_uri={job_intermediate_path}/raw_predictions.npz.gz",
                                 "--input_rows={input_image_rows}",
                                 "--input_cols={input_image_cols}",
+                                "--compartment={compartment}",
                                 "--benchmark_output_uri={job_intermediate_path}/postprocess_benchmark.json",
                                 "--output_uri={job_intermediate_path}/predictions.npz.gz",
                                 "--tiff_output_uri={tiff_output_uri}"
@@ -135,6 +136,7 @@ def make_job_json(
     model_hash: str,
     bigquery_benchmarking_table: str,
     input_channels_path: str,
+    compartment: str,
     working_directory: str,
     tiff_output_uri: str,
     input_image_rows: int,
@@ -146,6 +148,7 @@ def make_job_json(
         model_path=model_path,
         model_hash=model_hash,
         input_channels_path=input_channels_path,
+        compartment=compartment,
         job_intermediate_path=working_directory,
         tiff_output_uri=tiff_output_uri,
         input_image_rows=input_image_rows,

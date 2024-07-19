@@ -19,6 +19,13 @@ parser.add_argument(
     required=True,
 )
 parser.add_argument(
+    "--compartment",
+    help="Compartment to segment. One of 'whole-cell' (default) or 'nuclear' or 'both'.",
+    type=str,
+    required=False,
+    default="whole-cell",
+)
+parser.add_argument(
     "--bigquery_benchmarking_table",
     help="BigQuery table to write benchmarking results to (empty for none)",
     type=str,
@@ -78,6 +85,7 @@ job_json = make_job_json(
     model_hash=args.model_hash,
     bigquery_benchmarking_table=bigquery_benchmarking_table,
     input_channels_path=input_channels_path,
+    compartment=args.compartment,
     working_directory=output_path,
     tiff_output_uri="{}/{}.tiff".format(output_path, input_file_stem),
     input_image_rows=input_image_shape[0],
