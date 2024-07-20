@@ -6,7 +6,7 @@ import gs_fastcopy
 import numpy as np
 import smart_open
 
-BUCKET = "davids-genomics-data-public"
+BUCKET = "deepcell-batch-jobs_us-central1"
 BENCHMARKING_ROOT = "gs://{bucket}/benchmarking/2024-07-18-gs-fastcopy".format(
     bucket=BUCKET
 )
