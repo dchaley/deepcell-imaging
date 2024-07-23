@@ -109,6 +109,32 @@ def main():
     # Run each benchmark.
 
     t = default_timer()
+    smart_open_upload_uncompressed(arrays)
+    print("smart_open_upload_uncompressed,%s" % round(default_timer() - t, 2))
+
+    t = default_timer()
+    smart_open_download_uncompressed(array_names)
+    print("smart_open_download_uncompressed,%s" % round(default_timer() - t, 2))
+
+    # It looks like the numpy savez implementation seeks which smart_open gzip doesn't support.
+    # Disabling: we never actually used this (we used savez_compressed instead).
+    # t = default_timer()
+    # smart_open_upload_compressed(arrays)
+    # print("smart_open_upload_compressed,%s" % round(default_timer() - t, 2))
+
+    t = default_timer()
+    smart_open_upload_savez_compressed(arrays)
+    print("smart_open_upload_savez_compressed,%s" % round(default_timer() - t, 2))
+
+    t = default_timer()
+    smart_open_download_savez_compressed(array_names)
+    print("smart_open_download_savez_compressed,%s" % round(default_timer() - t, 2))
+
+    t = default_timer()
+    smart_open_download_compressed(array_names)
+    print("smart_open_download_compressed,%s" % round(default_timer() - t, 2))
+
+    t = default_timer()
     gs_fastcopy_upload_uncompressed(arrays)
     print("gs_fastcopy_upload_uncompressed,%s" % round(default_timer() - t, 2))
 
