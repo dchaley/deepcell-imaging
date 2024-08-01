@@ -85,8 +85,6 @@ def main():
     output_uri = args.output_uri
     benchmark_output_uri = args.benchmark_output_uri
 
-    # THE DEFAULT MODEL PATH IS IN US-CENTRAL1
-    # If you are running outside us-central1 you should make a copy to avoid egress.
     model_remote_path = args.model_path
     model_hash = args.model_hash
 
