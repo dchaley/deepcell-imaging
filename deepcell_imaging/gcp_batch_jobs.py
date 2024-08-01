@@ -3,6 +3,9 @@ This module contains functions for creating and submitting batch jobs to GCP.
 """
 
 import json
+import os
+
+import smart_open
 
 # A lot of stuff gets hardcoded in this json.
 # See the README for limitations.
@@ -163,3 +166,13 @@ def make_job_json(
         job_json.update(config)
 
     return job_json
+
+
+def get_batch_indexed_task(tasks_spec_uri, args_cls):
+    with smart_open.open(tasks_spec_uri, "r") as tasks_spec_file:
+        tasks_spec = json.load(tasks_spec_file)
+
+    task_index = int(os.environ["BATCH_TASK_INDEX"])
+    task = tasks_spec[task_index]
+
+    return args_cls(**task)

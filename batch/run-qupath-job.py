@@ -83,6 +83,8 @@ input_image_shape = input_file_contents[0][1]
 if args.configuration:
     with open(args.configuration, "r") as f:
         config = json.load(f)
+else:
+    config = {}
 
 job_json = make_job_json(
     region=REGION,

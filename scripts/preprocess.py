@@ -13,13 +13,24 @@ import logging
 import timeit
 import urllib
 from datetime import datetime, timezone
+from typing import Optional
 
 import gs_fastcopy
 import numpy as np
 import smart_open
+from pydantic import BaseModel
 
 import deepcell_imaging
 from deepcell_imaging import gcp_logging, benchmark_utils, mesmer_app
+from deepcell_imaging.gcp_batch_jobs import get_batch_indexed_task
+
+
+class PreprocessArgs(BaseModel):
+    image_uri: str
+    image_array_name: str = "input_channels"
+    image_mpp: Optional[float] = None
+    output_uri: str
+    benchmark_output_uri: Optional[str] = None
 
 
 def main():
@@ -29,38 +40,54 @@ def main():
     logger = logging.getLogger(__name__)
 
     parser.add_argument(
-        "--image_uri",
-        help="URI to input image npz file, containing an array named 'input_channels' by default (see --image-array-name)",
-        type=str,
-        required=True,
-    )
-    parser.add_argument(
-        "--image_array_name",
-        help="Name of array in input image npz file, default input_channels",
-        type=str,
-        required=False,
-        default="input_channels",
-    )
-    parser.add_argument(
-        "--image_mpp",
-        help="Optional float representing microns per pixel of input image. Leave blank to use model's mpp",
-        type=float,
-        required=False,
-    )
-    parser.add_argument(
-        "--output_uri",
-        help="Where to write preprocessed input npz file containing an array named 'image'",
-        type=str,
-        required=True,
-    )
-    parser.add_argument(
-        "--benchmark_output_uri",
-        help="Where to write preprocessing benchmarking data.",
+        "--tasks_spec_uri",
+        help="URI to a JSON file containing a list of task parameters",
         type=str,
         required=False,
     )
 
-    args = parser.parse_args()
+    parsed_args, args_remainder = parser.parse_known_args()
+
+    if parsed_args.tasks_spec_uri:
+        if len(args_remainder) > 0:
+            raise ValueError("Either pass --tasks_spec_uri alone, or not at all")
+
+        args = get_batch_indexed_task(parsed_args.tasks_spec_uri, PreprocessArgs)
+    else:
+        parser.add_argument(
+            "--image_uri",
+            help="URI to input image npz file, containing an array named 'input_channels' by default (see --image-array-name)",
+            type=str,
+            required=True,
+        )
+        parser.add_argument(
+            "--image_array_name",
+            help="Name of array in input image npz file, default input_channels",
+            type=str,
+            required=False,
+        )
+        parser.add_argument(
+            "--image_mpp",
+            help="Optional float representing microns per pixel of input image. Leave blank to use model's mpp",
+            type=float,
+            required=False,
+        )
+        parser.add_argument(
+            "--output_uri",
+            help="Where to write preprocessed input npz file containing an array named 'image'",
+            type=str,
+            required=True,
+        )
+        parser.add_argument(
+            "--benchmark_output_uri",
+            help="Where to write preprocessing benchmarking data.",
+            type=str,
+            required=False,
+        )
+
+        parsed_args = parser.parse_args(args_remainder)
+        kwargs = {k: v for k, v in vars(parsed_args).items() if v is not None}
+        args = PreprocessArgs(**kwargs)
 
     image_uri = args.image_uri
     image_array_name = args.image_array_name
