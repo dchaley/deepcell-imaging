@@ -12,42 +12,15 @@ import logging
 import timeit
 import urllib
 from datetime import datetime, timezone
-from typing import Optional
 
 import gs_fastcopy
 import numpy as np
 import smart_open
-from pydantic import BaseModel, Field
 
 import deepcell_imaging
 from deepcell_imaging import gcp_logging, benchmark_utils, mesmer_app
+from deepcell_imaging.gcp_batch_jobs.types import PreprocessArgs
 from deepcell_imaging.utils.cmdline import get_task_arguments
-
-
-class PreprocessArgs(BaseModel):
-    image_uri: str = Field(
-        title="Image URI",
-        description="URI to input image npz file, containing an array named 'input_channels' by default (see --image-array-name)",
-    )
-    image_array_name: str = Field(
-        default="input_channels",
-        title="Image Array Name",
-        description="Name of array in input image npz file. Default/blank: input_channels",
-    )
-    image_mpp: Optional[float] = Field(
-        default=None,
-        title="Image Microns Per Pixel",
-        description="Microns per pixel of input image. Default/blank: use the model's mpp value.",
-    )
-    output_uri: str = Field(
-        title="Output URI",
-        description="Where to write preprocessed input npz file containing an array named 'image'",
-    )
-    benchmark_output_uri: Optional[str] = Field(
-        default=None,
-        title="Benchmark Output URI",
-        description="Where to write preprocessing benchmarking data. Default/blank: don't write benchmarking data.",
-    )
 
 
 def main():

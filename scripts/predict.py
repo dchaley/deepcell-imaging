@@ -17,14 +17,12 @@ import json
 import logging
 import os
 import timeit
-from typing import Optional
 
 import gs_fastcopy
 import numpy as np
 import smart_open
 import tensorflow as tf
 from deepcell.layers.location import Location2D
-from pydantic import BaseModel, ConfigDict, Field
 
 import deepcell_imaging
 from deepcell_imaging import (
@@ -33,40 +31,8 @@ from deepcell_imaging import (
     cached_open,
     mesmer_app,
 )
+from deepcell_imaging.gcp_batch_jobs.types import PredictArgs
 from deepcell_imaging.utils.cmdline import get_task_arguments
-
-DEFAULT_BATCH_SIZE = 16
-
-
-class PredictArgs(BaseModel):
-    model_config = ConfigDict(protected_namespaces=())
-
-    image_uri: str = Field(
-        title="Image URI",
-        description="URI to preprocessed image npz file, containing an array named 'image'",
-    )
-    batch_size: Optional[int] = Field(
-        default=DEFAULT_BATCH_SIZE,
-        title="Batch Size",
-        description=f"Optional integer representing batch size to use for prediction. Default is {DEFAULT_BATCH_SIZE}.",
-    )
-    output_uri: str = Field(
-        title="Output URI",
-        description="Where to write model output npz file containing arr_0, arr_1, arr_2, arr_3",
-    )
-    benchmark_output_uri: Optional[str] = Field(
-        default=None,
-        title="Benchmark Output URI",
-        description="Where to write preprocessing benchmarking data.",
-    )
-    model_path: str = Field(
-        title="Model Path",
-        description="Path to the model archive",
-    )
-    model_hash: str = Field(
-        title="Model Hash",
-        description="The hash of the model archive",
-    )
 
 
 def main():

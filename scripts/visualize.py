@@ -9,42 +9,17 @@ Writes preprocessed image to a URI (typically on cloud storage).
 
 import logging
 import timeit
-from typing import Optional
 
 import gs_fastcopy
 import numpy as np
 import smart_open
 from PIL import Image
 from deepcell.utils.plot_utils import create_rgb_image, make_outline_overlay
-from pydantic import BaseModel, Field
 
 import deepcell_imaging
 from deepcell_imaging import gcp_logging
+from deepcell_imaging.gcp_batch_jobs.types import VisualizeArgs
 from deepcell_imaging.utils.cmdline import get_task_arguments
-
-
-class VisualizeArgs(BaseModel):
-    image_uri: str = Field(
-        title="Image URI",
-        description="URI to input image npz file, containing an array named 'input_channels' by default (see --image_array_name)",
-    )
-    image_array_name: Optional[str] = Field(
-        default="input_channels",
-        title="Image Array Name",
-        description="Name of array in input image npz file, default: input_channels",
-    )
-    predictions_uri: str = Field(
-        title="Predictions URI",
-        description="URI to image predictions npz file, containing an array named 'image'",
-    )
-    visualized_input_uri: str = Field(
-        title="Visualized Input URI",
-        description="Where to write visualized input png file.",
-    )
-    visualized_predictions_uri: str = Field(
-        title="Visualized Predictions URI",
-        description="Where to write visualized predictions png file.",
-    )
 
 
 def main():

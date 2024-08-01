@@ -10,51 +10,16 @@ Writes segmented image npz to a URI (typically on cloud storage).
 import json
 import logging
 import timeit
-from typing import Optional
 
 import gs_fastcopy
 import numpy as np
 import smart_open
 import tifffile
-from pydantic import BaseModel, Field
 
 import deepcell_imaging
 from deepcell_imaging import gcp_logging, benchmark_utils, mesmer_app
+from deepcell_imaging.gcp_batch_jobs.types import PostprocessArgs
 from deepcell_imaging.utils.cmdline import get_task_arguments
-
-
-class PostprocessArgs(BaseModel):
-    raw_predictions_uri: str = Field(
-        title="Raw Predictions URI",
-        description="URI to model output npz file, containing 4 arrays: arr_0, arr_1, arr_2, arr_3",
-    )
-    input_rows: int = Field(
-        title="Input Rows",
-        description="Number of rows in the input image.",
-    )
-    input_cols: int = Field(
-        title="Input Columns",
-        description="Number of columns in the input image.",
-    )
-    compartment: str = Field(
-        default="whole-cell",
-        title="Compartment",
-        description="Compartment to segment. One of 'whole-cell' (default) or 'nuclear' or 'both'.",
-    )
-    output_uri: str = Field(
-        title="Output URI",
-        description="URI to write postprocessed segment predictions npz file containing an array named 'image'.",
-    )
-    tiff_output_uri: Optional[str] = Field(
-        default=None,
-        title="TIFF Output URI",
-        description="Where to write segment predictions TIFF file containing a segment number for each pixel.",
-    )
-    benchmark_output_uri: Optional[str] = Field(
-        default=None,
-        title="Benchmark Output URI",
-        description="Where to write postprocessing benchmarking data.",
-    )
 
 
 def main():

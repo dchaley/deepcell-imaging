@@ -11,36 +11,15 @@ import io
 import json
 import logging
 import timeit
-from typing import Optional
 
 import smart_open
 from google.cloud import bigquery
-from pydantic import BaseModel, Field
 from tenacity import retry, retry_if_exception_message, wait_random_exponential
 
 import deepcell_imaging
 from deepcell_imaging import benchmark_utils, gcp_logging
+from deepcell_imaging.gcp_batch_jobs.types import GatherBenchmarkArgs
 from deepcell_imaging.utils.cmdline import get_task_arguments
-
-
-class GatherBenchmarkArgs(BaseModel):
-    preprocess_benchmarking_uri: str = Field(
-        title="Preprocess benchmarking URI",
-        description="URI to benchmarking data for the preprocessing step.",
-    )
-    prediction_benchmarking_uri: str = Field(
-        title="Prediction benchmarking URI",
-        description="URI to benchmarking data for the prediction step.",
-    )
-    postprocess_benchmarking_uri: str = Field(
-        title="Postprocess benchmarking URI",
-        description="URI to benchmarking data for the postprocessing step.",
-    )
-    bigquery_benchmarking_table: Optional[str] = Field(
-        default=None,
-        title="BigQuery benchmarking table",
-        description="The fully qualified name (project.dataset.table) of the BigQuery table to write benchmarking data to.",
-    )
 
 
 def main():
