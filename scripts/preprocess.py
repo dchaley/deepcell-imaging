@@ -7,7 +7,6 @@ Reads input image from a URI (typically on cloud storage).
 Writes preprocessed image to a URI (typically on cloud storage).
 """
 
-import argparse
 import json
 import logging
 import timeit
@@ -18,76 +17,44 @@ from typing import Optional
 import gs_fastcopy
 import numpy as np
 import smart_open
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import deepcell_imaging
 from deepcell_imaging import gcp_logging, benchmark_utils, mesmer_app
-from deepcell_imaging.gcp_batch_jobs import get_batch_indexed_task
+from deepcell_imaging.utils.cmdline import get_task_arguments
 
 
 class PreprocessArgs(BaseModel):
-    image_uri: str
-    image_array_name: str = "input_channels"
-    image_mpp: Optional[float] = None
-    output_uri: str
-    benchmark_output_uri: Optional[str] = None
+    image_uri: str = Field(
+        title="Image URI",
+        description="URI to input image npz file, containing an array named 'input_channels' by default (see --image-array-name)",
+    )
+    image_array_name: str = Field(
+        default="input_channels",
+        title="Image Array Name",
+        description="Name of array in input image npz file. Default/blank: input_channels",
+    )
+    image_mpp: Optional[float] = Field(
+        default=None,
+        title="Image Microns Per Pixel",
+        description="Microns per pixel of input image. Default/blank: use the model's mpp value.",
+    )
+    output_uri: str = Field(
+        title="Output URI",
+        description="Where to write preprocessed input npz file containing an array named 'image'",
+    )
+    benchmark_output_uri: Optional[str] = Field(
+        default=None,
+        title="Benchmark Output URI",
+        description="Where to write preprocessing benchmarking data. Default/blank: don't write benchmarking data.",
+    )
 
 
 def main():
-    parser = argparse.ArgumentParser("preprocess")
-
     deepcell_imaging.gcp_logging.initialize_gcp_logging()
     logger = logging.getLogger(__name__)
 
-    parser.add_argument(
-        "--tasks_spec_uri",
-        help="URI to a JSON file containing a list of task parameters",
-        type=str,
-        required=False,
-    )
-
-    parsed_args, args_remainder = parser.parse_known_args()
-
-    if parsed_args.tasks_spec_uri:
-        if len(args_remainder) > 0:
-            raise ValueError("Either pass --tasks_spec_uri alone, or not at all")
-
-        args = get_batch_indexed_task(parsed_args.tasks_spec_uri, PreprocessArgs)
-    else:
-        parser.add_argument(
-            "--image_uri",
-            help="URI to input image npz file, containing an array named 'input_channels' by default (see --image-array-name)",
-            type=str,
-            required=True,
-        )
-        parser.add_argument(
-            "--image_array_name",
-            help="Name of array in input image npz file, default input_channels",
-            type=str,
-            required=False,
-        )
-        parser.add_argument(
-            "--image_mpp",
-            help="Optional float representing microns per pixel of input image. Leave blank to use model's mpp",
-            type=float,
-            required=False,
-        )
-        parser.add_argument(
-            "--output_uri",
-            help="Where to write preprocessed input npz file containing an array named 'image'",
-            type=str,
-            required=True,
-        )
-        parser.add_argument(
-            "--benchmark_output_uri",
-            help="Where to write preprocessing benchmarking data.",
-            type=str,
-            required=False,
-        )
-
-        parsed_args = parser.parse_args(args_remainder)
-        kwargs = {k: v for k, v in vars(parsed_args).items() if v is not None}
-        args = PreprocessArgs(**kwargs)
+    args = get_task_arguments("preprocess", PreprocessArgs)
 
     image_uri = args.image_uri
     image_array_name = args.image_array_name

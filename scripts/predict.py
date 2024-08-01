@@ -13,7 +13,6 @@ The output npz has 4 arrays in it: names: arr_0, arr_1, arr_2, arr_3.
 batch_size : string
 """
 
-import argparse
 import json
 import logging
 import os
@@ -25,7 +24,7 @@ import numpy as np
 import smart_open
 import tensorflow as tf
 from deepcell.layers.location import Location2D
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 import deepcell_imaging
 from deepcell_imaging import (
@@ -34,7 +33,7 @@ from deepcell_imaging import (
     cached_open,
     mesmer_app,
 )
-from deepcell_imaging.gcp_batch_jobs import get_batch_indexed_task
+from deepcell_imaging.utils.cmdline import get_task_arguments
 
 DEFAULT_BATCH_SIZE = 16
 
@@ -42,75 +41,39 @@ DEFAULT_BATCH_SIZE = 16
 class PredictArgs(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
 
-    image_uri: str
-    batch_size: Optional[int] = DEFAULT_BATCH_SIZE
-    output_uri: str
-    benchmark_output_uri: Optional[str] = None
-    model_path: str
-    model_hash: str
+    image_uri: str = Field(
+        title="Image URI",
+        description="URI to preprocessed image npz file, containing an array named 'image'",
+    )
+    batch_size: Optional[int] = Field(
+        default=DEFAULT_BATCH_SIZE,
+        title="Batch Size",
+        description=f"Optional integer representing batch size to use for prediction. Default is {DEFAULT_BATCH_SIZE}.",
+    )
+    output_uri: str = Field(
+        title="Output URI",
+        description="Where to write model output npz file containing arr_0, arr_1, arr_2, arr_3",
+    )
+    benchmark_output_uri: Optional[str] = Field(
+        default=None,
+        title="Benchmark Output URI",
+        description="Where to write preprocessing benchmarking data.",
+    )
+    model_path: str = Field(
+        title="Model Path",
+        description="Path to the model archive",
+    )
+    model_hash: str = Field(
+        title="Model Hash",
+        description="The hash of the model archive",
+    )
 
 
 def main():
-    parser = argparse.ArgumentParser("predict")
-
     deepcell_imaging.gcp_logging.initialize_gcp_logging()
     logger = logging.getLogger(__name__)
 
-    parser.add_argument(
-        "--tasks_spec_uri",
-        help="URI to a JSON file containing a list of task parameters",
-        type=str,
-        required=False,
-    )
-
-    parsed_args, args_remainder = parser.parse_known_args()
-
-    if parsed_args.tasks_spec_uri:
-        if len(args_remainder) > 0:
-            raise ValueError("Either pass --tasks_spec_uri alone, or not at all")
-
-        args = get_batch_indexed_task(args.tasks_spec_uri, PredictArgs)
-    else:
-        parser.add_argument(
-            "--image_uri",
-            help="URI to preprocessed image npz file, containing an array named 'image'",
-            type=str,
-            required=True,
-        )
-        parser.add_argument(
-            "--batch_size",
-            help="Optional integer representing batch size to use for prediction. Default is 16.",
-            type=int,
-            required=False,
-        )
-        parser.add_argument(
-            "--output_uri",
-            help="Where to write model output npz file containing arr_0, arr_1, arr_2, arr_3",
-            type=str,
-            required=True,
-        )
-        parser.add_argument(
-            "--model_path",
-            help="Path to the model archive",
-            type=str,
-            required=True,
-        )
-        parser.add_argument(
-            "--model_hash",
-            help="The hash of the model archive",
-            type=str,
-            required=True,
-        )
-        parser.add_argument(
-            "--benchmark_output_uri",
-            help="Where to write preprocessing benchmarking data.",
-            type=str,
-            required=False,
-        )
-
-        parsed_args = parser.parse_args(args_remainder)
-        kwargs = {k: v for k, v in vars(parsed_args).items() if v is not None}
-        args = PredictArgs(**kwargs)
+    args = get_task_arguments("predict", PredictArgs)
 
     image_uri = args.image_uri
     batch_size = args.batch_size

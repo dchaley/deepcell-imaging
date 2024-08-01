@@ -7,102 +7,61 @@ Reads raw predictions from a URI (typically on cloud storage).
 Writes segmented image npz to a URI (typically on cloud storage).
 """
 
-import argparse
-from typing import Optional
-
-from pydantic import BaseModel
-
-import deepcell_imaging
-from deepcell_imaging import gcp_logging, benchmark_utils, mesmer_app
-import gs_fastcopy
 import json
 import logging
+import timeit
+from typing import Optional
+
+import gs_fastcopy
 import numpy as np
 import smart_open
 import tifffile
-import timeit
+from pydantic import BaseModel, Field
 
-from deepcell_imaging.gcp_batch_jobs import get_batch_indexed_task
+import deepcell_imaging
+from deepcell_imaging import gcp_logging, benchmark_utils, mesmer_app
+from deepcell_imaging.utils.cmdline import get_task_arguments
 
 
 class PostprocessArgs(BaseModel):
-    raw_predictions_uri: str
-    input_rows: int
-    input_cols: int
-    compartment: str = "whole-cell"
-    output_uri: str
-    tiff_output_uri: Optional[str] = None
-    benchmark_output_uri: Optional[str] = None
+    raw_predictions_uri: str = Field(
+        title="Raw Predictions URI",
+        description="URI to model output npz file, containing 4 arrays: arr_0, arr_1, arr_2, arr_3",
+    )
+    input_rows: int = Field(
+        title="Input Rows",
+        description="Number of rows in the input image.",
+    )
+    input_cols: int = Field(
+        title="Input Columns",
+        description="Number of columns in the input image.",
+    )
+    compartment: str = Field(
+        default="whole-cell",
+        title="Compartment",
+        description="Compartment to segment. One of 'whole-cell' (default) or 'nuclear' or 'both'.",
+    )
+    output_uri: str = Field(
+        title="Output URI",
+        description="URI to write postprocessed segment predictions npz file containing an array named 'image'.",
+    )
+    tiff_output_uri: Optional[str] = Field(
+        default=None,
+        title="TIFF Output URI",
+        description="Where to write segment predictions TIFF file containing a segment number for each pixel.",
+    )
+    benchmark_output_uri: Optional[str] = Field(
+        default=None,
+        title="Benchmark Output URI",
+        description="Where to write postprocessing benchmarking data.",
+    )
 
 
 def main():
-    parser = argparse.ArgumentParser("postprocess")
-
     deepcell_imaging.gcp_logging.initialize_gcp_logging()
     logger = logging.getLogger(__name__)
 
-    parser.add_argument(
-        "--tasks_spec_uri",
-        help="URI to a JSON file containing a list of task parameters",
-        type=str,
-        required=False,
-    )
-
-    parsed_args, args_remainder = parser.parse_known_args()
-
-    if parsed_args.tasks_spec_uri:
-        if len(args_remainder) > 0:
-            raise ValueError("Either pass --tasks_spec_uri alone, or not at all")
-
-        args = get_batch_indexed_task(parsed_args.tasks_spec_uri, PostprocessArgs)
-    else:
-        parser.add_argument(
-            "--raw_predictions_uri",
-            help="URI to model output npz file, containing 4 arrays: arr_0, arr_1, arr_2, arr_3",
-            type=str,
-            required=True,
-        )
-        parser.add_argument(
-            "--input_rows",
-            help="Number of rows in the input image.",
-            type=int,
-            required=True,
-        )
-        parser.add_argument(
-            "--input_cols",
-            help="Number of columns in the input image.",
-            type=int,
-            required=True,
-        )
-        parser.add_argument(
-            "--compartment",
-            help="Compartment to segment. One of 'whole-cell' (default) or 'nuclear' or 'both'.",
-            type=str,
-            required=False,
-            default="whole-cell",
-        )
-        parser.add_argument(
-            "--output_uri",
-            help="Where to write postprocessed segment predictions npz file containing an array named 'image'",
-            type=str,
-            required=True,
-        )
-        parser.add_argument(
-            "--tiff_output_uri",
-            help="Where to write postprocessed segment predictions TIFF file containing a segment number for each pixel",
-            type=str,
-            required=False,
-        )
-        parser.add_argument(
-            "--benchmark_output_uri",
-            help="Where to write preprocessing benchmarking data.",
-            type=str,
-            required=False,
-        )
-
-        parsed_args = parser.parse_args(args_remainder)
-        kwargs = {k: v for k, v in vars(parsed_args).items() if v is not None}
-        args = PostprocessArgs(**kwargs)
+    args = get_task_arguments("postprocess", PostprocessArgs)
 
     raw_predictions_uri = args.raw_predictions_uri
     input_rows = args.input_rows
