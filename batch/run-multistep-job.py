@@ -77,6 +77,8 @@ input_file_stem = pathlib.Path(parsed_input_path.path).stem
 if args.configuration:
     with open(args.configuration, "r") as f:
         config = json.load(f)
+else:
+    config = {}
 
 job_json = make_job_json(
     region=REGION,
