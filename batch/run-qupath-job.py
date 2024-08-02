@@ -3,11 +3,15 @@
 import argparse
 import datetime
 import json
+import os
 import subprocess
 import tempfile
 import uuid
 
-from deepcell_imaging.gcp_batch_jobs import make_job_json
+from google.cloud import storage
+from google.cloud.storage import Blob
+
+from deepcell_imaging.gcp_batch_jobs.multitask import TaskSpec, make_multitask_job_json
 from deepcell_imaging.numpy_utils import npz_headers
 
 CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:batch"
@@ -65,20 +69,61 @@ dataset = args.dataset.rstrip("/")
 prefix = args.prefix
 compartment = args.compartment
 
-input_channels_path = "{}/NPZ_INTERMEDIATE/{}.npz".format(dataset, prefix)
-job_intermediate_path = "{}/jobs/{}_{}".format(
-    dataset, prefix, datetime.datetime.now().isoformat()
-)
+image_root = f"{dataset}/OMETIFF"
+npz_root = f"{dataset}/NPZ_INTERMEDIATE"
+masks_output_root = f"{dataset}/SEGMASK"
 
-bigquery_benchmarking_table = args.bigquery_benchmarking_table
+client = storage.Client()
 
-tiff_output_uri = "{}/SEGMASK/{}_{}.tiff".format(dataset, prefix, compartment)
 
-# For now, assume there's only one file in the input.
-input_file_contents = list(npz_headers(input_channels_path))
-if len(input_file_contents) != 1:
-    raise ValueError("Expected exactly one array in the input file")
-input_image_shape = input_file_contents[0][1]
+def get_blobs(blob_uri):
+    blob = Blob.from_string(blob_uri, client=client)
+    bucket = client.bucket(blob.bucket.name)
+    return [x.name for x in bucket.list_blobs(prefix=f"{blob.name}")]
+
+
+image_blobs = set(get_blobs(image_root))
+npz_blobs = set(get_blobs(npz_root))
+
+# For each image, with a corresponding npz,
+# generate a DeepCell task.
+tasks = []
+
+# prefixes = ["mesmer_3", "mesmer_10"]
+prefixes = []
+
+for image in image_blobs:
+    prefix = os.path.splitext(os.path.basename(image))[0]
+    if prefixes and prefix not in prefixes:
+        continue
+    npz_path = f"{npz_root}/{prefix}.npz"
+    npz_path_blob = Blob.from_string(npz_path, client=client)
+    has_npz = npz_path_blob.name in npz_blobs
+
+    if not has_npz:
+        print(f"Skipping {prefix}: no corresponding npz")
+        continue
+
+    # FIXME: this needs to depend on compartment.
+    tiff_output_uri = f"{masks_output_root}/{prefix}_WholeCellMask.tiff"
+
+    # FIXME: this is slow, can we get them in bulk??
+    # For now, assume there's only one file in the input.
+    input_file_contents = list(npz_headers(npz_path))
+    if len(input_file_contents) != 1:
+        raise ValueError("Expected exactly one array in the input file")
+    input_image_shape = input_file_contents[0][1]
+
+    print("Found image", prefix, "with shape", input_image_shape)
+
+    tasks.append(
+        TaskSpec(
+            input_channels_path=npz_path,
+            tiff_output_uri=tiff_output_uri,
+            input_image_rows=input_image_shape[0],
+            input_image_cols=input_image_shape[1],
+        )
+    )
 
 # The batch job id must be unique, and can only contain lowercase letters,
 # numbers, and hyphens. It must also be 63 characters or fewer.
@@ -88,25 +133,28 @@ input_image_shape = input_file_contents[0][1]
 batch_job_id = "deepcell-{}".format(str(uuid.uuid4()))
 batch_job_id = batch_job_id[0:62].lower()
 
+working_directory = (
+    f"{dataset}/jobs/{datetime.datetime.now().isoformat()}_{batch_job_id}"
+)
+
+bigquery_benchmarking_table = args.bigquery_benchmarking_table
+
 if args.configuration:
     with open(args.configuration, "r") as f:
         config = json.load(f)
 else:
     config = {}
 
-job_json = make_job_json(
+job_json = make_multitask_job_json(
     region=REGION,
     container_image=CONTAINER_IMAGE,
     model_path=args.model_path,
     model_hash=args.model_hash,
     bigquery_benchmarking_table=bigquery_benchmarking_table,
-    input_channels_path=input_channels_path,
     compartment=compartment,
-    working_directory=job_intermediate_path,
-    tiff_output_uri=tiff_output_uri,
-    input_image_rows=input_image_shape[0],
-    input_image_cols=input_image_shape[1],
+    working_directory=working_directory,
     config=config,
+    tasks=tasks,
 )
 
 job_json_file = tempfile.NamedTemporaryFile()
@@ -119,5 +167,4 @@ cmd = "gcloud batch jobs submit {job_id} --location {location} --config {job_fil
 subprocess.run(cmd, shell=True)
 
 print("Job submitted with ID: {}".format(batch_job_id))
-print("Intermediate output: {}".format(job_intermediate_path))
-print("Final output: {}".format(tiff_output_uri))
+print("Intermediate output: {}".format(working_directory))

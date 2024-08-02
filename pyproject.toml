@@ -7,5 +7,4 @@ name = "deepcell-imaging"
 dynamic = ["version"]
 
 [tool.setuptools]
-packages = ["deepcell_imaging", "deepcell_imaging.gcp_batch_jobs", "deepcell_imaging.utils"]
-py-modules = ["__init__"] # dash, not underscore
+# Let auto-discovery do its thing.
