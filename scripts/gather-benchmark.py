@@ -7,79 +7,26 @@ Reads input image from a URI (typically on cloud storage).
 Writes preprocessed image to a URI (typically on cloud storage).
 """
 
-import argparse
 import io
 import json
 import logging
 import timeit
-from typing import Optional
 
 import smart_open
 from google.cloud import bigquery
-from pydantic import BaseModel
 from tenacity import retry, retry_if_exception_message, wait_random_exponential
 
 import deepcell_imaging
 from deepcell_imaging import benchmark_utils, gcp_logging
-from deepcell_imaging.gcp_batch_jobs import get_batch_indexed_task
-
-
-class GatherBenchmarkArgs(BaseModel):
-    preprocess_benchmarking_uri: str
-    prediction_benchmarking_uri: str
-    postprocess_benchmarking_uri: str
-    bigquery_benchmarking_table: Optional[str] = None
+from deepcell_imaging.gcp_batch_jobs.types import GatherBenchmarkArgs
+from deepcell_imaging.utils.cmdline import get_task_arguments
 
 
 def main():
-    parser = argparse.ArgumentParser("preprocess")
-
     deepcell_imaging.gcp_logging.initialize_gcp_logging()
     logger = logging.getLogger(__name__)
 
-    parser.add_argument(
-        "--tasks_spec_uri",
-        help="URI to a JSON file containing a list of task parameters",
-        type=str,
-        required=False,
-    )
-
-    parsed_args, args_remainder = parser.parse_known_args()
-
-    if parsed_args.tasks_spec_uri:
-        if len(args_remainder) > 0:
-            raise ValueError("Either pass --tasks_spec_uri alone, or not at all")
-
-        args = get_batch_indexed_task(parsed_args.tasks_spec_uri, GatherBenchmarkArgs)
-    else:
-        parser.add_argument(
-            "--preprocess_benchmarking_uri",
-            help="URI to benchmarking data for the preprocessing step.",
-            type=str,
-            required=True,
-        )
-        parser.add_argument(
-            "--prediction_benchmarking_uri",
-            help="URI to benchmarking data for the prediction step.",
-            type=str,
-            required=True,
-        )
-        parser.add_argument(
-            "--postprocess_benchmarking_uri",
-            help="URI to benchmarking data for the postprocessing step.",
-            type=str,
-            required=True,
-        )
-        parser.add_argument(
-            "--bigquery_benchmarking_table",
-            help="The fully qualified name (project.dataset.table) of the BigQuery table to write benchmarking data to.",
-            type=str,
-            required=True,
-        )
-
-        parsed_args = parser.parse_args(args_remainder)
-        kwargs = {k: v for k, v in vars(parsed_args).items() if v is not None}
-        args = GatherBenchmarkArgs(**kwargs)
+    args = get_task_arguments("gather-benchmark", GatherBenchmarkArgs)
 
     preprocess_benchmarking_uri = args.preprocess_benchmarking_uri
     prediction_benchmarking_uri = args.prediction_benchmarking_uri

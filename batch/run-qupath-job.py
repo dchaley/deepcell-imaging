@@ -80,6 +80,14 @@ if len(input_file_contents) != 1:
     raise ValueError("Expected exactly one array in the input file")
 input_image_shape = input_file_contents[0][1]
 
+# The batch job id must be unique, and can only contain lowercase letters,
+# numbers, and hyphens. It must also be 63 characters or fewer.
+# We're doing 62 to be safe.
+#
+# Regex: ^[a-z]([a-z0-9-]{0,61}[a-z0-9])?$
+batch_job_id = "deepcell-{}".format(str(uuid.uuid4()))
+batch_job_id = batch_job_id[0:62].lower()
+
 if args.configuration:
     with open(args.configuration, "r") as f:
         config = json.load(f)
@@ -104,14 +112,6 @@ job_json = make_job_json(
 job_json_file = tempfile.NamedTemporaryFile()
 with open(job_json_file.name, "w") as f:
     json.dump(job_json, f)
-
-# The batch job id must be unique, and can only contain lowercase letters,
-# numbers, and hyphens. It must also be 63 characters or fewer.
-# We're doing 62 to be safe.
-#
-# Regex: ^[a-z]([a-z0-9-]{0,61}[a-z0-9])?$
-batch_job_id = "deepcell-{}".format(str(uuid.uuid4()))
-batch_job_id = batch_job_id[0:62].lower()
 
 cmd = "gcloud batch jobs submit {job_id} --location {location} --config {job_filename}".format(
     job_id=batch_job_id, location=REGION, job_filename=job_json_file.name
