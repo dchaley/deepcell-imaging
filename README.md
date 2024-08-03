@@ -59,14 +59,22 @@ pip install -r requirements.txt
 
 Some incantations are needed to work on Apple silicon computers. You also need Python 3.9.
 
+DeepCell depends on `tensorflow`, not `tensorflow-macos`. Unfortunately we need `tensorflow-macos` specifically to provide TF2.8 on arm64 chips.
+
+The solution is to install the packages one at a time so that the DeepCell failure doesn't impact the other packages.
+
 ```
 python3.9 -m venv venv
 source venv/bin/activate
 pip install -r requirements-mac-arm64.txt
-pip install -r requirements.txt
+cat requirements.txt | xargs -n 1 pip install
+
 # Let it fail to install DeepCell, then:
 pip install -r requirements.txt --no-deps
+
+# Lastly install our own library. Note --no-deps
+pip install --editable . --no-deps
 ```
 
-The issue is that DeepCell depends on `tensorflow` not `tensorflow-macos` which we need for the 2.8 version on arm64 chips.
+I think but am not sure that the first `--no-deps` invocation is unnecessary as pip install installs dependencies.
 

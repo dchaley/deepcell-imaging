@@ -4,7 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "deepcell-imaging"
-dynamic = ["version"]
+dynamic = ["version", "dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
 
 [tool.setuptools]
-# Let auto-discovery do its thing.
+# Let auto-discovery do its thing with src-layout.
