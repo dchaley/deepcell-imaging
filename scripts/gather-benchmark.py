@@ -11,6 +11,7 @@ import io
 import json
 import logging
 import timeit
+import typing
 
 import smart_open
 from google.cloud import bigquery
@@ -76,15 +77,16 @@ def main():
         source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
     )
 
-    json_str = io.StringIO(json.dumps(benchmarking_data))
+    json_str = json.dumps(benchmarking_data)
 
     @retry(
         wait=wait_random_exponential(multiplier=1, max=60),
         retry=retry_if_exception_message(match=".*403 Exceeded rate limits.*"),
     )
-    def upload_to_bigquery(csv_string, table_id, bq_job_config):
+    def upload_to_bigquery(upload_str: str, table_id, bq_job_config):
+        upload_io: typing.IO = io.StringIO(upload_str)
         load_job = bq_client.load_table_from_file(
-            csv_string, table_id, job_config=bq_job_config
+            upload_io, table_id, job_config=bq_job_config
         )
         load_job.result()  # Waits for the job to complete.
 
