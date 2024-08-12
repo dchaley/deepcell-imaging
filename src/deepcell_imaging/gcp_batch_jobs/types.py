@@ -1,5 +1,3 @@
-from typing import Optional
-
 from pydantic import BaseModel, Field, ConfigDict
 
 DEFAULT_BATCH_SIZE = 16
@@ -15,7 +13,7 @@ class PreprocessArgs(BaseModel):
         title="Image Array Name",
         description="Name of array in input image npz file. Default/blank: input_channels",
     )
-    image_mpp: Optional[float] = Field(
+    image_mpp: float = Field(
         default=None,
         title="Image Microns Per Pixel",
         description="Microns per pixel of input image. Default/blank: use the model's mpp value.",
@@ -24,7 +22,7 @@ class PreprocessArgs(BaseModel):
         title="Output URI",
         description="Where to write preprocessed input npz file containing an array named 'image'",
     )
-    benchmark_output_uri: Optional[str] = Field(
+    benchmark_output_uri: str = Field(
         default=None,
         title="Benchmark Output URI",
         description="Where to write preprocessing benchmarking data. Default/blank: don't write benchmarking data.",
@@ -38,7 +36,7 @@ class PredictArgs(BaseModel):
         title="Image URI",
         description="URI to preprocessed image npz file, containing an array named 'image'",
     )
-    batch_size: Optional[int] = Field(
+    batch_size: int = Field(
         default=DEFAULT_BATCH_SIZE,
         title="Batch Size",
         description=f"Optional integer representing batch size to use for prediction. Default is {DEFAULT_BATCH_SIZE}.",
@@ -47,10 +45,10 @@ class PredictArgs(BaseModel):
         title="Output URI",
         description="Where to write model output npz file containing arr_0, arr_1, arr_2, arr_3",
     )
-    benchmark_output_uri: Optional[str] = Field(
+    benchmark_output_uri: str = Field(
         default=None,
         title="Benchmark Output URI",
-        description="Where to write preprocessing benchmarking data.",
+        description="Where to write prediction benchmarking data. Default/blank: don't write benchmarking data.",
     )
     model_path: str = Field(
         title="Model Path",
@@ -84,15 +82,15 @@ class PostprocessArgs(BaseModel):
         title="Output URI",
         description="URI to write postprocessed segment predictions npz file containing an array named 'image'.",
     )
-    tiff_output_uri: Optional[str] = Field(
+    tiff_output_uri: str = Field(
         default=None,
         title="TIFF Output URI",
         description="Where to write segment predictions TIFF file containing a segment number for each pixel.",
     )
-    benchmark_output_uri: Optional[str] = Field(
+    benchmark_output_uri: str = Field(
         default=None,
         title="Benchmark Output URI",
-        description="Where to write postprocessing benchmarking data.",
+        description="Where to write postprocessing benchmarking data. Default/blank: don't write benchmarking data.",
     )
 
 
@@ -101,7 +99,7 @@ class VisualizeArgs(BaseModel):
         title="Image URI",
         description="URI to input image npz file, containing an array named 'input_channels' by default (see --image_array_name)",
     )
-    image_array_name: Optional[str] = Field(
+    image_array_name: str = Field(
         default="input_channels",
         title="Image Array Name",
         description="Name of array in input image npz file, default: input_channels",
@@ -133,7 +131,7 @@ class GatherBenchmarkArgs(BaseModel):
         title="Postprocess benchmarking URI",
         description="URI to benchmarking data for the postprocessing step.",
     )
-    bigquery_benchmarking_table: Optional[str] = Field(
+    bigquery_benchmarking_table: str = Field(
         default=None,
         title="BigQuery benchmarking table",
         description="The fully qualified name (project.dataset.table) of the BigQuery table to write benchmarking data to.",
