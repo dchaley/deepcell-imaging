@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel, Field, ConfigDict
 
 DEFAULT_BATCH_SIZE = 16
@@ -13,7 +15,7 @@ class PreprocessArgs(BaseModel):
         title="Image Array Name",
         description="Name of array in input image npz file. Default/blank: input_channels",
     )
-    image_mpp: float = Field(
+    image_mpp: Optional[float] = Field(
         default=None,
         title="Image Microns Per Pixel",
         description="Microns per pixel of input image. Default/blank: use the model's mpp value.",
@@ -23,7 +25,7 @@ class PreprocessArgs(BaseModel):
         description="Where to write preprocessed input npz file containing an array named 'image'",
     )
     benchmark_output_uri: str = Field(
-        default=None,
+        default="",
         title="Benchmark Output URI",
         description="Where to write preprocessing benchmarking data. Default/blank: don't write benchmarking data.",
     )
@@ -46,7 +48,7 @@ class PredictArgs(BaseModel):
         description="Where to write model output npz file containing arr_0, arr_1, arr_2, arr_3",
     )
     benchmark_output_uri: str = Field(
-        default=None,
+        default="",
         title="Benchmark Output URI",
         description="Where to write prediction benchmarking data. Default/blank: don't write benchmarking data.",
     )
@@ -83,12 +85,12 @@ class PostprocessArgs(BaseModel):
         description="URI to write postprocessed segment predictions npz file containing an array named 'image'.",
     )
     tiff_output_uri: str = Field(
-        default=None,
+        default="",
         title="TIFF Output URI",
-        description="Where to write segment predictions TIFF file containing a segment number for each pixel.",
+        description="Where to write segment predictions TIFF file containing a segment number for each pixel. Default/blank: don't write TIFF file.",
     )
     benchmark_output_uri: str = Field(
-        default=None,
+        default="",
         title="Benchmark Output URI",
         description="Where to write postprocessing benchmarking data. Default/blank: don't write benchmarking data.",
     )
@@ -132,7 +134,7 @@ class GatherBenchmarkArgs(BaseModel):
         description="URI to benchmarking data for the postprocessing step.",
     )
     bigquery_benchmarking_table: str = Field(
-        default=None,
+        default="",
         title="BigQuery benchmarking table",
-        description="The fully qualified name (project.dataset.table) of the BigQuery table to write benchmarking data to.",
+        description="The fully qualified name (project.dataset.table) of the BigQuery table to write benchmarking data to. Default/blank: don't write to BigQuery.",
     )
