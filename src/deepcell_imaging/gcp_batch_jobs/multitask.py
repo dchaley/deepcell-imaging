@@ -84,6 +84,7 @@ BASE_MULTITASK_TEMPLATE = """
                 ]
             }},
             "taskCount": {task_count},
+            "taskCountPerNode": 1,
             "parallelism": 1
         }}
     ],
