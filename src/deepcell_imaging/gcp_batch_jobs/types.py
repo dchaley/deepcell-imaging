@@ -138,3 +138,27 @@ class GatherBenchmarkArgs(BaseModel):
         title="BigQuery benchmarking table",
         description="The fully qualified name (project.dataset.table) of the BigQuery table to write benchmarking data to. Default/blank: don't write to BigQuery.",
     )
+
+
+class QupathMeasurementArgs(BaseModel):
+    images_path: str = Field(
+        title="Images Path",
+        description="Path to the directory containing the images for QuPath.",
+    )
+    segmasks_path: str = Field(
+        title="Segmentation Masks Path",
+        description="Path to the directory containing the segmentation masks for QuPath.",
+    )
+    project_path: str = Field(
+        title="Project Path",
+        description="Path to the QuPath project root.",
+    )
+    reports_path: str = Field(
+        title="Reports Path",
+        description="Path to the QuPath reports root.",
+    )
+    image_filter: str = Field(
+        default="",
+        title="Image Filter",
+        description="Filter for which image names to process. Default/blank: no filter.",
+    )
