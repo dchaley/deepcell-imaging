@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+"""
+Script to launch a QuPath measurement job on Batch.
+
+This script can be used to launch a QuPath job on its own, or as the last step
+of a segmentation job (effectively implementing dependencies).
+"""
 
 import json
 import os

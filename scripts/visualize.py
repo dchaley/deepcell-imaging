@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 """
-Script to preprocess an input image for a Mesmer model.
+Script to visualize segmentation predictions for an input image.
 
-Reads input image from a URI (typically on cloud storage).
+Reads input image & predicted segments from URIs (typically on cloud storage).
 
-Writes preprocessed image to a URI (typically on cloud storage).
+Writes an image of the input and another with overlaid segments, to URIs (typically on cloud storage).
 """
 
 import logging
