@@ -102,32 +102,7 @@ BASE_MULTISTEP_TEMPLATE = """
             "taskCount": 1,
             "parallelism": 1
         }}
-    ],
-    "allocationPolicy": {{
-        "instances": [
-            {{
-                "installGpuDrivers": true,
-                "policy": {{
-                    "machineType": "n1-standard-8",
-                    "provisioningModel": "SPOT",
-                    "accelerators": [
-                        {{
-                            "type": "nvidia-tesla-t4",
-                            "count": 1
-                        }}
-                    ]
-                }}
-            }}
-        ],
-        "location": {{
-            "allowedLocations": [
-                "regions/{region}"
-            ]
-        }}
-    }},
-    "logsPolicy": {{
-        "destination": "CLOUD_LOGGING"
-    }}
+    ]
 }}
 """
 
@@ -164,6 +139,16 @@ def make_job_json(
 
     if config:
         job_json.update(config)
+
+    apply_allocation_policy(
+        job_json,
+        region,
+        "n1-standard-8",
+        "SPOT",
+        gpu_type="nvidia-tesla-t4",
+        gpu_count=1,
+    )
+    apply_cloud_logs_policy(job_json)
 
     return job_json
 

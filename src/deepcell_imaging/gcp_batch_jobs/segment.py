@@ -206,7 +206,6 @@ def make_multitask_job_json(
         gather_benchmark_tasks_spec_uri=gather_benchmark_tasks_spec_uri,
         visualize_tasks_spec_uri=visualize_tasks_spec_uri,
         task_count=len(tasks),
-        region=region,
     )
 
     job_json = json.loads(json_str)
