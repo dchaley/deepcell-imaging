@@ -4,12 +4,13 @@ import argparse
 import datetime
 import json
 import os
+import subprocess
 import tempfile
 import uuid
 
 from google.cloud import storage
 
-from deepcell_imaging.gcp_batch_jobs.multitask import (
+from deepcell_imaging.gcp_batch_jobs.segment import (
     make_multitask_job_json,
     make_segmentation_tasks,
 )

@@ -4,6 +4,7 @@ from typing import Optional
 import smart_open
 from pydantic import BaseModel
 
+from deepcell_imaging.gcp_batch_jobs import apply_cloud_logs_policy
 from deepcell_imaging.gcp_batch_jobs.types import (
     PreprocessArgs,
     PredictArgs,
