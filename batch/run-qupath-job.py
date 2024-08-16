@@ -13,7 +13,7 @@ from google.cloud.storage import Blob
 
 from deepcell_imaging.gcp_batch_jobs.multitask import TaskSpec, make_multitask_job_json
 from deepcell_imaging.numpy_utils import npz_headers
-from deepcell_imaging.utils.storage import get_blobs
+from deepcell_imaging.utils.storage import get_blobs, find_matching_npz
 
 CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:batch"
 REGION = "us-central1"
@@ -86,20 +86,14 @@ tasks = []
 # prefixes = ["mesmer_3", "mesmer_10"]
 prefixes = []
 
-for image in image_blobs:
-    prefix = os.path.splitext(os.path.basename(image))[0]
-    if prefixes and prefix not in prefixes:
-        continue
-    npz_path = f"{npz_root}/{prefix}.npz"
-    npz_path_blob = Blob.from_string(npz_path, client=client)
-    has_npz = npz_path_blob.name in npz_blobs
-
-    if not has_npz:
-        print(f"Skipping {prefix}: no corresponding npz")
+for image_name, npz_path in find_matching_npz(
+    image_blobs, npz_root, npz_blobs, client=client
+):
+    if prefixes and image_name not in prefixes:
         continue
 
     # FIXME: this needs to depend on compartment.
-    tiff_output_uri = f"{masks_output_root}/{prefix}_WholeCellMask.tiff"
+    tiff_output_uri = f"{masks_output_root}/{image_name}_WholeCellMask.tiff"
 
     # FIXME: this is slow, can we get them in bulk??
     # For now, assume there's only one file in the input.
@@ -108,7 +102,7 @@ for image in image_blobs:
         raise ValueError("Expected exactly one array in the input file")
     input_image_shape = input_file_contents[0][1]
 
-    print("Found image", prefix, "with shape", input_image_shape)
+    print("Found image", image_name, "with shape", input_image_shape)
 
     tasks.append(
         TaskSpec(
