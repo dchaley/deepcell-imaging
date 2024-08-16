@@ -12,6 +12,8 @@ from deepcell_imaging.gcp_batch_jobs.types import (
     VisualizeArgs,
     SegmentationTask,
 )
+from deepcell_imaging.numpy_utils import npz_headers
+from deepcell_imaging.utils.storage import find_matching_npz
 
 # Note: Need to escape the curly braces in the JSON template
 BASE_MULTITASK_TEMPLATE = """
@@ -116,13 +118,6 @@ BASE_MULTITASK_TEMPLATE = """
     }}
 }}
 """
-
-
-class SegmentationTask(BaseModel):
-    input_channels_path: str
-    tiff_output_uri: str
-    input_image_rows: int
-    input_image_cols: int
 
 
 def make_multitask_job_json(
@@ -241,3 +236,27 @@ def make_multitask_job_json(
         job_json.update(config)
 
     return job_json
+
+
+def make_segmentation_tasks(
+    image_names, npz_root, npz_blobs, masks_output_root, storage_client=None
+):
+    matched_images = find_matching_npz(
+        image_names, npz_root, npz_blobs, client=storage_client
+    )
+
+    for image_name, npz_path in matched_images:
+        # FIXME(#298): this needs to depend on compartment.
+        tiff_output_uri = f"{masks_output_root}/{image_name}_WholeCellMask.tiff"
+
+        input_file_contents = list(npz_headers(npz_path))
+        if len(input_file_contents) != 1:
+            raise ValueError("Expected exactly one array in the input file")
+        input_image_shape = input_file_contents[0][1]
+
+        yield SegmentationTask(
+            input_channels_path=npz_path,
+            tiff_output_uri=tiff_output_uri,
+            input_image_rows=input_image_shape[0],
+            input_image_cols=input_image_shape[1],
+        )

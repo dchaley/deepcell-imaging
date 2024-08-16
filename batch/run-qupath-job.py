@@ -3,16 +3,18 @@
 import argparse
 import datetime
 import json
+import os
 import tempfile
 import uuid
 
 from google.cloud import storage
 
-from deepcell_imaging.gcp_batch_jobs.multitask import make_multitask_job_json
+from deepcell_imaging.gcp_batch_jobs.multitask import (
+    make_multitask_job_json,
+    make_segmentation_tasks,
+)
 
-from deepcell_imaging.gcp_batch_jobs.types import SegmentationTask
-from deepcell_imaging.numpy_utils import npz_headers
-from deepcell_imaging.utils.storage import get_blobs, find_matching_npz
+from deepcell_imaging.utils.storage import get_blob_names
 
 CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:batch"
 REGION = "us-central1"
@@ -75,42 +77,21 @@ masks_output_root = f"{dataset}/SEGMASK"
 
 client = storage.Client()
 
-image_blobs = set(get_blobs(image_root))
-npz_blobs = set(get_blobs(npz_root))
+image_names = set(get_blob_names(image_root))
+npz_names = set(get_blob_names(npz_root))
 
 # For each image, with a corresponding npz,
 # generate a DeepCell task.
-tasks = []
 
 # prefixes = ["mesmer_3", "mesmer_10"]
 prefixes = []
 
-for image_name, npz_path in find_matching_npz(
-    image_blobs, npz_root, npz_blobs, client=client
-):
-    if prefixes and image_name not in prefixes:
-        continue
+image_basenames = [os.path.splitext(os.path.basename(y))[0] for y in image_names]
+image_names = [x for x in image_basenames if x in prefixes] if prefixes else image_names
 
-    # FIXME: this needs to depend on compartment.
-    tiff_output_uri = f"{masks_output_root}/{image_name}_WholeCellMask.tiff"
-
-    # FIXME: this is slow, can we get them in bulk??
-    # For now, assume there's only one file in the input.
-    input_file_contents = list(npz_headers(npz_path))
-    if len(input_file_contents) != 1:
-        raise ValueError("Expected exactly one array in the input file")
-    input_image_shape = input_file_contents[0][1]
-
-    print("Found image", image_name, "with shape", input_image_shape)
-
-    tasks.append(
-        SegmentationTask(
-            input_channels_path=npz_path,
-            tiff_output_uri=tiff_output_uri,
-            input_image_rows=input_image_shape[0],
-            input_image_cols=input_image_shape[1],
-        )
-    )
+tasks = list(
+    make_segmentation_tasks(image_names, npz_root, npz_names, masks_output_root, client)
+)
 
 # The batch job id must be unique, and can only contain lowercase letters,
 # numbers, and hyphens. It must also be 63 characters or fewer.
