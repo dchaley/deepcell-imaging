@@ -176,3 +176,11 @@ def get_batch_indexed_task(tasks_spec_uri, args_cls):
     task = tasks_spec[task_index]
 
     return args_cls(**task)
+
+
+def apply_cloud_logs_policy(job: dict) -> None:
+    """
+    Return a copy of the job definition,
+    with the logs policy set to cloud logging.
+    """
+    job["logsPolicy"] = {"destination": "CLOUD_LOGGING"}

@@ -113,9 +113,6 @@ BASE_MULTITASK_TEMPLATE = """
                 "regions/{region}"
             ]
         }}
-    }},
-    "logsPolicy": {{
-        "destination": "CLOUD_LOGGING"
     }}
 }}
 """
@@ -235,6 +232,8 @@ def make_multitask_job_json(
 
     if config:
         job_json.update(config)
+
+    apply_cloud_logs_policy(job_json)
 
     return job_json
 
