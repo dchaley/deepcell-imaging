@@ -65,7 +65,26 @@ def test_make_multitask_job_json(patched_open):
                 "parallelism": 1,
             }
         ],
-        "allocationPolicy": ANY,
+        "allocationPolicy": {
+            "instances": [
+                {
+                    "installGpuDrivers": True,
+                    "policy": {
+                        "machineType": "n1-standard-8",
+                        "provisioningModel": "SPOT",
+                        "accelerators": [
+                            {
+                                "type": "nvidia-tesla-t4",
+                                "count": 1,
+                            },
+                        ],
+                    },
+                },
+            ],
+            "location": {
+                "allowedLocations": ["regions/a-region"],
+            },
+        },
         "logsPolicy": {"destination": "CLOUD_LOGGING"},
     }
 

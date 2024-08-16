@@ -4,7 +4,10 @@ from typing import Optional
 import smart_open
 from pydantic import BaseModel
 
-from deepcell_imaging.gcp_batch_jobs import apply_cloud_logs_policy
+from deepcell_imaging.gcp_batch_jobs import (
+    apply_cloud_logs_policy,
+    apply_allocation_policy,
+)
 from deepcell_imaging.gcp_batch_jobs.types import (
     PreprocessArgs,
     PredictArgs,
@@ -91,29 +94,7 @@ BASE_MULTITASK_TEMPLATE = """
             "taskCountPerNode": 1,
             "parallelism": 1
         }}
-    ],
-    "allocationPolicy": {{
-        "instances": [
-            {{
-                "installGpuDrivers": true,
-                "policy": {{
-                    "machineType": "n1-standard-8",
-                    "provisioningModel": "SPOT",
-                    "accelerators": [
-                        {{
-                            "type": "nvidia-tesla-t4",
-                            "count": 1
-                        }}
-                    ]
-                }}
-            }}
-        ],
-        "location": {{
-            "allowedLocations": [
-                "regions/{region}"
-            ]
-        }}
-    }}
+    ]
 }}
 """
 
@@ -233,6 +214,14 @@ def make_multitask_job_json(
     if config:
         job_json.update(config)
 
+    apply_allocation_policy(
+        job_json,
+        region,
+        "n1-standard-8",
+        "SPOT",
+        gpu_type="nvidia-tesla-t4",
+        gpu_count=1,
+    )
     apply_cloud_logs_policy(job_json)
 
     return job_json

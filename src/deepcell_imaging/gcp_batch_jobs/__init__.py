@@ -178,9 +178,43 @@ def get_batch_indexed_task(tasks_spec_uri, args_cls):
     return args_cls(**task)
 
 
+def apply_allocation_policy(
+    job: dict,
+    region: str,
+    machine_type: str,
+    provisioning_model: str,
+    gpu_type: str,
+    gpu_count: int,
+) -> None:
+    """
+    Apply an allocation policy to the job definition: machine type, provisioning model, and GPU.
+    """
+    if gpu_type and not gpu_count or gpu_count and not gpu_type:
+        raise ValueError("GPU type and GPU count must be set together")
+    if provisioning_model not in ["SPOT", "STANDARD"]:
+        raise ValueError("Provisioning model must be either SPOT or STANDARD")
+
+    job["allocationPolicy"] = {
+        "instances": [
+            {
+                "policy": {
+                    "machineType": machine_type,
+                    "provisioningModel": provisioning_model,
+                },
+            }
+        ],
+        "location": {"allowedLocations": [f"regions/{region}"]},
+    }
+
+    if gpu_type:
+        job["allocationPolicy"]["instances"][0]["installGpuDrivers"] = True
+        job["allocationPolicy"]["instances"][0]["policy"]["accelerators"] = [
+            {"type": gpu_type, "count": gpu_count}
+        ]
+
+
 def apply_cloud_logs_policy(job: dict) -> None:
     """
-    Return a copy of the job definition,
-    with the logs policy set to cloud logging.
+    Apply a cloud logging policy to the job definition.
     """
     job["logsPolicy"] = {"destination": "CLOUD_LOGGING"}
