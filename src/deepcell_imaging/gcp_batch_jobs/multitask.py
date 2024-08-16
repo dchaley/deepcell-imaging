@@ -12,7 +12,7 @@ from deepcell_imaging.gcp_batch_jobs.types import (
     VisualizeArgs,
     SegmentationTask,
 )
-from deepcell_imaging.numpy_utils import npz_headers
+from deepcell_imaging.utils.numpy import npz_headers
 from deepcell_imaging.utils.storage import find_matching_npz
 
 # Note: Need to escape the curly braces in the JSON template

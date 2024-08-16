@@ -9,7 +9,7 @@ import urllib
 import uuid
 
 from deepcell_imaging.gcp_batch_jobs import make_job_json
-from deepcell_imaging.numpy_utils import npz_headers
+from deepcell_imaging.utils.numpy import npz_headers
 
 parser = argparse.ArgumentParser("deepcell-on-batch")
 parser.add_argument(
