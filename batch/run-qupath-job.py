@@ -3,15 +3,14 @@
 import argparse
 import datetime
 import json
-import os
-import subprocess
 import tempfile
 import uuid
 
 from google.cloud import storage
-from google.cloud.storage import Blob
 
-from deepcell_imaging.gcp_batch_jobs.multitask import TaskSpec, make_multitask_job_json
+from deepcell_imaging.gcp_batch_jobs.multitask import make_multitask_job_json
+
+from deepcell_imaging.gcp_batch_jobs.types import SegmentationTask
 from deepcell_imaging.numpy_utils import npz_headers
 from deepcell_imaging.utils.storage import get_blobs, find_matching_npz
 
@@ -105,7 +104,7 @@ for image_name, npz_path in find_matching_npz(
     print("Found image", image_name, "with shape", input_image_shape)
 
     tasks.append(
-        TaskSpec(
+        SegmentationTask(
             input_channels_path=npz_path,
             tiff_output_uri=tiff_output_uri,
             input_image_rows=input_image_shape[0],

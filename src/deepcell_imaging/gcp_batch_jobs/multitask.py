@@ -10,6 +10,7 @@ from deepcell_imaging.gcp_batch_jobs.types import (
     PostprocessArgs,
     GatherBenchmarkArgs,
     VisualizeArgs,
+    SegmentationTask,
 )
 
 # Note: Need to escape the curly braces in the JSON template
@@ -117,7 +118,7 @@ BASE_MULTITASK_TEMPLATE = """
 """
 
 
-class TaskSpec(BaseModel):
+class SegmentationTask(BaseModel):
     input_channels_path: str
     tiff_output_uri: str
     input_image_rows: int
@@ -129,7 +130,7 @@ def make_multitask_job_json(
     container_image: str,
     model_path: str,
     model_hash: str,
-    tasks: list[TaskSpec],
+    tasks: list[SegmentationTask],
     compartment: str,
     working_directory: str,
     bigquery_benchmarking_table: Optional[str] = None,

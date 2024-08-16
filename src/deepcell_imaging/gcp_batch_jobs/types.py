@@ -5,6 +5,19 @@ from pydantic import BaseModel, Field, ConfigDict
 DEFAULT_BATCH_SIZE = 16
 
 
+class SegmentationTask(BaseModel):
+    """
+    Represents a segmentation task in a segmentation job.
+    Specifies just the inputs for the task.
+    Assumes other parameters are set in the job configuration.
+    """
+
+    input_channels_path: str
+    tiff_output_uri: str
+    input_image_rows: int
+    input_image_cols: int
+
+
 class PreprocessArgs(BaseModel):
     image_uri: str = Field(
         title="Image URI",
