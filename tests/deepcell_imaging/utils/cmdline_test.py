@@ -3,11 +3,10 @@ from unittest.mock import ANY, patch
 
 from pydantic import BaseModel, Field
 
-import deepcell_imaging.utils.cmdline
 from deepcell_imaging.utils.cmdline import get_task_arguments
 
 
-class TestArgs(BaseModel):
+class ArgsForTest(BaseModel):
     images_path: str
     segmasks_path: str
     project_path: str
@@ -28,7 +27,7 @@ def test_argv_parsing():
         "gs://bucket/reports",
     ]
     with patch.object(sys, "argv", test_args):
-        result = get_task_arguments("test", TestArgs)
+        result = get_task_arguments("test", ArgsForTest)
 
     assert dict(result) == {
         "images_path": "gs://bucket/images",
@@ -46,7 +45,7 @@ def test_tasks_uri():
         "gs://bucket/tasks.json",
     ]
 
-    task = TestArgs(
+    task = ArgsForTest(
         images_path="gs://root/images",
         segmasks_path="/root/segmasks",
         project_path="gs://root/project",
@@ -58,7 +57,7 @@ def test_tasks_uri():
             "deepcell_imaging.utils.cmdline.get_batch_indexed_task",
             return_value=task,
         ):
-            result = get_task_arguments("test", TestArgs)
+            result = get_task_arguments("test", ArgsForTest)
 
     assert result.images_path == "gs://root/images"
     assert result.segmasks_path == "/root/segmasks"

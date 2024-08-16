@@ -14,3 +14,8 @@ dependencies = {file = ["requirements.txt"]}
 
 [tool.setuptools]
 # Let auto-discovery do its thing with src-layout.
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]
