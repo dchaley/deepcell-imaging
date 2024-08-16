@@ -13,6 +13,7 @@ from google.cloud.storage import Blob
 
 from deepcell_imaging.gcp_batch_jobs.multitask import TaskSpec, make_multitask_job_json
 from deepcell_imaging.numpy_utils import npz_headers
+from deepcell_imaging.utils.storage import get_blobs
 
 CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:batch"
 REGION = "us-central1"
@@ -74,13 +75,6 @@ npz_root = f"{dataset}/NPZ_INTERMEDIATE"
 masks_output_root = f"{dataset}/SEGMASK"
 
 client = storage.Client()
-
-
-def get_blobs(blob_uri):
-    blob = Blob.from_string(blob_uri, client=client)
-    bucket = client.bucket(blob.bucket.name)
-    return [x.name for x in bucket.list_blobs(prefix=f"{blob.name}")]
-
 
 image_blobs = set(get_blobs(image_root))
 npz_blobs = set(get_blobs(npz_root))
