@@ -6,6 +6,9 @@ build-backend = "setuptools.build_meta"
 name = "deepcell-imaging"
 dynamic = ["version", "dependencies"]
 
+[project.optional-dependencies]
+dev = ["black", "pytest", "pytest-cov"]
+
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
 
