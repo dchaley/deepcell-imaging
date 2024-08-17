@@ -2,7 +2,6 @@ import json
 from typing import Optional
 
 import smart_open
-from pydantic import BaseModel
 
 from deepcell_imaging.gcp_batch_jobs import (
     apply_cloud_logs_policy,
@@ -99,7 +98,7 @@ BASE_MULTITASK_TEMPLATE = """
 """
 
 
-def make_multitask_job_json(
+def make_segment_job(
     region: str,
     container_image: str,
     model_path: str,
@@ -208,22 +207,22 @@ def make_multitask_job_json(
         task_count=len(tasks),
     )
 
-    job_json = json.loads(json_str)
-
-    if config:
-        job_json.update(config)
+    job = json.loads(json_str)
 
     apply_allocation_policy(
-        job_json,
+        job,
         region,
         "n1-standard-8",
         "SPOT",
         gpu_type="nvidia-tesla-t4",
         gpu_count=1,
     )
-    apply_cloud_logs_policy(job_json)
+    apply_cloud_logs_policy(job)
 
-    return job_json
+    if config:
+        job.update(config)
+
+    return job
 
 
 def make_segmentation_tasks(

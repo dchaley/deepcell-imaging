@@ -15,8 +15,8 @@ import uuid
 import deepcell_imaging.gcp_logging
 import logging
 
-from deepcell_imaging.gcp_batch_jobs.qupath_measurements import (
-    make_qupath_measurements_job_json,
+from deepcell_imaging.gcp_batch_jobs.quantify import (
+    make_quantify_job,
 )
 from deepcell_imaging.gcp_batch_jobs.types import QupathMeasurementArgs
 from deepcell_imaging.utils.cmdline import get_task_arguments
@@ -41,7 +41,7 @@ def main():
 
     args = get_task_arguments("launch_qupath_measurement", QupathMeasurementArgs)
 
-    job_json = make_qupath_measurements_job_json(
+    job_json = make_quantify_job(
         region=REGION,
         container_image=CONTAINER_IMAGE,
         images_path=args.images_path,

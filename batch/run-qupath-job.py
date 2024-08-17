@@ -11,7 +11,7 @@ import uuid
 from google.cloud import storage
 
 from deepcell_imaging.gcp_batch_jobs.segment import (
-    make_multitask_job_json,
+    make_segment_job,
     make_segmentation_tasks,
 )
 
@@ -114,7 +114,7 @@ if args.configuration:
 else:
     config = {}
 
-job_json = make_multitask_job_json(
+job_json = make_segment_job(
     region=REGION,
     container_image=CONTAINER_IMAGE,
     model_path=args.model_path,

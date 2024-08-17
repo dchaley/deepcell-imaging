@@ -168,8 +168,8 @@ def apply_allocation_policy(
     region: str,
     machine_type: str,
     provisioning_model: str,
-    gpu_type: str,
-    gpu_count: int,
+    gpu_type: str = None,
+    gpu_count: int = None,
 ) -> None:
     """
     Apply an allocation policy to the job definition: machine type, provisioning model, and GPU.

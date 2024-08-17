@@ -1,27 +1,18 @@
 from unittest.mock import ANY, patch
 
-from deepcell_imaging.gcp_batch_jobs.segment import make_segment_job
-from deepcell_imaging.gcp_batch_jobs.types import SegmentationTask
+from deepcell_imaging.gcp_batch_jobs.quantify import make_quantify_job
 
 
 @patch("smart_open.open")
-def test_make_multitask_job_json(_patched_open):
-    job = make_segment_job(
+def test_make_quantify_job(_patched_open):
+    job = make_quantify_job(
         region="a-region",
         container_image="an-image",
-        model_path="a-model",
-        model_hash="a-hash",
-        tasks=[
-            SegmentationTask(
-                input_channels_path="/channels/path",
-                tiff_output_uri="/tiff/path",
-                input_image_rows=123,
-                input_image_cols=456,
-            )
-        ],
-        compartment="a-compartment",
-        working_directory="a-directory",
-        bigquery_benchmarking_table="a-table",
+        images_path="/images/path",
+        segmasks_path="/segmasks/path",
+        project_path="/project/path",
+        reports_path="/reports/path",
+        image_filter="a-filter",
     )
 
     assert job == {
@@ -29,10 +20,6 @@ def test_make_multitask_job_json(_patched_open):
             {
                 "taskSpec": {
                     "runnables": [
-                        ANY,
-                        ANY,
-                        ANY,
-                        ANY,
                         ANY,
                     ],
                     "computeResource": {
@@ -56,16 +43,9 @@ def test_make_multitask_job_json(_patched_open):
         "allocationPolicy": {
             "instances": [
                 {
-                    "installGpuDrivers": True,
                     "policy": {
                         "machineType": "n1-standard-8",
                         "provisioningModel": "SPOT",
-                        "accelerators": [
-                            {
-                                "type": "nvidia-tesla-t4",
-                                "count": 1,
-                            },
-                        ],
                     },
                 },
             ],
