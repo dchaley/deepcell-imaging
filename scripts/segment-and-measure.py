@@ -9,6 +9,7 @@ the subsequent QuPath job.
 intermediate numpy files.
 """
 import argparse
+import json
 import logging
 
 from google.cloud import storage
@@ -127,7 +128,7 @@ def main():
     )
 
     # For now … do nothing, just print the tasks.
-    print(image_segmentation_tasks)
+    print(json.dumps(image_segmentation_tasks, indent=1))
 
 
 if __name__ == "__main__":
