@@ -11,7 +11,11 @@ intermediate numpy files.
 import argparse
 import logging
 
+from google.cloud import storage
+
 import deepcell_imaging.gcp_logging
+from deepcell_imaging.gcp_batch_jobs.segment import make_segmentation_tasks
+from deepcell_imaging.utils.storage import get_blob_names
 
 CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/qupath-project-initializer:latest"
 REGION = "us-central1"
@@ -43,6 +47,12 @@ def main():
         default="OMETIFF",
     )
     workspace_parser.add_argument(
+        "--npz_subdir",
+        help="Subdirectory within the dataset containing the image files as numpy arrays",
+        type=str,
+        default="NPZ_INTERMEDIATE",
+    )
+    workspace_parser.add_argument(
         "--segmasks_subdir",
         help="Subdirectory within the dataset containing the segmentation masks",
         type=str,
@@ -68,6 +78,11 @@ def main():
         required=True,
     )
     paths_parser.add_argument(
+        "--numpy_path",
+        help="Path to the images as numpy arrays",
+        required=True,
+    )
+    paths_parser.add_argument(
         "--segmasks_path",
         help="Path to the segmentation masks",
         required=True,
@@ -85,8 +100,34 @@ def main():
 
     args = parser.parse_args()
 
-    # For now … do nothing, just print the parsed args.
-    print(args)
+    if args.mode == "workspace":
+        image_root = f"{args.dataset_path}/{args.images_subdir}"
+        npz_root = f"{args.dataset_path}/{args.npz_subdir}"
+        masks_output_root = f"{args.dataset_path}/{args.segmasks_subdir}"
+        project_root = f"{args.dataset_path}/{args.project_subdir}"
+        reports_root = f"{args.dataset_path}/{args.reports_subdir}"
+    elif args.mode == "paths":
+        image_root = args.images_path
+        npz_root = args.numpy_path
+        masks_output_root = args.segmasks_path
+        project_root = args.project_path
+        reports_root = args.reports_path
+    else:
+        raise ValueError(f"Invalid mode: {args.mode}")
+
+    client = storage.Client()
+
+    image_paths = set(get_blob_names(image_root, client=client))
+    npz_paths = set(get_blob_names(npz_root, client=client))
+
+    image_segmentation_tasks = list(
+        make_segmentation_tasks(
+            image_paths, npz_root, npz_paths, masks_output_root, client
+        )
+    )
+
+    # For now … do nothing, just print the tasks.
+    print(image_segmentation_tasks)
 
 
 if __name__ == "__main__":
