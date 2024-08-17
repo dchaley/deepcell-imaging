@@ -8,7 +8,7 @@ import tempfile
 import urllib
 import uuid
 
-from deepcell_imaging.gcp_batch_jobs import make_job_json
+from deepcell_imaging.gcp_batch_jobs import make_job_json, submit_job
 from deepcell_imaging.utils.numpy import npz_headers
 
 parser = argparse.ArgumentParser("deepcell-on-batch")
@@ -95,14 +95,7 @@ job_json = make_job_json(
     config=config,
 )
 
-job_json_file = tempfile.NamedTemporaryFile()
-with open(job_json_file.name, "w") as f:
-    json.dump(job_json, f)
-
-cmd = "gcloud batch jobs submit {job_id} --location {location} --config {job_filename}".format(
-    job_id=job_id, location=REGION, job_filename=job_json_file.name
-)
-subprocess.run(cmd, shell=True)
+submit_job(job_json, job_id, REGION)
 
 print("Job submitted with ID: {}".format(job_id))
 print("Output: {}".format(output_path))

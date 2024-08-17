@@ -4,6 +4,8 @@ This module contains functions for creating and submitting batch jobs to GCP.
 
 import json
 import os
+import subprocess
+import tempfile
 
 import smart_open
 
@@ -203,3 +205,15 @@ def apply_cloud_logs_policy(job: dict) -> None:
     Apply a cloud logging policy to the job definition.
     """
     job["logsPolicy"] = {"destination": "CLOUD_LOGGING"}
+
+
+def submit_job(job: dict, job_id: str, region: str) -> None:
+    """
+    Submit a job to the Batch service.
+    """
+    with tempfile.NamedTemporaryFile() as job_json_file:
+        with open(job_json_file.name, "w") as f:
+            json.dump(job, f)
+
+        cmd = f"gcloud batch jobs submit {job_id} --location {region} --config {job_json_file.name}"
+        subprocess.run(cmd, shell=True)

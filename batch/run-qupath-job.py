@@ -10,6 +10,7 @@ import uuid
 
 from google.cloud import storage
 
+from deepcell_imaging.gcp_batch_jobs import submit_job
 from deepcell_imaging.gcp_batch_jobs.segment import (
     make_segment_job,
     make_segmentation_tasks,
@@ -126,14 +127,7 @@ job_json = make_segment_job(
     tasks=tasks,
 )
 
-job_json_file = tempfile.NamedTemporaryFile()
-with open(job_json_file.name, "w") as f:
-    json.dump(job_json, f)
-
-cmd = "gcloud batch jobs submit {job_id} --location {location} --config {job_filename}".format(
-    job_id=batch_job_id, location=REGION, job_filename=job_json_file.name
-)
-subprocess.run(cmd, shell=True)
+submit_job(job_json, batch_job_id, REGION)
 
 print("Job submitted with ID: {}".format(batch_job_id))
 print("Intermediate output: {}".format(working_directory))
