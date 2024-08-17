@@ -24,58 +24,7 @@ BASE_MULTITASK_TEMPLATE = """
     "taskGroups": [
         {{
             "taskSpec": {{
-                "runnables": [
-                    {{
-                        "container": {{
-                            "imageUri": "{container_image}",
-                            "entrypoint": "python",
-                            "commands": [
-                                "scripts/preprocess.py",
-                                "--tasks_spec_uri={preprocess_tasks_spec_uri}"
-                            ]
-                        }}
-                    }},
-                    {{
-                        "container": {{
-                            "imageUri": "{container_image}",
-                            "entrypoint": "python",
-                            "commands": [
-                                "scripts/predict.py",
-                                "--tasks_spec_uri={predict_tasks_spec_uri}"
-                            ]
-                        }}
-                    }},
-                    {{
-                        "container": {{
-                            "imageUri": "{container_image}",
-                            "entrypoint": "python",
-                            "commands": [
-                                "scripts/postprocess.py",
-                                "--tasks_spec_uri={postprocess_tasks_spec_uri}"
-                            ]
-                        }}
-                    }},
-                    {{
-                        "container": {{
-                            "imageUri": "{container_image}",
-                            "entrypoint": "python",
-                            "commands": [
-                                "scripts/gather-benchmark.py",
-                                "--tasks_spec_uri={gather_benchmark_tasks_spec_uri}"
-                            ]
-                        }}
-                    }},
-                    {{
-                        "container": {{
-                            "imageUri": "{container_image}",
-                            "entrypoint": "python",
-                            "commands": [
-                                "scripts/visualize.py",
-                                "--tasks_spec_uri={visualize_tasks_spec_uri}"
-                            ]
-                        }}
-                    }}
-                ],
+                "runnables": [],
                 "computeResource": {{
                     "memoryMib": 26000
                 }},
@@ -96,6 +45,32 @@ BASE_MULTITASK_TEMPLATE = """
     ]
 }}
 """
+
+
+def create_segmenting_runnable(
+    container_image: str,
+    phase: str,
+    tasks_uris: dict[str, str],
+):
+    if phase not in [
+        "preprocess",
+        "predict",
+        "postprocess",
+        "gather-benchmark",
+        "visualize",
+    ]:
+        raise ValueError(f"Invalid phase: {phase}")
+
+    return {
+        "container": {
+            "imageUri": container_image,
+            "entrypoint": "python",
+            "commands": [
+                f"scripts/{phase}.py",
+                f"--tasks_spec_uri={tasks_uris[phase]}",
+            ],
+        }
+    }
 
 
 def make_segment_preprocess_tasks(
@@ -248,11 +223,11 @@ def upload_tasks(
             json.dump([task.model_dump() for task in tasks], f)
 
     return {
-        "preprocess_tasks_spec_uri": preprocess_tasks_spec_uri,
-        "predict_tasks_spec_uri": predict_tasks_spec_uri,
-        "postprocess_tasks_spec_uri": postprocess_tasks_spec_uri,
-        "gather_benchmark_tasks_spec_uri": gather_benchmark_tasks_spec_uri,
-        "visualize_tasks_spec_uri": visualize_tasks_spec_uri,
+        "preprocess": preprocess_tasks_spec_uri,
+        "predict": predict_tasks_spec_uri,
+        "postprocess": postprocess_tasks_spec_uri,
+        "gather-benchmark": gather_benchmark_tasks_spec_uri,
+        "visualize": visualize_tasks_spec_uri,
     }
 
 
@@ -294,16 +269,18 @@ def make_segment_job(
     )
 
     json_str = BASE_MULTITASK_TEMPLATE.format(
-        container_image=container_image,
-        preprocess_tasks_spec_uri=task_uris["preprocess_tasks_spec_uri"],
-        predict_tasks_spec_uri=task_uris["predict_tasks_spec_uri"],
-        postprocess_tasks_spec_uri=task_uris["postprocess_tasks_spec_uri"],
-        gather_benchmark_tasks_spec_uri=task_uris["gather_benchmark_tasks_spec_uri"],
-        visualize_tasks_spec_uri=task_uris["visualize_tasks_spec_uri"],
         task_count=len(tasks),
     )
 
     job = json.loads(json_str)
+
+    job["taskGroups"][0]["taskSpec"]["runnables"] = [
+        create_segmenting_runnable(container_image, "preprocess", task_uris),
+        create_segmenting_runnable(container_image, "predict", task_uris),
+        create_segmenting_runnable(container_image, "postprocess", task_uris),
+        create_segmenting_runnable(container_image, "gather-benchmark", task_uris),
+        create_segmenting_runnable(container_image, "visualize", task_uris),
+    ]
 
     apply_allocation_policy(
         job,

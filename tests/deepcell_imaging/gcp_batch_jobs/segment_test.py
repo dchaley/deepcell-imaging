@@ -29,11 +29,41 @@ def test_make_multitask_job_json(_patched_open):
             {
                 "taskSpec": {
                     "runnables": [
-                        ANY,
-                        ANY,
-                        ANY,
-                        ANY,
-                        ANY,
+                        {
+                            "container": {
+                                "imageUri": "an-image",
+                                "entrypoint": "python",
+                                "commands": ["scripts/preprocess.py", ANY],
+                            }
+                        },
+                        {
+                            "container": {
+                                "imageUri": "an-image",
+                                "entrypoint": "python",
+                                "commands": ["scripts/predict.py", ANY],
+                            }
+                        },
+                        {
+                            "container": {
+                                "imageUri": "an-image",
+                                "entrypoint": "python",
+                                "commands": ["scripts/postprocess.py", ANY],
+                            }
+                        },
+                        {
+                            "container": {
+                                "imageUri": "an-image",
+                                "entrypoint": "python",
+                                "commands": ["scripts/gather-benchmark.py", ANY],
+                            }
+                        },
+                        {
+                            "container": {
+                                "imageUri": "an-image",
+                                "entrypoint": "python",
+                                "commands": ["scripts/visualize.py", ANY],
+                            }
+                        },
                     ],
                     "computeResource": {
                         "memoryMib": ANY,
