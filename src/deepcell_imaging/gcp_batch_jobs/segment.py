@@ -98,26 +98,14 @@ BASE_MULTITASK_TEMPLATE = """
 """
 
 
-def make_segment_job(
-    region: str,
-    container_image: str,
-    model_path: str,
-    model_hash: str,
+def make_segment_preprocess_tasks(
     tasks: list[SegmentationTask],
-    compartment: str,
     working_directory: str,
-    bigquery_benchmarking_table: Optional[str] = None,
-    config: dict = None,
-) -> dict:
+    bigquery_benchmarking_table: str,
+):
     preprocess_tasks = []
-    predict_tasks = []
-    postprocess_tasks = []
-    gather_benchmark_tasks = []
-    visualize_tasks = []
-
     for index, task in enumerate(tasks):
         task_directory = f"{working_directory}/task_{index}"
-
         preprocess_tasks.append(
             PreprocessArgs(
                 image_uri=task.input_channels_path,
@@ -129,6 +117,20 @@ def make_segment_job(
                 ),
             )
         )
+
+    return preprocess_tasks
+
+
+def make_segment_predict_tasks(
+    model_path: str,
+    model_hash: str,
+    tasks: list[SegmentationTask],
+    working_directory: str,
+    bigquery_benchmarking_table: str,
+):
+    predict_tasks = []
+    for index, task in enumerate(tasks):
+        task_directory = f"{working_directory}/task_{index}"
         predict_tasks.append(
             PredictArgs(
                 model_path=model_path,
@@ -142,6 +144,19 @@ def make_segment_job(
                 ),
             )
         )
+
+    return predict_tasks
+
+
+def make_segment_postprocess_tasks(
+    tasks: list[SegmentationTask],
+    working_directory: str,
+    compartment: str,
+    bigquery_benchmarking_table: Optional[str] = None,
+):
+    postprocess_tasks = []
+    for index, task in enumerate(tasks):
+        task_directory = f"{working_directory}/task_{index}"
         postprocess_tasks.append(
             PostprocessArgs(
                 raw_predictions_uri=f"{task_directory}/raw_predictions.npz.gz",
@@ -157,6 +172,18 @@ def make_segment_job(
                 ),
             )
         )
+
+    return postprocess_tasks
+
+
+def make_segment_benchmark_tasks(
+    tasks: list[SegmentationTask],
+    working_directory: str,
+    bigquery_benchmarking_table: Optional[str] = None,
+):
+    gather_benchmark_tasks = []
+    for index, task in enumerate(tasks):
+        task_directory = f"{working_directory}/task_{index}"
         gather_benchmark_tasks.append(
             GatherBenchmarkArgs(
                 preprocess_benchmarking_uri=(
@@ -171,14 +198,58 @@ def make_segment_job(
                 bigquery_benchmarking_table=bigquery_benchmarking_table,
             )
         )
+
+    return gather_benchmark_tasks
+
+
+def make_segment_visualize_tasks(
+    tasks: list[SegmentationTask],
+    working_directory: str,
+    image_array_name: str,
+):
+    visualize_tasks = []
+    for index, task in enumerate(tasks):
+        task_directory = f"{working_directory}/task_{index}"
         visualize_tasks.append(
             VisualizeArgs(
-                predictions_uri=f"{task_directory}/predictions.npz.gz",
                 image_uri=task.input_channels_path,
+                image_array_name=image_array_name,
+                predictions_uri=f"{task_directory}/predictions.npz.gz",
                 visualized_input_uri=f"{task_directory}/visualized_input.png",
                 visualized_predictions_uri=f"{task_directory}/visualized_predictions.png",
             )
         )
+
+    return visualize_tasks
+
+
+def make_segment_job(
+    region: str,
+    container_image: str,
+    model_path: str,
+    model_hash: str,
+    tasks: list[SegmentationTask],
+    compartment: str,
+    working_directory: str,
+    bigquery_benchmarking_table: Optional[str] = None,
+    config: dict = None,
+) -> dict:
+
+    preprocess_tasks = make_segment_preprocess_tasks(
+        tasks, working_directory, bigquery_benchmarking_table
+    )
+    predict_tasks = make_segment_predict_tasks(
+        model_path, model_hash, tasks, working_directory, bigquery_benchmarking_table
+    )
+    postprocess_tasks = make_segment_postprocess_tasks(
+        tasks, working_directory, compartment, bigquery_benchmarking_table
+    )
+    gather_benchmark_tasks = make_segment_benchmark_tasks(
+        tasks, working_directory, bigquery_benchmarking_table
+    )
+    visualize_tasks = make_segment_visualize_tasks(
+        tasks, working_directory, "input_channels"
+    )
 
     # write the json tasks to the working directory
     preprocess_tasks_spec_uri = f"{working_directory}/preprocess_tasks.json"
