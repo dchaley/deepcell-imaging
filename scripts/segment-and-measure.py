@@ -21,7 +21,7 @@ import logging
 from deepcell_imaging.gcp_batch_jobs.quantify import (
     make_quantify_job,
 )
-from deepcell_imaging.gcp_batch_jobs.types import QupathMeasurementArgs
+from deepcell_imaging.gcp_batch_jobs.types import QuantifyArgs
 from deepcell_imaging.utils.cmdline import get_task_arguments
 
 CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/qupath-project-initializer:latest"
