@@ -44,11 +44,7 @@ def main():
     job_json = make_quantify_job(
         region=REGION,
         container_image=CONTAINER_IMAGE,
-        images_path=args.images_path,
-        segmasks_path=args.segmasks_path,
-        project_path=args.project_path,
-        reports_path=args.reports_path,
-        image_filter=args.image_filter,
+        args=args,
     )
 
     job_json_file = tempfile.NamedTemporaryFile()

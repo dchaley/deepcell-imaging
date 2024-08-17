@@ -4,6 +4,7 @@ from deepcell_imaging.gcp_batch_jobs import (
     apply_allocation_policy,
     apply_cloud_logs_policy,
 )
+from deepcell_imaging.gcp_batch_jobs.types import QuantifyArgs
 
 # Note: Need to escape the curly braces in the JSON template
 BASE_QUANTIFY_JOB_TEMPLATE = """
@@ -54,21 +55,17 @@ BASE_QUANTIFY_JOB_TEMPLATE = """
 def make_quantify_job(
     region: str,
     container_image: str,
-    images_path: str,
-    segmasks_path: str,
-    project_path: str,
-    reports_path: str,
-    image_filter: str,
+    args: QuantifyArgs,
     config: dict = None,
 ) -> dict:
     json_str = BASE_QUANTIFY_JOB_TEMPLATE.format(
         container_image=container_image,
         region=region,
-        images_path=images_path,
-        segmasks_path=segmasks_path,
-        project_path=project_path,
-        reports_path=reports_path,
-        image_filter=image_filter,
+        images_path=args.images_path,
+        segmasks_path=args.segmasks_path,
+        project_path=args.project_path,
+        reports_path=args.reports_path,
+        image_filter=args.image_filter,
     )
 
     print(json_str)
