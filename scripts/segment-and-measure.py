@@ -11,11 +11,16 @@ intermediate numpy files.
 import argparse
 import json
 import logging
+import uuid
+import datetime
 
 from google.cloud import storage
 
 import deepcell_imaging.gcp_logging
-from deepcell_imaging.gcp_batch_jobs.segment import make_segmentation_tasks
+from deepcell_imaging.gcp_batch_jobs.segment import (
+    make_segmentation_tasks,
+    build_segment_job_tasks,
+)
 from deepcell_imaging.utils.storage import get_blob_filenames
 
 CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/qupath-project-initializer:latest"
@@ -27,11 +32,25 @@ def main():
     logger = logging.getLogger(__name__)
 
     parser = argparse.ArgumentParser("segment-and-measure")
+
+    # Common arguments
     parser.add_argument(
         "--image_filter",
         help="Filter for images to process",
         type=str,
         default="",
+    )
+    parser.add_argument(
+        "--model_path",
+        help="Path to the model archive",
+        type=str,
+        default="gs://genomics-data-public-central1/cellular-segmentation/vanvalenlab/deep-cell/vanvalenlab-tf-model-multiplex-downloaded-20230706/MultiplexSegmentation-resaved-20240710.h5",
+    )
+    parser.add_argument(
+        "--model_hash",
+        help="Hash of the model archive",
+        type=str,
+        default="56b0f246081fe6b730ca74eab8a37d60",
     )
 
     subparsers = parser.add_subparsers(help="Mode of operation", dest="mode")
@@ -119,15 +138,55 @@ def main():
     client = storage.Client()
 
     image_paths = get_blob_filenames(image_root, client=client)
+    image_paths = [x for x in image_paths if x == args.image_filter]
     npz_paths = get_blob_filenames(npz_root, client=client)
 
     image_segmentation_tasks = list(
         make_segmentation_tasks(image_paths, npz_root, npz_paths, masks_output_root)
     )
+
+    # The batch job id must be unique, and can only contain lowercase letters,
+    # numbers, and hyphens. It must also be 63 characters or fewer.
+    # We're doing 62 to be safe.
+    #
+    # Regex: ^[a-z]([a-z0-9-]{0,61}[a-z0-9])?$
+    batch_job_id = "deepcell-{}".format(str(uuid.uuid4()))
+    batch_job_id = batch_job_id[0:62].lower()
+
+    if args.mode == "workspace":
+        working_directory = f"{args.dataset_path}/jobs/{datetime.datetime.now().isoformat()}_{batch_job_id}"
+    else:
+        working_directory = (
+            f"{npz_root}/jobs/{datetime.datetime.now().isoformat()}_{batch_job_id}"
+        )
+
+    job = build_segment_job_tasks(
+        region=REGION,
+        container_image=CONTAINER_IMAGE,
+        model_path=args.model_path,
+        model_hash=args.model_hash,
+        tasks=image_segmentation_tasks,
+        compartment="whole-cell",
+        working_directory=working_directory,
     )
 
     # For now … do nothing, just print the tasks.
-    print(json.dumps(image_segmentation_tasks, indent=1))
+    print("Preprocess tasks:")
+    print(json.dumps([x.model_dump() for x in job["tasks"]["preprocess"][0]], indent=1))
+    print("Predict tasks:")
+    print(json.dumps([x.model_dump() for x in job["tasks"]["predict"][0]], indent=1))
+    print("Postprocess tasks:")
+    print(
+        json.dumps([x.model_dump() for x in job["tasks"]["postprocess"][0]], indent=1)
+    )
+    print("Benchmark tasks:")
+    print(
+        json.dumps(
+            [x.model_dump() for x in job["tasks"]["gather-benchmark"][0]], indent=1
+        )
+    )
+    print("Visualize tasks:")
+    print(json.dumps([x.model_dump() for x in job["tasks"]["visualize"][0]], indent=1))
 
 
 if __name__ == "__main__":
