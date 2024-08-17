@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Optional
 
 import smart_open
@@ -45,6 +46,9 @@ BASE_MULTITASK_TEMPLATE = """
     ]
 }}
 """
+
+
+logger = logging.getLogger(__name__)
 
 
 def create_segmenting_runnable(
@@ -298,12 +302,8 @@ def make_segment_job(
     return job
 
 
-def make_segmentation_tasks(
-    image_names, npz_root, npz_blobs, masks_output_root, storage_client=None
-):
-    matched_images = find_matching_npz(
-        image_names, npz_root, npz_blobs, client=storage_client
-    )
+def make_segmentation_tasks(image_names, npz_root, npz_names, masks_output_root):
+    matched_images = find_matching_npz(image_names, npz_root, npz_names)
 
     for image_name, npz_path in matched_images:
         # FIXME(#298): this needs to depend on compartment.
