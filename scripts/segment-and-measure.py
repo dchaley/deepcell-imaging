@@ -16,7 +16,7 @@ from google.cloud import storage
 
 import deepcell_imaging.gcp_logging
 from deepcell_imaging.gcp_batch_jobs.segment import make_segmentation_tasks
-from deepcell_imaging.utils.storage import get_blob_names
+from deepcell_imaging.utils.storage import get_blob_filenames
 
 CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/qupath-project-initializer:latest"
 REGION = "us-central1"
@@ -118,13 +118,12 @@ def main():
 
     client = storage.Client()
 
-    image_paths = set(get_blob_names(image_root, client=client))
-    npz_paths = set(get_blob_names(npz_root, client=client))
+    image_paths = get_blob_filenames(image_root, client=client)
+    npz_paths = get_blob_filenames(npz_root, client=client)
 
     image_segmentation_tasks = list(
-        make_segmentation_tasks(
-            image_paths, npz_root, npz_paths, masks_output_root, client
-        )
+        make_segmentation_tasks(image_paths, npz_root, npz_paths, masks_output_root)
+    )
     )
 
     # For now … do nothing, just print the tasks.

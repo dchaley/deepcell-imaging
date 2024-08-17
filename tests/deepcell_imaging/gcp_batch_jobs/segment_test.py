@@ -1,7 +1,7 @@
 from unittest.mock import ANY, patch
 
 from deepcell_imaging.gcp_batch_jobs.segment import (
-    make_segment_job,
+    build_segment_job_tasks,
     make_segmentation_tasks,
 )
 from deepcell_imaging.gcp_batch_jobs.types import SegmentationTask
@@ -35,9 +35,8 @@ def test_make_segmentation_tasks(_mock_npz_headers):
     ]
 
 
-@patch("smart_open.open")
-def test_make_multitask_job_json(_patched_open):
-    job = make_segment_job(
+def test_build_segment_job_tasks():
+    job = build_segment_job_tasks(
         region="a-region",
         container_image="an-image",
         model_path="a-model",
@@ -55,7 +54,7 @@ def test_make_multitask_job_json(_patched_open):
         bigquery_benchmarking_table="a-table",
     )
 
-    assert job == {
+    assert job["job_definition"] == {
         "taskGroups": [
             {
                 "taskSpec": {

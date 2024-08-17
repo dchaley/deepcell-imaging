@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 def create_segmenting_runnable(
     container_image: str,
     phase: str,
-    tasks_uris: dict[str, str],
+    tasks_uris: dict[str, tuple[list, str]],
 ):
     if phase not in [
         "preprocess",
@@ -71,7 +71,7 @@ def create_segmenting_runnable(
             "entrypoint": "python",
             "commands": [
                 f"scripts/{phase}.py",
-                f"--tasks_spec_uri={tasks_uris[phase]}",
+                f"--tasks_spec_uri={tasks_uris[phase][1]}",
             ],
         }
     }
@@ -203,39 +203,14 @@ def make_segment_visualize_tasks(
 
 
 def upload_tasks(
-    working_directory: str,
-    preprocess_tasks: list[PreprocessArgs],
-    predict_tasks: list[PredictArgs],
-    postprocess_tasks: list[PostprocessArgs],
-    gather_benchmark_tasks: list[GatherBenchmarkArgs],
-    visualize_tasks: list[VisualizeArgs],
+    tasks: dict[str, tuple[list, str]],
 ):
-    preprocess_tasks_spec_uri = f"{working_directory}/preprocess_tasks.json"
-    predict_tasks_spec_uri = f"{working_directory}/predict_tasks.json"
-    postprocess_tasks_spec_uri = f"{working_directory}/postprocess_tasks.json"
-    gather_benchmark_tasks_spec_uri = f"{working_directory}/gather_benchmark_tasks.json"
-    visualize_tasks_spec_uri = f"{working_directory}/visualize_tasks.json"
-
-    for tasks, upload_uri in (
-        (preprocess_tasks, preprocess_tasks_spec_uri),
-        (predict_tasks, predict_tasks_spec_uri),
-        (postprocess_tasks, postprocess_tasks_spec_uri),
-        (gather_benchmark_tasks, gather_benchmark_tasks_spec_uri),
-        (visualize_tasks, visualize_tasks_spec_uri),
-    ):
+    for phase_tasks, upload_uri in tasks.values():
         with smart_open.open(upload_uri, "w") as f:
-            json.dump([task.model_dump() for task in tasks], f)
-
-    return {
-        "preprocess": preprocess_tasks_spec_uri,
-        "predict": predict_tasks_spec_uri,
-        "postprocess": postprocess_tasks_spec_uri,
-        "gather-benchmark": gather_benchmark_tasks_spec_uri,
-        "visualize": visualize_tasks_spec_uri,
-    }
+            json.dump([task.model_dump() for task in phase_tasks], f)
 
 
-def make_segment_job(
+def build_segment_job_tasks(
     region: str,
     container_image: str,
     model_path: str,
@@ -263,27 +238,32 @@ def make_segment_job(
         tasks, working_directory, "input_channels"
     )
 
-    task_uris = upload_tasks(
-        working_directory,
-        preprocess_tasks,
-        predict_tasks,
-        postprocess_tasks,
-        gather_benchmark_tasks,
-        visualize_tasks,
-    )
+    preprocess_tasks_spec_uri = f"{working_directory}/preprocess_tasks.json"
+    predict_tasks_spec_uri = f"{working_directory}/predict_tasks.json"
+    postprocess_tasks_spec_uri = f"{working_directory}/postprocess_tasks.json"
+    gather_benchmark_tasks_spec_uri = f"{working_directory}/gather_benchmark_tasks.json"
+    visualize_tasks_spec_uri = f"{working_directory}/visualize_tasks.json"
 
-    json_str = BASE_MULTITASK_TEMPLATE.format(
-        task_count=len(tasks),
-    )
+    phase_task_defs = {
+        "preprocess": (preprocess_tasks, preprocess_tasks_spec_uri),
+        "predict": (predict_tasks, predict_tasks_spec_uri),
+        "postprocess": (postprocess_tasks, postprocess_tasks_spec_uri),
+        "gather-benchmark": (gather_benchmark_tasks, gather_benchmark_tasks_spec_uri),
+        "visualize": (visualize_tasks, visualize_tasks_spec_uri),
+    }
+
+    json_str = BASE_MULTITASK_TEMPLATE.format(task_count=len(tasks))
 
     job = json.loads(json_str)
 
     job["taskGroups"][0]["taskSpec"]["runnables"] = [
-        create_segmenting_runnable(container_image, "preprocess", task_uris),
-        create_segmenting_runnable(container_image, "predict", task_uris),
-        create_segmenting_runnable(container_image, "postprocess", task_uris),
-        create_segmenting_runnable(container_image, "gather-benchmark", task_uris),
-        create_segmenting_runnable(container_image, "visualize", task_uris),
+        create_segmenting_runnable(container_image, "preprocess", phase_task_defs),
+        create_segmenting_runnable(container_image, "predict", phase_task_defs),
+        create_segmenting_runnable(container_image, "postprocess", phase_task_defs),
+        create_segmenting_runnable(
+            container_image, "gather-benchmark", phase_task_defs
+        ),
+        create_segmenting_runnable(container_image, "visualize", phase_task_defs),
     ]
 
     apply_allocation_policy(
@@ -299,7 +279,7 @@ def make_segment_job(
     if config:
         job.update(config)
 
-    return job
+    return {"job_definition": job, "tasks": phase_task_defs}
 
 
 def make_segmentation_tasks(image_names, npz_root, npz_names, masks_output_root):

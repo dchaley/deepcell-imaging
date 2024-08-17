@@ -10,10 +10,14 @@ from google.cloud import storage
 
 from deepcell_imaging.gcp_batch_jobs import submit_job
 from deepcell_imaging.gcp_batch_jobs.segment import (
-    make_segment_job,
+    build_segment_job_tasks,
     make_segmentation_tasks,
+    upload_tasks,
 )
-from deepcell_imaging.utils.storage import get_blob_names
+from deepcell_imaging.gcp_logging import initialize_gcp_logging
+from deepcell_imaging.utils.storage import get_blob_filenames
+
+initialize_gcp_logging()
 
 CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:batch"
 REGION = "us-central1"
@@ -76,20 +80,20 @@ masks_output_root = f"{dataset}/SEGMASK"
 
 client = storage.Client()
 
-image_names = set(get_blob_names(image_root))
-npz_names = set(get_blob_names(npz_root))
+image_names = get_blob_filenames(image_root)
+npz_names = get_blob_filenames(npz_root)
 
 # For each image, with a corresponding npz,
 # generate a DeepCell task.
 
 # prefixes = ["mesmer_3", "mesmer_10"]
-prefixes = []
+prefixes = [prefix] if prefix else []
 
 image_basenames = [os.path.splitext(os.path.basename(y))[0] for y in image_names]
 image_names = [x for x in image_basenames if x in prefixes] if prefixes else image_names
 
 tasks = list(
-    make_segmentation_tasks(image_names, npz_root, npz_names, masks_output_root, client)
+    make_segmentation_tasks(image_names, npz_root, npz_names, masks_output_root)
 )
 
 # The batch job id must be unique, and can only contain lowercase letters,
@@ -112,7 +116,7 @@ if args.configuration:
 else:
     config = {}
 
-job_json = make_segment_job(
+job = build_segment_job_tasks(
     region=REGION,
     container_image=CONTAINER_IMAGE,
     model_path=args.model_path,
@@ -123,6 +127,10 @@ job_json = make_segment_job(
     config=config,
     tasks=tasks,
 )
+
+upload_tasks(job["tasks"])
+
+job_json = job["job_definition"]
 
 submit_job(job_json, batch_job_id, REGION)
 

@@ -19,10 +19,12 @@ def get_blob_filenames(uri_prefix, client=None):
 
     root_blob = Blob.from_string(uri_prefix, client=client)
     bucket = client.bucket(root_blob.bucket.name)
-    return [
-        gs_uri_to_basename(x.name)
-        for x in bucket.list_blobs(prefix=f"{root_blob.name}")
-    ]
+    return set(
+        [
+            gs_uri_to_basename(x.name)
+            for x in bucket.list_blobs(prefix=f"{root_blob.name}")
+        ]
+    )
 
 
 def find_matching_npz(image_names, npz_root, npz_names):
