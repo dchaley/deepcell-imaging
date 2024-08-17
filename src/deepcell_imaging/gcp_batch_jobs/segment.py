@@ -223,6 +223,39 @@ def make_segment_visualize_tasks(
     return visualize_tasks
 
 
+def upload_tasks(
+    working_directory: str,
+    preprocess_tasks: list[PreprocessArgs],
+    predict_tasks: list[PredictArgs],
+    postprocess_tasks: list[PostprocessArgs],
+    gather_benchmark_tasks: list[GatherBenchmarkArgs],
+    visualize_tasks: list[VisualizeArgs],
+):
+    preprocess_tasks_spec_uri = f"{working_directory}/preprocess_tasks.json"
+    predict_tasks_spec_uri = f"{working_directory}/predict_tasks.json"
+    postprocess_tasks_spec_uri = f"{working_directory}/postprocess_tasks.json"
+    gather_benchmark_tasks_spec_uri = f"{working_directory}/gather_benchmark_tasks.json"
+    visualize_tasks_spec_uri = f"{working_directory}/visualize_tasks.json"
+
+    for tasks, upload_uri in (
+        (preprocess_tasks, preprocess_tasks_spec_uri),
+        (predict_tasks, predict_tasks_spec_uri),
+        (postprocess_tasks, postprocess_tasks_spec_uri),
+        (gather_benchmark_tasks, gather_benchmark_tasks_spec_uri),
+        (visualize_tasks, visualize_tasks_spec_uri),
+    ):
+        with smart_open.open(upload_uri, "w") as f:
+            json.dump([task.model_dump() for task in tasks], f)
+
+    return {
+        "preprocess_tasks_spec_uri": preprocess_tasks_spec_uri,
+        "predict_tasks_spec_uri": predict_tasks_spec_uri,
+        "postprocess_tasks_spec_uri": postprocess_tasks_spec_uri,
+        "gather_benchmark_tasks_spec_uri": gather_benchmark_tasks_spec_uri,
+        "visualize_tasks_spec_uri": visualize_tasks_spec_uri,
+    }
+
+
 def make_segment_job(
     region: str,
     container_image: str,
@@ -251,30 +284,22 @@ def make_segment_job(
         tasks, working_directory, "input_channels"
     )
 
-    # write the json tasks to the working directory
-    preprocess_tasks_spec_uri = f"{working_directory}/preprocess_tasks.json"
-    predict_tasks_spec_uri = f"{working_directory}/predict_tasks.json"
-    postprocess_tasks_spec_uri = f"{working_directory}/postprocess_tasks.json"
-    gather_benchmark_tasks_spec_uri = f"{working_directory}/gather_benchmark_tasks.json"
-    visualize_tasks_spec_uri = f"{working_directory}/visualize_tasks.json"
-
-    for step_uri, step_tasks in (
-        (preprocess_tasks_spec_uri, preprocess_tasks),
-        (predict_tasks_spec_uri, predict_tasks),
-        (postprocess_tasks_spec_uri, postprocess_tasks),
-        (gather_benchmark_tasks_spec_uri, gather_benchmark_tasks),
-        (visualize_tasks_spec_uri, visualize_tasks),
-    ):
-        with smart_open.open(step_uri, "w") as f:
-            json.dump([task.model_dump() for task in step_tasks], f)
+    task_uris = upload_tasks(
+        working_directory,
+        preprocess_tasks,
+        predict_tasks,
+        postprocess_tasks,
+        gather_benchmark_tasks,
+        visualize_tasks,
+    )
 
     json_str = BASE_MULTITASK_TEMPLATE.format(
         container_image=container_image,
-        preprocess_tasks_spec_uri=preprocess_tasks_spec_uri,
-        predict_tasks_spec_uri=predict_tasks_spec_uri,
-        postprocess_tasks_spec_uri=postprocess_tasks_spec_uri,
-        gather_benchmark_tasks_spec_uri=gather_benchmark_tasks_spec_uri,
-        visualize_tasks_spec_uri=visualize_tasks_spec_uri,
+        preprocess_tasks_spec_uri=task_uris["preprocess_tasks_spec_uri"],
+        predict_tasks_spec_uri=task_uris["predict_tasks_spec_uri"],
+        postprocess_tasks_spec_uri=task_uris["postprocess_tasks_spec_uri"],
+        gather_benchmark_tasks_spec_uri=task_uris["gather_benchmark_tasks_spec_uri"],
+        visualize_tasks_spec_uri=task_uris["visualize_tasks_spec_uri"],
         task_count=len(tasks),
     )
 
