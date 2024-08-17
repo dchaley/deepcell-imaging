@@ -92,7 +92,7 @@ def make_segment_preprocess_tasks(
                 benchmark_output_uri=(
                     f"{task_directory}/preprocess_benchmark.json"
                     if bigquery_benchmarking_table
-                    else None
+                    else ""
                 ),
             )
         )
@@ -119,7 +119,7 @@ def make_segment_predict_tasks(
                 benchmark_output_uri=(
                     f"{task_directory}/predict_benchmark.json"
                     if bigquery_benchmarking_table
-                    else None
+                    else ""
                 ),
             )
         )
@@ -147,7 +147,7 @@ def make_segment_postprocess_tasks(
                 benchmark_output_uri=(
                     f"{task_directory}/postprocess_benchmark.json"
                     if bigquery_benchmarking_table
-                    else None
+                    else ""
                 ),
             )
         )
@@ -174,7 +174,9 @@ def make_segment_benchmark_tasks(
                 postprocess_benchmarking_uri=(
                     f"{task_directory}/postprocess_benchmark.json"
                 ),
-                bigquery_benchmarking_table=bigquery_benchmarking_table,
+                bigquery_benchmarking_table=(
+                    bigquery_benchmarking_table if bigquery_benchmarking_table else ""
+                ),
             )
         )
 
