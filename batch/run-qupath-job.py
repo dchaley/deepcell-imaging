@@ -4,8 +4,6 @@ import argparse
 import datetime
 import json
 import os
-import subprocess
-import tempfile
 import uuid
 
 from google.cloud import storage
@@ -15,7 +13,6 @@ from deepcell_imaging.gcp_batch_jobs.segment import (
     make_segment_job,
     make_segmentation_tasks,
 )
-
 from deepcell_imaging.utils.storage import get_blob_names
 
 CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:batch"

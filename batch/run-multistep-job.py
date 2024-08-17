@@ -3,8 +3,6 @@
 import argparse
 import json
 import pathlib
-import subprocess
-import tempfile
 import urllib
 import uuid
 
