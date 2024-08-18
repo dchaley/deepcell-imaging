@@ -17,13 +17,15 @@ import datetime
 from google.cloud import storage
 
 import deepcell_imaging.gcp_logging
+from deepcell_imaging.gcp_batch_jobs.quantify import append_quantify_task
 from deepcell_imaging.gcp_batch_jobs.segment import (
     make_segmentation_tasks,
     build_segment_job_tasks,
 )
+from deepcell_imaging.gcp_batch_jobs.types import QuantifyArgs
 from deepcell_imaging.utils.storage import get_blob_filenames
 
-CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/qupath-project-initializer:latest"
+SEGMENT_CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:batch"
 REGION = "us-central1"
 
 
@@ -137,10 +139,14 @@ def main():
 
     client = storage.Client()
 
+    logger.info("Fetching images")
+
     image_paths = get_blob_filenames(image_root, client=client)
     image_paths = [x for x in image_paths if x == args.image_filter]
-    npz_paths = get_blob_filenames(npz_root, client=client)
 
+    logger.info("Finding matching npz files")
+
+    npz_paths = get_blob_filenames(npz_root, client=client)
     image_segmentation_tasks = list(
         make_segmentation_tasks(image_paths, npz_root, npz_paths, masks_output_root)
     )
@@ -162,13 +168,26 @@ def main():
 
     job = build_segment_job_tasks(
         region=REGION,
-        container_image=CONTAINER_IMAGE,
+        container_image=SEGMENT_CONTAINER_IMAGE,
         model_path=args.model_path,
         model_hash=args.model_hash,
         tasks=image_segmentation_tasks,
         compartment="whole-cell",
         working_directory=working_directory,
     )
+    append_quantify_task(
+        job,
+        SEGMENT_CONTAINER_IMAGE,
+        QuantifyArgs(
+            images_path=image_root,
+            segmasks_path=masks_output_root,
+            project_path=project_root,
+            reports_path=reports_root,
+            image_filter=args.image_filter,
+        ),
+    )
+
+    print(json.dumps(job["job_definition"], indent=1))
 
     # For now … do nothing, just print the tasks.
     print("Preprocess tasks:")

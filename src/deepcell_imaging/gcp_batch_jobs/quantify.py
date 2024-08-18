@@ -52,6 +52,27 @@ BASE_QUANTIFY_JOB_TEMPLATE = """
 """
 
 
+def append_quantify_task(
+    job: dict,
+    container_image: str,
+    args: QuantifyArgs,
+):
+    cmd_args = [
+        f'--{flag_name}="{arg_value}"' for flag_name, arg_value in vars(args).items()
+    ]
+    runnable = {
+        "container": {
+            "imageUri": container_image,
+            "entrypoint": "python",
+            "commands": [
+                f"scripts/launch-qupath-measurement.py",
+                *cmd_args,
+            ],
+        }
+    }
+    job["job_definition"]["taskGroups"][0]["taskSpec"]["runnables"].append(runnable)
+
+
 def make_quantify_job(
     region: str,
     container_image: str,
