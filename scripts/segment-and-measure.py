@@ -17,10 +17,12 @@ import datetime
 from google.cloud import storage
 
 import deepcell_imaging.gcp_logging
+from deepcell_imaging.gcp_batch_jobs import submit_job
 from deepcell_imaging.gcp_batch_jobs.quantify import append_quantify_task
 from deepcell_imaging.gcp_batch_jobs.segment import (
     make_segmentation_tasks,
     build_segment_job_tasks,
+    upload_tasks,
 )
 from deepcell_imaging.gcp_batch_jobs.types import QuantifyArgs
 from deepcell_imaging.utils.storage import get_blob_filenames
@@ -189,23 +191,15 @@ def main():
 
     print(json.dumps(job["job_definition"], indent=1))
 
-    # For now … do nothing, just print the tasks.
-    print("Preprocess tasks:")
-    print(json.dumps([x.model_dump() for x in job["tasks"]["preprocess"][0]], indent=1))
-    print("Predict tasks:")
-    print(json.dumps([x.model_dump() for x in job["tasks"]["predict"][0]], indent=1))
-    print("Postprocess tasks:")
-    print(
-        json.dumps([x.model_dump() for x in job["tasks"]["postprocess"][0]], indent=1)
-    )
-    print("Benchmark tasks:")
-    print(
-        json.dumps(
-            [x.model_dump() for x in job["tasks"]["gather-benchmark"][0]], indent=1
-        )
-    )
-    print("Visualize tasks:")
-    print(json.dumps([x.model_dump() for x in job["tasks"]["visualize"][0]], indent=1))
+    logger.info("Uploading task files")
+    upload_tasks(job["tasks"])
+
+    logger.info("Submitting job to Batch")
+    job_json = job["job_definition"]
+    submit_job(job_json, batch_job_id, REGION)
+
+    logger.info("Batch job id: %s", batch_job_id)
+    logger.info("Working directory: %s", working_directory)
 
 
 if __name__ == "__main__":

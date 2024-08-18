@@ -58,7 +58,7 @@ def append_quantify_task(
     args: QuantifyArgs,
 ):
     cmd_args = [
-        f'--{flag_name}="{arg_value}"' for flag_name, arg_value in vars(args).items()
+        (f"--{flag_name}", arg_value) for flag_name, arg_value in vars(args).items()
     ]
     runnable = {
         "container": {
@@ -66,7 +66,7 @@ def append_quantify_task(
             "entrypoint": "python",
             "commands": [
                 f"scripts/launch-qupath-measurement.py",
-                *cmd_args,
+                *[arg for pair in cmd_args for arg in pair],
             ],
         }
     }
