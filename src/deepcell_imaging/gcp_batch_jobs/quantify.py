@@ -1,19 +1,13 @@
 import json
-from typing import Optional
 
-import smart_open
-from pydantic import BaseModel
-
-from deepcell_imaging.gcp_batch_jobs.types import (
-    PreprocessArgs,
-    PredictArgs,
-    PostprocessArgs,
-    GatherBenchmarkArgs,
-    VisualizeArgs,
+from deepcell_imaging.gcp_batch_jobs import (
+    apply_allocation_policy,
+    apply_cloud_logs_policy,
 )
+from deepcell_imaging.gcp_batch_jobs.types import QuantifyArgs
 
 # Note: Need to escape the curly braces in the JSON template
-BASE_QUPATH_MEASUREMENTS_TEMPLATE = """
+BASE_QUANTIFY_JOB_TEMPLATE = """
 {{
     "taskGroups": [
         {{
@@ -53,54 +47,60 @@ BASE_QUPATH_MEASUREMENTS_TEMPLATE = """
             "parallelism": 1,
             "taskCountPerNode": 1
         }}
-    ],
-    "allocationPolicy": {{
-        "instances": [
-            {{
-                "policy": {{
-                    "machineType": "n1-standard-8",
-                    "provisioningModel": "SPOT"
-                }}
-            }}
-        ],
-        "location": {{
-            "allowedLocations": [
-                "regions/{region}"
-            ]
-        }}
-    }},
-
-    "logsPolicy": {{
-        "destination": "CLOUD_LOGGING"
-    }}
+    ]
 }}
 """
 
 
-def make_qupath_measurements_job_json(
+def append_quantify_task(
+    job: dict,
+    container_image: str,
+    args: QuantifyArgs,
+):
+    cmd_args = [
+        (f"--{flag_name}", arg_value) for flag_name, arg_value in vars(args).items()
+    ]
+    runnable = {
+        "container": {
+            "imageUri": container_image,
+            "entrypoint": "python",
+            "commands": [
+                f"scripts/launch-qupath-measurement.py",
+                *[arg for pair in cmd_args for arg in pair],
+            ],
+        }
+    }
+    job["job_definition"]["taskGroups"][0]["taskSpec"]["runnables"].append(runnable)
+
+
+def make_quantify_job(
     region: str,
     container_image: str,
-    images_path: str,
-    segmasks_path: str,
-    project_path: str,
-    reports_path: str,
-    image_filter: str,
+    args: QuantifyArgs,
     config: dict = None,
 ) -> dict:
-    json_str = BASE_QUPATH_MEASUREMENTS_TEMPLATE.format(
+    json_str = BASE_QUANTIFY_JOB_TEMPLATE.format(
         container_image=container_image,
         region=region,
-        images_path=images_path,
-        segmasks_path=segmasks_path,
-        project_path=project_path,
-        reports_path=reports_path,
-        image_filter=image_filter,
+        images_path=args.images_path,
+        segmasks_path=args.segmasks_path,
+        project_path=args.project_path,
+        reports_path=args.reports_path,
+        image_filter=args.image_filter,
     )
 
     print(json_str)
-    job_json = json.loads(json_str)
+    job = json.loads(json_str)
+
+    apply_allocation_policy(
+        job,
+        region,
+        "n1-standard-8",
+        "SPOT",
+    )
+    apply_cloud_logs_policy(job)
 
     if config:
-        job_json.update(config)
+        job.update(config)
 
-    return job_json
+    return job

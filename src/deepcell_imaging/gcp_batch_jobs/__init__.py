@@ -4,6 +4,8 @@ This module contains functions for creating and submitting batch jobs to GCP.
 
 import json
 import os
+import subprocess
+import tempfile
 
 import smart_open
 
@@ -102,32 +104,7 @@ BASE_MULTISTEP_TEMPLATE = """
             "taskCount": 1,
             "parallelism": 1
         }}
-    ],
-    "allocationPolicy": {{
-        "instances": [
-            {{
-                "installGpuDrivers": true,
-                "policy": {{
-                    "machineType": "n1-standard-8",
-                    "provisioningModel": "SPOT",
-                    "accelerators": [
-                        {{
-                            "type": "nvidia-tesla-t4",
-                            "count": 1
-                        }}
-                    ]
-                }}
-            }}
-        ],
-        "location": {{
-            "allowedLocations": [
-                "regions/{region}"
-            ]
-        }}
-    }},
-    "logsPolicy": {{
-        "destination": "CLOUD_LOGGING"
-    }}
+    ]
 }}
 """
 
@@ -165,6 +142,16 @@ def make_job_json(
     if config:
         job_json.update(config)
 
+    apply_allocation_policy(
+        job_json,
+        region,
+        "n1-standard-8",
+        "SPOT",
+        gpu_type="nvidia-tesla-t4",
+        gpu_count=1,
+    )
+    apply_cloud_logs_policy(job_json)
+
     return job_json
 
 
@@ -176,3 +163,57 @@ def get_batch_indexed_task(tasks_spec_uri, args_cls):
     task = tasks_spec[task_index]
 
     return args_cls(**task)
+
+
+def apply_allocation_policy(
+    job: dict,
+    region: str,
+    machine_type: str,
+    provisioning_model: str,
+    gpu_type: str = None,
+    gpu_count: int = None,
+) -> None:
+    """
+    Apply an allocation policy to the job definition: machine type, provisioning model, and GPU.
+    """
+    if gpu_type and not gpu_count or gpu_count and not gpu_type:
+        raise ValueError("GPU type and GPU count must be set together")
+    if provisioning_model not in ["SPOT", "STANDARD"]:
+        raise ValueError("Provisioning model must be either SPOT or STANDARD")
+
+    job["allocationPolicy"] = {
+        "instances": [
+            {
+                "policy": {
+                    "machineType": machine_type,
+                    "provisioningModel": provisioning_model,
+                },
+            }
+        ],
+        "location": {"allowedLocations": [f"regions/{region}"]},
+    }
+
+    if gpu_type:
+        job["allocationPolicy"]["instances"][0]["installGpuDrivers"] = True
+        job["allocationPolicy"]["instances"][0]["policy"]["accelerators"] = [
+            {"type": gpu_type, "count": gpu_count}
+        ]
+
+
+def apply_cloud_logs_policy(job: dict) -> None:
+    """
+    Apply a cloud logging policy to the job definition.
+    """
+    job["logsPolicy"] = {"destination": "CLOUD_LOGGING"}
+
+
+def submit_job(job: dict, job_id: str, region: str) -> None:
+    """
+    Submit a job to the Batch service.
+    """
+    with tempfile.NamedTemporaryFile() as job_json_file:
+        with open(job_json_file.name, "w") as f:
+            json.dump(job, f)
+
+        cmd = f"gcloud batch jobs submit {job_id} --location {region} --config {job_json_file.name}"
+        subprocess.run(cmd, shell=True)

@@ -6,8 +6,16 @@ build-backend = "setuptools.build_meta"
 name = "deepcell-imaging"
 dynamic = ["version", "dependencies"]
 
+[project.optional-dependencies]
+dev = ["black", "pytest", "pytest-cov"]
+
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
 
 [tool.setuptools]
 # Let auto-discovery do its thing with src-layout.
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]

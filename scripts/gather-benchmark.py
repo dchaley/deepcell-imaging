@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 """
-Script to preprocess an input image for a Mesmer model.
+Script to gather & submit benchmarking data for a segmentation run.
 
-Reads input image from a URI (typically on cloud storage).
+Reads each step's benchmarking from URIs (typically on cloud storage).
 
-Writes preprocessed image to a URI (typically on cloud storage).
+Then adds in some extra information, and uploads to BigQuery.
 """
 
 import io

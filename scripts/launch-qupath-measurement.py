@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+"""
+Script to launch a QuPath measurement job on Batch.
+
+This script can be used to launch a QuPath job on its own, or as the last step
+of a segmentation job (effectively implementing dependencies).
+"""
 
 import json
 import os
@@ -9,10 +15,10 @@ import uuid
 import deepcell_imaging.gcp_logging
 import logging
 
-from deepcell_imaging.gcp_batch_jobs.qupath_measurements import (
-    make_qupath_measurements_job_json,
+from deepcell_imaging.gcp_batch_jobs.quantify import (
+    make_quantify_job,
 )
-from deepcell_imaging.gcp_batch_jobs.types import QupathMeasurementArgs
+from deepcell_imaging.gcp_batch_jobs.types import QuantifyArgs
 from deepcell_imaging.utils.cmdline import get_task_arguments
 
 CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/qupath-project-initializer:latest"
@@ -33,16 +39,12 @@ def main():
         logger.info(f"Skipping task {task_index}; we only run the first task.")
         return
 
-    args = get_task_arguments("launch_qupath_measurement", QupathMeasurementArgs)
+    args = get_task_arguments("launch_qupath_measurement", QuantifyArgs)
 
-    job_json = make_qupath_measurements_job_json(
+    job_json = make_quantify_job(
         region=REGION,
         container_image=CONTAINER_IMAGE,
-        images_path=args.images_path,
-        segmasks_path=args.segmasks_path,
-        project_path=args.project_path,
-        reports_path=args.reports_path,
-        image_filter=args.image_filter,
+        args=args,
     )
 
     job_json_file = tempfile.NamedTemporaryFile()

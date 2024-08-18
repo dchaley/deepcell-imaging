@@ -4,15 +4,20 @@ import argparse
 import datetime
 import json
 import os
-import subprocess
-import tempfile
 import uuid
 
 from google.cloud import storage
-from google.cloud.storage import Blob
 
-from deepcell_imaging.gcp_batch_jobs.multitask import TaskSpec, make_multitask_job_json
-from deepcell_imaging.numpy_utils import npz_headers
+from deepcell_imaging.gcp_batch_jobs import submit_job
+from deepcell_imaging.gcp_batch_jobs.segment import (
+    build_segment_job_tasks,
+    make_segmentation_tasks,
+    upload_tasks,
+)
+from deepcell_imaging.gcp_logging import initialize_gcp_logging
+from deepcell_imaging.utils.storage import get_blob_filenames
+
+initialize_gcp_logging()
 
 CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:batch"
 REGION = "us-central1"
@@ -75,55 +80,21 @@ masks_output_root = f"{dataset}/SEGMASK"
 
 client = storage.Client()
 
-
-def get_blobs(blob_uri):
-    blob = Blob.from_string(blob_uri, client=client)
-    bucket = client.bucket(blob.bucket.name)
-    return [x.name for x in bucket.list_blobs(prefix=f"{blob.name}")]
-
-
-image_blobs = set(get_blobs(image_root))
-npz_blobs = set(get_blobs(npz_root))
+image_names = get_blob_filenames(image_root)
+npz_names = get_blob_filenames(npz_root)
 
 # For each image, with a corresponding npz,
 # generate a DeepCell task.
-tasks = []
 
 # prefixes = ["mesmer_3", "mesmer_10"]
-prefixes = []
+prefixes = [prefix] if prefix else []
 
-for image in image_blobs:
-    prefix = os.path.splitext(os.path.basename(image))[0]
-    if prefixes and prefix not in prefixes:
-        continue
-    npz_path = f"{npz_root}/{prefix}.npz"
-    npz_path_blob = Blob.from_string(npz_path, client=client)
-    has_npz = npz_path_blob.name in npz_blobs
+image_basenames = [os.path.splitext(os.path.basename(y))[0] for y in image_names]
+image_names = [x for x in image_basenames if x in prefixes] if prefixes else image_names
 
-    if not has_npz:
-        print(f"Skipping {prefix}: no corresponding npz")
-        continue
-
-    # FIXME: this needs to depend on compartment.
-    tiff_output_uri = f"{masks_output_root}/{prefix}_WholeCellMask.tiff"
-
-    # FIXME: this is slow, can we get them in bulk??
-    # For now, assume there's only one file in the input.
-    input_file_contents = list(npz_headers(npz_path))
-    if len(input_file_contents) != 1:
-        raise ValueError("Expected exactly one array in the input file")
-    input_image_shape = input_file_contents[0][1]
-
-    print("Found image", prefix, "with shape", input_image_shape)
-
-    tasks.append(
-        TaskSpec(
-            input_channels_path=npz_path,
-            tiff_output_uri=tiff_output_uri,
-            input_image_rows=input_image_shape[0],
-            input_image_cols=input_image_shape[1],
-        )
-    )
+tasks = list(
+    make_segmentation_tasks(image_names, npz_root, npz_names, masks_output_root)
+)
 
 # The batch job id must be unique, and can only contain lowercase letters,
 # numbers, and hyphens. It must also be 63 characters or fewer.
@@ -145,7 +116,7 @@ if args.configuration:
 else:
     config = {}
 
-job_json = make_multitask_job_json(
+job = build_segment_job_tasks(
     region=REGION,
     container_image=CONTAINER_IMAGE,
     model_path=args.model_path,
@@ -157,14 +128,11 @@ job_json = make_multitask_job_json(
     tasks=tasks,
 )
 
-job_json_file = tempfile.NamedTemporaryFile()
-with open(job_json_file.name, "w") as f:
-    json.dump(job_json, f)
+upload_tasks(job["tasks"])
 
-cmd = "gcloud batch jobs submit {job_id} --location {location} --config {job_filename}".format(
-    job_id=batch_job_id, location=REGION, job_filename=job_json_file.name
-)
-subprocess.run(cmd, shell=True)
+job_json = job["job_definition"]
+
+submit_job(job_json, batch_job_id, REGION)
 
 print("Job submitted with ID: {}".format(batch_job_id))
 print("Intermediate output: {}".format(working_directory))
