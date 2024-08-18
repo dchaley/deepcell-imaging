@@ -189,8 +189,6 @@ def main():
         ),
     )
 
-    print(json.dumps(job["job_definition"], indent=1))
-
     logger.info("Uploading task files")
     upload_tasks(job["tasks"])
 
