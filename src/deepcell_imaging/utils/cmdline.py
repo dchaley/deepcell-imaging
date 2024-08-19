@@ -25,7 +25,7 @@ def get_task_arguments(
         "--env_config_uri",
         help="URI to a JSON file containing environment configuration",
         type=str,
-        required=True,
+        required=False,
     )
 
     env_config = None
