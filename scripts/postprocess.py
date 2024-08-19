@@ -26,7 +26,7 @@ def main():
     deepcell_imaging.gcp_logging.initialize_gcp_logging()
     logger = logging.getLogger(__name__)
 
-    args = get_task_arguments("postprocess", PostprocessArgs)
+    args, extra_args = get_task_arguments("postprocess", PostprocessArgs)
 
     raw_predictions_uri = args.raw_predictions_uri
     input_rows = args.input_rows

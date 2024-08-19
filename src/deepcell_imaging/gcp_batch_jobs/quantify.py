@@ -56,10 +56,14 @@ def append_quantify_task(
     job: dict,
     container_image: str,
     args: QuantifyArgs,
+    env_config_uri: str = "",
 ):
     cmd_args = [
         (f"--{flag_name}", arg_value) for flag_name, arg_value in vars(args).items()
     ]
+    if env_config_uri:
+        cmd_args.append(("--env_config_uri", env_config_uri))
+
     runnable = {
         "container": {
             "imageUri": container_image,
