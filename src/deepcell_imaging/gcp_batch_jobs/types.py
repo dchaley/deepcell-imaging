@@ -5,6 +5,21 @@ from pydantic import BaseModel, Field, ConfigDict
 DEFAULT_BATCH_SIZE = 16
 
 
+class EnvironmentConfig(BaseModel):
+    region: str = Field(
+        title="Region",
+        description="The region in which the job will run.",
+    )
+    segment_container_image: str = Field(
+        title="Segment Container Image",
+        description="The container image to use for the segmentation job.",
+    )
+    quantify_container_image: str = Field(
+        title="Quantify Container Image",
+        description="The container image to use for the quantify job.",
+    )
+
+
 class SegmentationTask(BaseModel):
     """
     Represents a segmentation task in a segmentation job.

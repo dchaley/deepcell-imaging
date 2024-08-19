@@ -14,6 +14,7 @@ import logging
 import uuid
 import datetime
 
+import smart_open
 from google.cloud import storage
 
 import deepcell_imaging.gcp_logging
@@ -24,11 +25,8 @@ from deepcell_imaging.gcp_batch_jobs.segment import (
     build_segment_job_tasks,
     upload_tasks,
 )
-from deepcell_imaging.gcp_batch_jobs.types import QuantifyArgs
+from deepcell_imaging.gcp_batch_jobs.types import QuantifyArgs, EnvironmentConfig
 from deepcell_imaging.utils.storage import get_blob_filenames
-
-SEGMENT_CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:batch"
-REGION = "us-central1"
 
 
 def main():
@@ -60,7 +58,7 @@ def main():
         "--env_config_uri",
         help="URI to a JSON file containing GCP configuration",
         type=str,
-        default="",
+        required=True,
     )
 
     subparsers = parser.add_subparsers(help="Mode of operation", dest="mode")
@@ -130,6 +128,10 @@ def main():
 
     args = parser.parse_args()
 
+    with smart_open.open(args.env_config_uri, "r") as env_config_file:
+        env_config_json = json.load(env_config_file)
+        env_config = EnvironmentConfig(**env_config_json)
+
     if args.mode == "workspace":
         image_root = f"{args.dataset_path}/{args.images_subdir}"
         npz_root = f"{args.dataset_path}/{args.npz_subdir}"
@@ -175,17 +177,20 @@ def main():
         )
 
     job = build_segment_job_tasks(
-        region=REGION,
-        container_image=SEGMENT_CONTAINER_IMAGE,
+        region=env_config.region,
+        container_image=env_config.segment_container_image,
         model_path=args.model_path,
         model_hash=args.model_hash,
         tasks=image_segmentation_tasks,
         compartment="whole-cell",
         working_directory=working_directory,
     )
+
+    # Note that we use the SEGMENT container here, not quantify,
+    # because we launch the quantify job FROM the segment job.
     append_quantify_task(
         job,
-        SEGMENT_CONTAINER_IMAGE,
+        env_config.segment_container_image,
         QuantifyArgs(
             images_path=image_root,
             segmasks_path=masks_output_root,
@@ -201,7 +206,7 @@ def main():
 
     logger.info("Submitting job to Batch")
     job_json = job["job_definition"]
-    submit_job(job_json, batch_job_id, REGION)
+    submit_job(job_json, batch_job_id, env_config.region)
 
     logger.info("Batch job id: %s", batch_job_id)
     logger.info("Working directory: %s", working_directory)
