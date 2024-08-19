@@ -27,7 +27,7 @@ def main():
     deepcell_imaging.gcp_logging.initialize_gcp_logging()
     logger = logging.getLogger(__name__)
 
-    args, extra_args = get_task_arguments("gather-benchmark", GatherBenchmarkArgs)
+    args, env_config = get_task_arguments("gather-benchmark", GatherBenchmarkArgs)
 
     preprocess_benchmarking_uri = args.preprocess_benchmarking_uri
     prediction_benchmarking_uri = args.prediction_benchmarking_uri

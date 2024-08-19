@@ -36,9 +36,11 @@ def main():
         logger.info(f"Skipping task {task_index}; we only run the first task.")
         return
 
-    args, extra_args = get_task_arguments("launch_qupath_measurement", QuantifyArgs)
+    args, env_config = get_task_arguments("launch_qupath_measurement", QuantifyArgs)
 
-    env_config = extra_args["env_config"]
+    if not env_config:
+        raise ValueError("Environment configuration is required")
+
     container_image = env_config.quantify_container_image
     region = env_config.region
 
