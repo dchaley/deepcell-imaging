@@ -27,7 +27,7 @@ def test_argv_parsing():
         "gs://bucket/reports",
     ]
     with patch.object(sys, "argv", test_args):
-        result, extra_args = get_task_arguments("test", ArgsForTest)
+        result, env_config = get_task_arguments("test", ArgsForTest)
 
     assert dict(result) == {
         "images_path": "gs://bucket/images",
@@ -57,7 +57,7 @@ def test_tasks_uri():
             "deepcell_imaging.utils.cmdline.get_batch_indexed_task",
             return_value=task,
         ):
-            result, extra_args = get_task_arguments("test", ArgsForTest)
+            result, env_config = get_task_arguments("test", ArgsForTest)
 
     assert result.images_path == "gs://root/images"
     assert result.segmasks_path == "/root/segmasks"
