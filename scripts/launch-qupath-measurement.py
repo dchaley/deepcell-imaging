@@ -38,9 +38,9 @@ def main():
 
     args, extra_args = get_task_arguments("launch_qupath_measurement", QuantifyArgs)
 
-    env_config = extra_args.get("env", {})
-    container_image = env_config["quantify_container_image"]
-    region = env_config["region"]
+    env_config = extra_args["env_config"]
+    container_image = env_config.quantify_container_image
+    region = env_config.region
 
     job_json = make_quantify_job(
         region=region,
