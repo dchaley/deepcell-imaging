@@ -21,9 +21,6 @@ from deepcell_imaging.gcp_batch_jobs.quantify import (
 from deepcell_imaging.gcp_batch_jobs.types import QuantifyArgs
 from deepcell_imaging.utils.cmdline import get_task_arguments
 
-CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/qupath-project-initializer:latest"
-REGION = "us-central1"
-
 
 def main():
     deepcell_imaging.gcp_logging.initialize_gcp_logging()
@@ -41,9 +38,13 @@ def main():
 
     args, extra_args = get_task_arguments("launch_qupath_measurement", QuantifyArgs)
 
+    env_config = extra_args.get("env", {})
+    container_image = env_config["quantify_container_image"]
+    region = env_config["region"]
+
     job_json = make_quantify_job(
-        region=REGION,
-        container_image=CONTAINER_IMAGE,
+        region=region,
+        container_image=container_image,
         args=args,
     )
 
@@ -60,7 +61,7 @@ def main():
     batch_job_id = batch_job_id[0:62].lower()
 
     cmd = "gcloud batch jobs submit {job_id} --location {location} --config {job_filename}".format(
-        job_id=batch_job_id, location=REGION, job_filename=job_json_file.name
+        job_id=batch_job_id, location=region, job_filename=job_json_file.name
     )
     subprocess.run(cmd, shell=True)
 

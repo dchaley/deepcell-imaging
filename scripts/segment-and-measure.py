@@ -56,6 +56,12 @@ def main():
         type=str,
         default="56b0f246081fe6b730ca74eab8a37d60",
     )
+    parser.add_argument(
+        "--env_config_uri",
+        help="URI to a JSON file containing GCP configuration",
+        type=str,
+        default="",
+    )
 
     subparsers = parser.add_subparsers(help="Mode of operation", dest="mode")
 
@@ -187,6 +193,7 @@ def main():
             reports_path=reports_root,
             image_filter=args.image_filter,
         ),
+        env_config_uri=args.env_config_uri,
     )
 
     logger.info("Uploading task files")
