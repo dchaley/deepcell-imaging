@@ -5,19 +5,19 @@ Current benchmarks. See also: [2023-10-18 Deepcell performance optimization note
 
 Time:
 
-| Task | Local | Cloud |
-| ---- | ----- | ----- |
-| Preprocess | 53s | 43s |
-| Predict | 928s | 193s |
-| Postprocess | 275s | 264s |
+| Task        | Local | Cloud |
+|-------------|-------|-------|
+| Preprocess  | 53s   | 43s   |
+| Predict     | 928s  | 193s  |
+| Postprocess | 275s  | 264s  |
 
 Resources:
 
-| Resource | Local | Cloud |
-| -------- | ----- | ----- |
-| CPU |  6-core | 16 vcpu |
-| GPU | 0 | 1 T4 | 
-| RAM | 16 | 60 |
+| Resource | Local  | Cloud   |
+|----------|--------|---------|
+| CPU      | 6-core | 16 vcpu |
+| GPU      | 0      | 1 T4    | 
+| RAM      | 16     | 60      |
 
 # Idea / raw notes 
 
