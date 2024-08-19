@@ -39,7 +39,7 @@ def main():
     deepcell_imaging.gcp_logging.initialize_gcp_logging()
     logger = logging.getLogger(__name__)
 
-    args = get_task_arguments("predict", PredictArgs)
+    args, extra_args = get_task_arguments("predict", PredictArgs)
 
     image_uri = args.image_uri
     batch_size = args.batch_size

@@ -26,7 +26,7 @@ def main():
     deepcell_imaging.gcp_logging.initialize_gcp_logging()
     logger = logging.getLogger(__name__)
 
-    args = get_task_arguments("visualize", VisualizeArgs)
+    args, extra_args = get_task_arguments("visualize", VisualizeArgs)
 
     image_uri = args.image_uri
     image_array_name = args.image_array_name

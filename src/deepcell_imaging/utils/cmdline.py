@@ -1,9 +1,13 @@
 import argparse
+from typing import TypeVar, Type
 
 from deepcell_imaging.gcp_batch_jobs import get_batch_indexed_task
 
 
-def get_task_arguments(task_name, args_cls):
+ArgType = TypeVar("ArgType")
+
+
+def get_task_arguments(task_name, args_cls: Type[ArgType]) -> tuple[ArgType, dict]:
     parser = argparse.ArgumentParser(task_name, add_help=False)
 
     parser.add_argument(
@@ -13,6 +17,8 @@ def get_task_arguments(task_name, args_cls):
         required=False,
     )
 
+    extra_args = {}
+
     # If needed, we could change this to act on an args list passed
     # as a parameter, instead of just using implicit sys.argv
     parsed_args, args_remainder = parser.parse_known_args()
@@ -21,7 +27,7 @@ def get_task_arguments(task_name, args_cls):
         if len(args_remainder) > 0:
             raise ValueError("Either pass --tasks_spec_uri alone, or not at all")
 
-        return get_batch_indexed_task(parsed_args.tasks_spec_uri, args_cls)
+        return get_batch_indexed_task(parsed_args.tasks_spec_uri, args_cls), extra_args
     else:
         model_fields = args_cls.model_fields
 
@@ -38,4 +44,4 @@ def get_task_arguments(task_name, args_cls):
 
         parsed_args = parser.parse_args(args_remainder)
         kwargs = {k: v for k, v in vars(parsed_args).items() if v is not None}
-        return args_cls(**kwargs)
+        return args_cls(**kwargs), extra_args

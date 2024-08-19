@@ -39,7 +39,7 @@ def main():
         logger.info(f"Skipping task {task_index}; we only run the first task.")
         return
 
-    args = get_task_arguments("launch_qupath_measurement", QuantifyArgs)
+    args, extra_args = get_task_arguments("launch_qupath_measurement", QuantifyArgs)
 
     job_json = make_quantify_job(
         region=REGION,
