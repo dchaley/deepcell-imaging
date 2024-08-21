@@ -140,7 +140,8 @@ def make_segment_postprocess_tasks(
             PostprocessArgs(
                 raw_predictions_uri=f"{task_directory}/raw_predictions.npz.gz",
                 output_uri=f"{task_directory}/predictions.npz.gz",
-                tiff_output_uri=f"{task.tiff_output_uri}",
+                wholecell_tiff_output_uri=f"{task.wholecell_tiff_output_uri}",
+                nuclear_tiff_output_uri=f"{task.nuclear_tiff_output_uri}",
                 input_rows=task.input_image_rows,
                 input_cols=task.input_image_cols,
                 compartment=compartment,
@@ -288,8 +289,10 @@ def make_segmentation_tasks(image_names, npz_root, npz_names, masks_output_root)
     matched_images = find_matching_npz(image_names, npz_root, npz_names)
 
     for image_name, npz_path in matched_images:
-        # FIXME(#298): this needs to depend on compartment.
-        tiff_output_uri = f"{masks_output_root}/{image_name}_WholeCellMask.tiff"
+        wholecell_tiff_output_uri = (
+            f"{masks_output_root}/{image_name}_WholeCellMask.tiff"
+        )
+        nuclear_tiff_output_uri = f"{masks_output_root}/{image_name}_NuclearMask.tiff"
 
         input_file_contents = list(npz_headers(npz_path))
         if len(input_file_contents) != 1:
@@ -298,7 +301,8 @@ def make_segmentation_tasks(image_names, npz_root, npz_names, masks_output_root)
 
         yield SegmentationTask(
             input_channels_path=npz_path,
-            tiff_output_uri=tiff_output_uri,
+            wholecell_tiff_output_uri=wholecell_tiff_output_uri,
+            nuclear_tiff_output_uri=nuclear_tiff_output_uri,
             input_image_rows=input_image_shape[0],
             input_image_cols=input_image_shape[1],
         )

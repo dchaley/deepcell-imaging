@@ -182,7 +182,7 @@ def main():
         model_path=args.model_path,
         model_hash=args.model_hash,
         tasks=image_segmentation_tasks,
-        compartment="whole-cell",
+        compartment="both",
         working_directory=working_directory,
     )
 
