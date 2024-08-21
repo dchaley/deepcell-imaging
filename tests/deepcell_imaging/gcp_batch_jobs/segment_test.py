@@ -22,13 +22,15 @@ def test_make_segmentation_tasks(_mock_npz_headers):
     assert list(tasks) == [
         SegmentationTask(
             input_channels_path="gs://a-dataset/NPZ_INTERMEDIATE/a-prefix.npz",
-            tiff_output_uri="gs://a-dataset/SEGMASK/a-prefix_WholeCellMask.tiff",
+            wholecell_tiff_output_uri="gs://a-dataset/SEGMASK/a-prefix_WholeCellMask.tiff",
+            nuclear_tiff_output_uri="gs://a-dataset/SEGMASK/a-prefix_NuclearMask.tiff",
             input_image_rows=123,
             input_image_cols=456,
         ),
         SegmentationTask(
             input_channels_path="gs://a-dataset/NPZ_INTERMEDIATE/b-prefix.npz",
-            tiff_output_uri="gs://a-dataset/SEGMASK/b-prefix_WholeCellMask.tiff",
+            wholecell_tiff_output_uri="gs://a-dataset/SEGMASK/b-prefix_WholeCellMask.tiff",
+            nuclear_tiff_output_uri="gs://a-dataset/SEGMASK/b-prefix_NuclearMask.tiff",
             input_image_rows=123,
             input_image_cols=456,
         ),
@@ -44,7 +46,8 @@ def test_build_segment_job_tasks():
         tasks=[
             SegmentationTask(
                 input_channels_path="/channels/path",
-                tiff_output_uri="/tiff/path",
+                wholecell_tiff_output_uri="/tiff/wholecell/path",
+                nuclear_tiff_output_uri="/tiff/nuclear/path",
                 input_image_rows=123,
                 input_image_cols=456,
             )

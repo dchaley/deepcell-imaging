@@ -28,7 +28,8 @@ class SegmentationTask(BaseModel):
     """
 
     input_channels_path: str
-    tiff_output_uri: str
+    wholecell_tiff_output_uri: str = ""
+    nuclear_tiff_output_uri: str = ""
     input_image_rows: int
     input_image_cols: int
 
@@ -112,10 +113,15 @@ class PostprocessArgs(BaseModel):
         title="Output URI",
         description="URI to write postprocessed segment predictions npz file containing an array named 'image'.",
     )
-    tiff_output_uri: str = Field(
+    wholecell_tiff_output_uri: str = Field(
         default="",
-        title="TIFF Output URI",
-        description="Where to write segment predictions TIFF file containing a segment number for each pixel. Default/blank: don't write TIFF file.",
+        title="Whole-Cell segmentation Output URI",
+        description="Where to write whole-cell segmentation TIFF file. Default/blank: don't write TIFF file.",
+    )
+    nuclear_tiff_output_uri: str = Field(
+        default="",
+        title="Nuclear segmentation Output URI",
+        description="Where to write nuclear segmentation TIFF file. Default/blank: don't write TIFF file.",
     )
     benchmark_output_uri: str = Field(
         default="",

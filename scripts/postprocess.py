@@ -33,7 +33,6 @@ def main():
     input_cols = args.input_cols
     compartment = args.compartment
     output_uri = args.output_uri
-    tiff_output_uri = args.tiff_output_uri
     benchmark_output_uri = args.benchmark_output_uri
 
     logger.info("Loading raw predictions")
@@ -82,15 +81,39 @@ def main():
         output_time_s = timeit.default_timer() - t
         logger.info("Saved output in %s s" % round(output_time_s, 2))
 
-        if tiff_output_uri:
-            logger.info("Saving postprocessed TIFF output to %s" % tiff_output_uri)
+        if args.wholecell_tiff_output_uri:
+            logger.info(
+                "Saving whole-cell segmentation TIFF output to %s"
+                % args.wholecell_tiff_output_uri
+            )
             t = timeit.default_timer()
-            segments_int32 = segmentation.astype(np.int32)
-            with gs_fastcopy.write(tiff_output_uri) as output_writer:
-                tifffile.imwrite(output_writer, segments_int32)
+            wholecell_segmentation = segmentation[..., 0][..., np.newaxis].astype(
+                np.int32
+            )
+            with gs_fastcopy.write(args.wholecell_tiff_output_uri) as output_writer:
+                tifffile.imwrite(output_writer, wholecell_segmentation)
 
-            tiff_output_time_s = timeit.default_timer() - t
-            logger.info("Saved tiff output in %s s" % round(tiff_output_time_s, 2))
+            wholecell_output_time_s = timeit.default_timer() - t
+            logger.info(
+                "Saved whole-cell output in %s s" % round(wholecell_output_time_s, 2)
+            )
+
+        if args.nuclear_tiff_output_uri:
+            logger.info(
+                "Saving nuclear segmentation TIFF output to %s"
+                % args.nuclear_tiff_output_uri
+            )
+            t = timeit.default_timer()
+            nuclear_segmentation = segmentation[..., 1][..., np.newaxis].astype(
+                np.int32
+            )
+            with gs_fastcopy.write(args.nuclear_tiff_output_uri) as output_writer:
+                tifffile.imwrite(output_writer, nuclear_segmentation)
+
+            nuclear_output_time_s = timeit.default_timer() - t
+            logger.info(
+                "Saved nuclear output in %s s" % round(nuclear_output_time_s, 2)
+            )
     else:
         logger.warning("Not saving failed postprocessing output.")
         output_time_s = 0.0
