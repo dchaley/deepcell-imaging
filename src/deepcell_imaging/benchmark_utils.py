@@ -6,6 +6,15 @@ import requests
 import resource
 import traceback
 
+from urllib3.exceptions import NameResolutionError
+
+
+def is_name_resolution_error_context(exc):
+    try:
+        return isinstance(exc.__context__.__context__, NameResolutionError)
+    except AttributeError:
+        return False
+
 
 def get_gce_instance_type():
     # Call the metadata server.
@@ -16,6 +25,13 @@ def get_gce_instance_type():
         # This comes back like this: projects/1234567890/machineTypes/n2-standard-8
         full_machine_type = requests.get(metadata_server, headers=metadata_flavor).text
         return full_machine_type.split("/")[-1]
+    except requests.exceptions.ConnectionError as e:
+        if is_name_resolution_error_context(e):
+            logging.info("Can't contact metadata server for machine type")
+            return "error"
+        else:
+            logging.warning("Error getting machine type: " + str(e.__cause__))
+            return "error"
     except Exception as e:
         exception_string = traceback.format_exc()
         logging.warning("Error getting machine type: " + exception_string)
@@ -32,6 +48,13 @@ def get_gce_region():
         region = requests.get(metadata_server, headers=metadata_flavor).text
         m = re.search("zones/(.*)-[^-]*$", region)
         return m.group(1)
+    except requests.exceptions.ConnectionError as e:
+        if is_name_resolution_error_context(e):
+            logging.info("Can't contact metadata server for region")
+            return "error"
+        else:
+            logging.warning("Error getting region: " + str(e.__cause__))
+            return "error"
     except Exception as e:
         exception_string = traceback.format_exc()
         logging.warning("Error getting region: " + exception_string)
@@ -49,6 +72,16 @@ def get_gce_is_preemptible():
         # This comes back like this: projects/1234567890/machineTypes/n2-standard-8
         preemptible_str = requests.get(metadata_server, headers=metadata_flavor).text
         return preemptible_str.lower() == "true"
+    except requests.exceptions.ConnectionError as e:
+        if is_name_resolution_error_context(e):
+            logging.info(
+                "Can't contact metadata server for is_preemptible. Assuming false."
+            )
+        else:
+            logging.warning(
+                "Error getting preemptible, assuming false: " + str(e.__cause__)
+            )
+        return False
     except Exception as e:
         exception_string = traceback.format_exc()
         logging.warning(
