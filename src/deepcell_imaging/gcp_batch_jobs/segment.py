@@ -7,7 +7,9 @@ import smart_open
 from deepcell_imaging.gcp_batch_jobs import (
     apply_cloud_logs_policy,
     apply_allocation_policy,
-    set_boot_disk_size,
+    add_attached_disk,
+    add_task_volume,
+    set_task_environment_variable,
 )
 from deepcell_imaging.gcp_batch_jobs.types import (
     PreprocessArgs,
@@ -286,7 +288,10 @@ def build_segment_job_tasks(
         [task.input_image_rows * task.input_image_cols for task in tasks]
     )
     size_in_bytes = biggest_pixels * 8 * 4
-    set_boot_disk_size(job, size_in_bytes // 1024 // 1024)
+
+    add_attached_disk(job, "deepcell-workspace", size_in_bytes // 1024 // 1024 // 1024)
+    add_task_volume(job, "/mnt/disks/deepcell-workspace", "deepcell-workspace")
+    set_task_environment_variable(job, "TMPDIR", "/mnt/disks/deepcell-workspace")
 
     if config:
         job.update(config)
