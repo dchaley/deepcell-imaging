@@ -62,15 +62,42 @@ def apply_cloud_logs_policy(job: dict) -> None:
     job["logsPolicy"] = {"destination": "CLOUD_LOGGING"}
 
 
-def set_boot_disk_size(job: dict, size_mib: int) -> None:
+def add_attached_disk(
+    job: dict, device_name: str, size_gb: int, disk_type: str = "pd-balanced"
+) -> None:
     """
     Set the boot disk size for the job definition.
     """
-    # setdefault is used if the computeResource key does not exist yet
-    compute_resource = job["taskGroups"][0]["taskSpec"].setdefault(
-        "computeResource", {}
-    )
-    compute_resource["bootDiskMib"] = size_mib
+    attached_disk = {
+        "deviceName": device_name,
+        "newDisk": {
+            "type": disk_type,
+            "sizeGb": max(size_gb, 1),
+        },
+    }
+
+    job["allocationPolicy"]["instances"][0]["policy"]["disks"] = [attached_disk]
+
+
+def add_task_volume(job: dict, mount_path: str, device_name: str) -> None:
+    """
+    Add a volume to the job definition.
+    """
+    job["taskGroups"][0]["taskSpec"]["volumes"] = [
+        {
+            "mountPath": mount_path,
+            "deviceName": device_name,
+        }
+    ]
+
+
+def set_task_environment_variable(job: dict, key: str, value: str) -> None:
+    """
+    Set an environment variable for the task in the job definition.
+    """
+    env = job["taskGroups"][0]["taskSpec"].setdefault("environment", {})
+    env_vars = env.setdefault("variables", {})
+    env_vars[key] = value
 
 
 def submit_job(job: dict, job_id: str, region: str) -> None:
