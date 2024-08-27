@@ -62,6 +62,17 @@ def apply_cloud_logs_policy(job: dict) -> None:
     job["logsPolicy"] = {"destination": "CLOUD_LOGGING"}
 
 
+def set_boot_disk_size(job: dict, size_mib: int) -> None:
+    """
+    Set the boot disk size for the job definition.
+    """
+    # setdefault is used if the computeResource key does not exist yet
+    compute_resource = job["taskGroups"][0]["taskSpec"].setdefault(
+        "computeResource", {}
+    )
+    compute_resource["bootDiskMib"] = size_mib
+
+
 def submit_job(job: dict, job_id: str, region: str) -> None:
     """
     Submit a job to the Batch service.

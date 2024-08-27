@@ -7,6 +7,7 @@ import smart_open
 from deepcell_imaging.gcp_batch_jobs import (
     apply_cloud_logs_policy,
     apply_allocation_policy,
+    set_boot_disk_size,
 )
 from deepcell_imaging.gcp_batch_jobs.types import (
     PreprocessArgs,
@@ -278,6 +279,14 @@ def build_segment_job_tasks(
         gpu_count=1,
     )
     apply_cloud_logs_policy(job)
+
+    # Set boot disk size based on the largest input image.
+    # The largest intermediate file (raw predictions) has 4 float64s per pixel.
+    biggest_pixels = max(
+        [task.input_image_rows * task.input_image_cols for task in tasks]
+    )
+    size_in_bytes = biggest_pixels * 8 * 4
+    set_boot_disk_size(job, size_in_bytes // 1024 // 1024)
 
     if config:
         job.update(config)

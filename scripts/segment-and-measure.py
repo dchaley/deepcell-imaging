@@ -152,7 +152,9 @@ def main():
     logger.info("Fetching images")
 
     image_paths = get_blob_filenames(image_root, client=client)
-    image_paths = [x for x in image_paths if x == args.image_filter]
+    image_paths = [
+        x for x in image_paths if (not args.image_filter or x == args.image_filter)
+    ]
 
     logger.info("Finding matching npz files")
 
