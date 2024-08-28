@@ -3,6 +3,9 @@ import json
 from deepcell_imaging.gcp_batch_jobs import (
     apply_allocation_policy,
     apply_cloud_logs_policy,
+    add_attached_disk,
+    add_task_volume,
+    set_task_environment_variable,
 )
 from deepcell_imaging.gcp_batch_jobs.types import QuantifyArgs
 
@@ -103,6 +106,17 @@ def make_quantify_job(
         "SPOT",
     )
     apply_cloud_logs_policy(job)
+
+    # We know this is (probably) way too much– but we don't have accurate
+    # sizing yet. Come back to this!
+    # https://github.com/dchaley/qupath-project-initializer/issues/40
+    size_in_gb = 500
+
+    volume_name = "qupath-workspace"
+    tmp_dir = "/mnt/disks/qupath-workspace"
+    add_attached_disk(job, volume_name, size_in_gb)
+    add_task_volume(job, tmp_dir, volume_name)
+    set_task_environment_variable(job, "TMPDIR", tmp_dir)
 
     if config:
         job.update(config)
