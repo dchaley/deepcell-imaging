@@ -289,9 +289,11 @@ def build_segment_job_tasks(
     )
     size_in_bytes = biggest_pixels * 8 * 4
 
-    add_attached_disk(job, "deepcell-workspace", size_in_bytes // 1024 // 1024 // 1024)
-    add_task_volume(job, "/mnt/disks/deepcell-workspace", "deepcell-workspace")
-    set_task_environment_variable(job, "TMPDIR", "/mnt/disks/deepcell-workspace")
+    volume_name = "deepcell-workspace"
+    tmp_dir = "/mnt/disks/deepcell-workspace"
+    add_attached_disk(job, volume_name, size_in_bytes // 1024 // 1024 // 1024)
+    add_task_volume(job, tmp_dir, volume_name)
+    set_task_environment_variable(job, "TMPDIR", tmp_dir)
 
     if config:
         job.update(config)
