@@ -9,23 +9,22 @@ the subsequent QuPath job.
 intermediate numpy files.
 """
 import argparse
+import datetime
 import json
 import logging
 import uuid
-import datetime
 
 import smart_open
 from google.cloud import storage
 
 import deepcell_imaging.gcp_logging
 from deepcell_imaging.gcp_batch_jobs import submit_job
-from deepcell_imaging.gcp_batch_jobs.quantify import append_quantify_task
 from deepcell_imaging.gcp_batch_jobs.segment import (
     make_segmentation_tasks,
     build_segment_job_tasks,
     upload_tasks,
 )
-from deepcell_imaging.gcp_batch_jobs.types import QuantifyArgs, EnvironmentConfig
+from deepcell_imaging.gcp_batch_jobs.types import EnvironmentConfig
 from deepcell_imaging.utils.cmdline import add_dataset_parameters, get_dataset_paths
 from deepcell_imaging.utils.storage import get_blob_filenames
 
@@ -34,7 +33,7 @@ def main():
     deepcell_imaging.gcp_logging.initialize_gcp_logging()
     logger = logging.getLogger(__name__)
 
-    parser = argparse.ArgumentParser("segment-and-measure")
+    parser = argparse.ArgumentParser("segment")
 
     # Common arguments
     parser.add_argument(
@@ -115,21 +114,6 @@ def main():
         compartment="both",
         working_directory=working_directory,
         bigquery_benchmarking_table=env_config.bigquery_benchmarking_table,
-    )
-
-    # Note that we use the SEGMENT container here, not quantify,
-    # because we launch the quantify job FROM the segment job.
-    append_quantify_task(
-        job,
-        env_config.segment_container_image,
-        QuantifyArgs(
-            images_path=dataset_paths["image_root"],
-            segmasks_path=dataset_paths["masks_output_root"],
-            project_path=dataset_paths["project_root"],
-            reports_path=dataset_paths["reports_root"],
-            image_filter=args.image_filter,
-        ),
-        env_config_uri=args.env_config_uri,
     )
 
     logger.info("Uploading task files")
