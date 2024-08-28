@@ -186,6 +186,7 @@ def main():
         tasks=image_segmentation_tasks,
         compartment="both",
         working_directory=working_directory,
+        bigquery_benchmarking_table=env_config.bigquery_benchmarking_table,
     )
 
     # Note that we use the SEGMENT container here, not quantify,

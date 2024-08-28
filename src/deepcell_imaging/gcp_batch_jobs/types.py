@@ -18,6 +18,11 @@ class EnvironmentConfig(BaseModel):
         title="Quantify Container Image",
         description="The container image to use for the quantify job.",
     )
+    bigquery_benchmarking_table: str = Field(
+        default="",
+        title="BigQuery Benchmarking Table",
+        description="The fully qualified name (project.dataset.table) of the BigQuery table to write benchmarking data to. Default/blank: don't save benchmarking.",
+    )
 
 
 class SegmentationTask(BaseModel):
