@@ -30,7 +30,7 @@ You'll need a JSON file available in a cloud bucket, configuring the application
 You'll need to replace the variables with your environment.
 
 - You can use the public Docker Hub containers, or copy them to your own artifact repository. 
-- For the benchmarking, you need to create a dataset & table in a GCP project; or you can omit it or set it to blank to skip collecting benchmarks.
+- For the benchmarking, you need to create a dataset & table in a GCP project; or you can omit it or set it to blank to skip collecting benchmarks. The table must be created with the schema specified in [this file](benchmarking/bigquery_benchmarking_schema.json).
 - Lastly, specify the GCP region where compute resources will be provisioned. This is not the same as storage buckets, but consider making it the same for efficiency & egress cost reduction.
 
 For example, using the Docker Hub containers & skipping benchmarking:

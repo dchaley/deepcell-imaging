@@ -1,0 +1,182 @@
+[
+  {
+    "mode": "NULLABLE",
+    "name": "input_file_id",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "numpy_size_mb",
+    "type": "FLOAT"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "pixels_m",
+    "type": "INTEGER"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "compartment",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "benchmark_datetime_utc",
+    "type": "DATETIME"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "success",
+    "type": "BOOLEAN"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "cloud_region",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "preprocessing_instance_type",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "preprocessing_gpu_type",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "preprocessing_num_gpus",
+    "type": "INTEGER"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "preprocessing_success",
+    "type": "BOOLEAN"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "preprocessing_peak_memory_gb",
+    "type": "FLOAT"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "preprocessing_is_preemptible",
+    "type": "BOOLEAN"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "preprocessing_input_load_time_s",
+    "type": "FLOAT"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "preprocessing_time_s",
+    "type": "FLOAT"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "preprocessing_output_write_time_s",
+    "type": "FLOAT"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "prediction_instance_type",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "prediction_gpu_type",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "prediction_num_gpus",
+    "type": "INTEGER"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "prediction_success",
+    "type": "BOOLEAN"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "prediction_peak_memory_gb",
+    "type": "FLOAT"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "prediction_is_preemptible",
+    "type": "BOOLEAN"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "prediction_input_load_time_s",
+    "type": "FLOAT"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "prediction_time_s",
+    "type": "FLOAT"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "prediction_output_write_time_s",
+    "type": "FLOAT"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "prediction_model_load_time_s",
+    "type": "FLOAT"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "prediction_batch_size",
+    "type": "INTEGER"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "postprocessing_instance_type",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "postprocessing_gpu_type",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "postprocessing_num_gpus",
+    "type": "INTEGER"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "postprocessing_success",
+    "type": "BOOLEAN"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "postprocessing_peak_memory_gb",
+    "type": "FLOAT"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "postprocessing_is_preemptible",
+    "type": "BOOLEAN"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "postprocessing_input_load_time_s",
+    "type": "FLOAT"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "postprocessing_time_s",
+    "type": "FLOAT"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "postprocessing_output_write_time_s",
+    "type": "FLOAT"
+  }
+]
