@@ -12,6 +12,113 @@ Also note that DeepCell performs its own pre- and post-processing around the Ten
 
 ![tiling process](images/tiling-process.png)
 
+# Running segmentation
+
+## Configuration
+
+You'll need a JSON file available in a cloud bucket, configuring the application environment. Create a file something like this:
+
+```json
+{
+  "segment_container_image": "$REPOSITORY/benchmarking:batch",
+  "quantify_container_image": "$REPOSITORY/qupath-project-initializer:latest",
+  "bigquery_benchmarking_table": "$PROJECT.$DATASET.$TABLE",
+  "region": "$REGION"
+}
+```
+
+You'll need to replace the variables with your environment.
+
+- You can use the public Docker Hub containers, or copy them to your own artifact repository. 
+- For the benchmarking, you need to create a dataset & table in a GCP project; or you can omit it or set it to blank to skip collecting benchmarks.
+- Lastly, specify the GCP region where compute resources will be provisioned. This is not the same as storage buckets, but consider making it the same for efficiency & egress cost reduction.
+
+For example, using the Docker Hub containers & skipping benchmarking:
+
+```json
+{
+  "segment_container_image": "dchaley/deepcell-imaging:batch",
+  "quantify_container_image": "dchaley/qupath-project-initializer:latest",
+  "region": "us-central1"
+}
+```
+
+Upload this file somewhere to GCP storage. We put ours in the root of our working bucket. You'll pass this GS URI as a parameter to the scripts.
+
+## Run segmentation & measurement
+
+To run DeepCell on input images then compute QuPath measurements, use the helper `scripts/segment-and-measure.py`. There are two ways to run this script: (1) running on a QuPath workspace, and (2) running on explicit paths.
+
+1. QuPath workspace: 
+
+   1. Many QuPath projects are organized something like this:
+
+      ```
+      📁 Dataset
+      ↳ 📁 OMETIFF
+        ↳ 🖼️ SomeTissueSample.ome.tiff
+        ↳ 🖼️ AnotherTissueSample.ome.tiff
+      ↳ 📁 NPZ_INTERMEDIATE
+        ↳ 🔢 SomeTissueSample.npz
+        ↳ 🔢 AnotherTissueSample.npz
+      ↳ 📁 SEGMASK
+        ↳ 🔢 SomeTissueSample_WholeCellMask.tiff
+        ↳ 🔢 SomeTissueSample_NucleusMask.tiff
+        ↳ 🔢 AnotherTissueSample_WholeCellMask.tiff
+        ↳ 🔢 AnotherTissueSample_NucleusMask.tiff
+      ↳ 📁 REPORTS
+        ↳ 📄 SomeTissueSample_QUANT.tsv
+        ↳ 📄 AnotherTissueSample_QUANT.tsv
+      ↳ 📁 PROJ
+        ↳ 📁 data
+          ↳ ...
+        ↳ 📄 project.qpproj
+      ```
+
+      To generate segmentation masks & quantification reports, run the following command:
+
+      ```shell
+      scripts/segment-and-measure.py
+        --env_config_uri gs://bucket/path/to/env-config.json
+        workspace gs://bucket/path/to/dataset
+      ```
+
+      This will enumerate all files in the `OMETIFF` directory that have matching files in `NPZ_INTERMEDIATE`, and run DeepCell segmentation to generate the `SEGMASK` numpy files. Then it will run QuPath measurements to generate the `REPORTS` files.
+
+      If your folder structure is different (for example `OME-TIFF` instead of `OMETIFF`) you can use these parameters to specify the workspace subdirectories: `--images_subdir`, `--npz_subdir`, `--segmasks_subdir`, `--project_subdir`, `--reports_subdir`. Put these parameters *after* the `workspace` command.
+
+2. Explicit paths.
+
+   1. You can also specify all paths explicitly (the files don't have to be organized in a dataset). To do so, run this command:
+
+      ```shell
+      scripts/segment-and-measure.py
+        --env_config_uri gs://bucket/path/to/env-config.json
+        paths
+        --images_path gs://bucket/path/to/ometiffs
+        --numpy_path gs://bucket/path/to/npzs
+        --segmasks_path gs://bucket/path/to/segmasks
+        --project_path gs://bucket/path/to/project
+        --reports_path gs://bucket/path/to/reports
+      ```
+
+In either case, when you download the QuPath project, you'll need to download the OMETIFF files as well. When you open the project it will prompt you to select the base directory containing the OMETIFFs, and from there should automatically remap the image paths.
+
+#### Working on a subset of images
+
+You can use the parameter `--image_filter` to only operate on a subset of the OMETIFFs. For example,
+
+```shell
+scripts/segment-and-measure.py
+  --env_config_uri gs://.../config.json
+  --image_filter SomeTissue
+  workspace gs://path/to/workspace
+```
+
+This will operate on every file whose name begins with the string `SomeTissue`. This would match `SomeTissueSample`, `SomeTissueImage`, etc. Note that this parameter has to come before the `workspace` or `paths` parameter.
+
+# Benchmarking
+
 ## Goal and Key Links
 
 - **GOAL: Understand and optimize using DeepCell to perform cellular image segmentation on GCP at scale.**
