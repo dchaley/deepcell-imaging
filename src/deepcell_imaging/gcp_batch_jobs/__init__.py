@@ -9,6 +9,11 @@ import tempfile
 
 import smart_open
 
+from deepcell_imaging.gcp_batch_jobs.types import (
+    NetworkInterfaceConfig,
+    ServiceAccountConfig,
+)
+
 
 def get_batch_indexed_task(tasks_spec_uri, args_cls):
     with smart_open.open(tasks_spec_uri, "r") as tasks_spec_file:
@@ -98,6 +103,16 @@ def set_task_environment_variable(job: dict, key: str, value: str) -> None:
     env = job["taskGroups"][0]["taskSpec"].setdefault("environment", {})
     env_vars = env.setdefault("variables", {})
     env_vars[key] = value
+
+
+def add_networking_interface(job: dict, networking_interface: NetworkInterfaceConfig):
+    job["allocationPolicy"].setdefault("network", {})["networkInterfaces"] = [
+        networking_interface.model_dump()
+    ]
+
+
+def add_service_account(job: dict, service_account: ServiceAccountConfig):
+    job["allocationPolicy"]["serviceAccount"] = service_account.model_dump()
 
 
 def submit_job(job: dict, job_id: str, region: str) -> None:

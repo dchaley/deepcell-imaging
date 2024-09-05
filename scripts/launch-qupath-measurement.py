@@ -48,6 +48,8 @@ def main():
         region=region,
         container_image=container_image,
         args=args,
+        networking_interface=env_config.networking_interface,
+        service_account=env_config.service_account,
     )
 
     job_json_file = tempfile.NamedTemporaryFile()

@@ -6,8 +6,14 @@ from deepcell_imaging.gcp_batch_jobs import (
     add_attached_disk,
     add_task_volume,
     set_task_environment_variable,
+    add_networking_interface,
+    add_service_account,
 )
-from deepcell_imaging.gcp_batch_jobs.types import QuantifyArgs
+from deepcell_imaging.gcp_batch_jobs.types import (
+    QuantifyArgs,
+    ServiceAccountConfig,
+    NetworkInterfaceConfig,
+)
 
 # Note: Need to escape the curly braces in the JSON template
 BASE_QUANTIFY_JOB_TEMPLATE = """
@@ -84,6 +90,8 @@ def make_quantify_job(
     region: str,
     container_image: str,
     args: QuantifyArgs,
+    networking_interface: NetworkInterfaceConfig = None,
+    service_account: ServiceAccountConfig = None,
     config: dict = None,
 ) -> dict:
     json_str = BASE_QUANTIFY_JOB_TEMPLATE.format(
@@ -117,6 +125,12 @@ def make_quantify_job(
     add_attached_disk(job, volume_name, size_in_gb)
     add_task_volume(job, tmp_dir, volume_name)
     set_task_environment_variable(job, "TMPDIR", tmp_dir)
+
+    if networking_interface:
+        add_networking_interface(job, networking_interface)
+
+    if service_account:
+        add_service_account(job, service_account)
 
     if config:
         job.update(config)
