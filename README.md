@@ -23,7 +23,15 @@ You'll need a JSON file available in a cloud bucket, configuring the application
   "segment_container_image": "$REPOSITORY/benchmarking:batch",
   "quantify_container_image": "$REPOSITORY/qupath-project-initializer:latest",
   "bigquery_benchmarking_table": "$PROJECT.$DATASET.$TABLE",
-  "region": "$REGION"
+  "region": "$REGION",
+  "networking_interface": {
+    "network": "the_network",
+    "subnetwork": "the_subnetwork",
+    "no_external_ip_address": true
+  },
+  "service_account": {
+    "email": "the_service@account.com"
+  }
 }
 ```
 
@@ -32,8 +40,9 @@ You'll need to replace the variables with your environment.
 - You can use the public Docker Hub containers, or copy them to your own artifact repository. 
 - For the benchmarking, you need to create a dataset & table in a GCP project; or you can omit it or set it to blank to skip collecting benchmarks. The table must be created with the schema specified in [this file](benchmarking/bigquery_benchmarking_schema.json).
 - Lastly, specify the GCP region where compute resources will be provisioned. This is not the same as storage buckets, but consider making it the same for efficiency & egress cost reduction.
+- The `networking_interface` and `service_account` sections are optional if you want to use default settings.
 
-For example, using the Docker Hub containers & skipping benchmarking:
+For example, using the Docker Hub containers & skipping benchmarking & default networking + service account:
 
 ```json
 {

@@ -5,6 +5,37 @@ from pydantic import BaseModel, Field, ConfigDict
 DEFAULT_BATCH_SIZE = 16
 
 
+class NetworkInterfaceConfig(BaseModel):
+    network: str = Field(
+        default="",
+        title="Network",
+        description="The network to use for the job.",
+    )
+    subnetwork: str = Field(
+        default="",
+        title="Subnetwork",
+        description="The subnetwork to use for the job.",
+    )
+    no_external_ip_address: bool = Field(
+        default=False,
+        title="No External IP Address",
+        description="True if there is no external IP address on the VM.",
+    )
+
+
+class ServiceAccountConfig(BaseModel):
+    email: str = Field(
+        default="",
+        title="Service Account Email",
+        description="The email of the service account to use for the job.",
+    )
+    scopes: list[str] = Field(
+        default_factory=list,
+        title="Service Account Scopes",
+        description="The scopes to use for the service account.",
+    )
+
+
 class EnvironmentConfig(BaseModel):
     region: str = Field(
         title="Region",
@@ -22,6 +53,16 @@ class EnvironmentConfig(BaseModel):
         default="",
         title="BigQuery Benchmarking Table",
         description="The fully qualified name (project.dataset.table) of the BigQuery table to write benchmarking data to. Default/blank: don't save benchmarking.",
+    )
+    networking_interface: NetworkInterfaceConfig = Field(
+        default_factory=NetworkInterfaceConfig,
+        title="Networking Interface",
+        description="The networking interface configuration for the job.",
+    )
+    service_account: ServiceAccountConfig = Field(
+        default_factory=ServiceAccountConfig,
+        title="Service Account",
+        description="The service account configuration for the job.",
     )
 
 

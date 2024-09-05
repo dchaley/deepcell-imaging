@@ -115,6 +115,8 @@ def main():
         compartment="both",
         working_directory=working_directory,
         bigquery_benchmarking_table=env_config.bigquery_benchmarking_table,
+        networking_interface=env_config.networking_interface,
+        service_account=env_config.service_account,
     )
 
     # Note that we use the SEGMENT container here, not quantify,
