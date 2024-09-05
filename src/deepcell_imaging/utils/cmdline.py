@@ -62,7 +62,9 @@ def get_task_arguments(
         return args_cls(**kwargs), env_config
 
 
-def add_dataset_parameters(parser: argparse.ArgumentParser) -> None:
+def add_dataset_parameters(
+    parser: argparse.ArgumentParser, require_measurement_parameters: bool
+) -> None:
     subparsers = parser.add_subparsers(help="Mode of operation", dest="mode")
 
     workspace_parser = subparsers.add_parser("workspace")
@@ -120,12 +122,12 @@ def add_dataset_parameters(parser: argparse.ArgumentParser) -> None:
     paths_parser.add_argument(
         "--project_path",
         help="Path to the QuPath project",
-        required=True,
+        required=True if require_measurement_parameters else False,
     )
     paths_parser.add_argument(
         "--reports_path",
         help="Path to the QuPath reports",
-        required=True,
+        required=True if require_measurement_parameters else False,
     )
 
 

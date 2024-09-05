@@ -61,7 +61,7 @@ def main():
         required=True,
     )
 
-    add_dataset_parameters(parser)
+    add_dataset_parameters(parser, require_measurement_parameters=False)
 
     args = parser.parse_args()
 
