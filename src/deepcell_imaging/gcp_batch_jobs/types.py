@@ -74,6 +74,7 @@ class SegmentationTask(BaseModel):
     """
 
     input_channels_path: str
+    image_name: str
     wholecell_tiff_output_uri: str = ""
     nuclear_tiff_output_uri: str = ""
     input_image_rows: int
@@ -84,6 +85,10 @@ class PreprocessArgs(BaseModel):
     image_uri: str = Field(
         title="Image URI",
         description="URI to input image npz file, containing an array named 'input_channels' by default (see --image-array-name)",
+    )
+    image_name: str = Field(
+        title="Image Name",
+        description="Name of the input image.",
     )
     image_array_name: str = Field(
         default="input_channels",

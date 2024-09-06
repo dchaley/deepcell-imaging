@@ -95,6 +95,7 @@ def make_segment_preprocess_tasks(
         preprocess_tasks.append(
             PreprocessArgs(
                 image_uri=task.input_channels_path,
+                image_name=task.image_name,
                 output_uri=f"{task_directory}/preprocessed.npz.gz",
                 benchmark_output_uri=(
                     f"{task_directory}/preprocess_benchmark.json"
@@ -329,6 +330,7 @@ def make_segmentation_tasks(image_names, npz_root, npz_names, masks_output_root)
 
         yield SegmentationTask(
             input_channels_path=npz_path,
+            image_name=image_name,
             wholecell_tiff_output_uri=wholecell_tiff_output_uri,
             nuclear_tiff_output_uri=nuclear_tiff_output_uri,
             input_image_rows=input_image_shape[0],

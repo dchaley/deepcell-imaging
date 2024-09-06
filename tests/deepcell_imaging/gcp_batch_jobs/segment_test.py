@@ -22,6 +22,7 @@ def test_make_segmentation_tasks(_mock_npz_headers):
     assert list(tasks) == [
         SegmentationTask(
             input_channels_path="gs://a-dataset/NPZ_INTERMEDIATE/a-prefix.npz",
+            image_name="a-prefix",
             wholecell_tiff_output_uri="gs://a-dataset/SEGMASK/a-prefix_WholeCellMask.tiff",
             nuclear_tiff_output_uri="gs://a-dataset/SEGMASK/a-prefix_NuclearMask.tiff",
             input_image_rows=123,
@@ -29,6 +30,7 @@ def test_make_segmentation_tasks(_mock_npz_headers):
         ),
         SegmentationTask(
             input_channels_path="gs://a-dataset/NPZ_INTERMEDIATE/b-prefix.npz",
+            image_name="b-prefix",
             wholecell_tiff_output_uri="gs://a-dataset/SEGMASK/b-prefix_WholeCellMask.tiff",
             nuclear_tiff_output_uri="gs://a-dataset/SEGMASK/b-prefix_NuclearMask.tiff",
             input_image_rows=123,
@@ -46,6 +48,7 @@ def test_build_segment_job_tasks():
         tasks=[
             SegmentationTask(
                 input_channels_path="/channels/path",
+                image_name="an-image",
                 wholecell_tiff_output_uri="/tiff/wholecell/path",
                 nuclear_tiff_output_uri="/tiff/nuclear/path",
                 input_image_rows=123,
@@ -110,6 +113,10 @@ def test_build_segment_job_tasks():
                             },
                         },
                     ],
+                    "environment": {
+                        "variables": {"TMPDIR": ANY},
+                    },
+                    "volumes": ANY,
                 },
                 "taskCount": 1,
                 "taskCountPerNode": 1,
@@ -129,6 +136,7 @@ def test_build_segment_job_tasks():
                                 "count": 1,
                             },
                         ],
+                        "disks": ANY,
                     },
                 },
             ],
