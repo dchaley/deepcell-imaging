@@ -86,14 +86,11 @@ def main():
     if benchmark_output_uri:
         gpu_info = benchmark_utils.get_gpu_info()
 
-        parsed_url = urllib.parse.urlparse(image_uri)
-        filename = parsed_url.path.split("/")[-2]
-
         # BigQuery datetimes don't have a timezone.
         benchmark_time = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
         timing_info = {
-            "input_file_id": filename,
+            "input_file_id": args.image_name,
             "numpy_size_mb": round(input_channels.nbytes / 1e6, 2),
             "pixels_m": input_channels.shape[0] * input_channels.shape[1],
             "benchmark_datetime_utc": benchmark_time,

@@ -37,6 +37,10 @@ def test_make_quantify_job(_patched_open):
                             },
                         },
                     ],
+                    "environment": {
+                        "variables": {"TMPDIR": ANY},
+                    },
+                    "volumes": ANY,
                 },
                 "taskCount": 1,
                 "taskCountPerNode": 1,
@@ -49,6 +53,7 @@ def test_make_quantify_job(_patched_open):
                     "policy": {
                         "machineType": "n1-standard-8",
                         "provisioningModel": "SPOT",
+                        "disks": ANY,
                     },
                 },
             ],
