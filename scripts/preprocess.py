@@ -92,7 +92,7 @@ def main():
         timing_info = {
             "input_file_id": args.image_name,
             "numpy_size_mb": round(input_channels.nbytes / 1e6, 2),
-            "pixels_m": input_channels.shape[0] * input_channels.shape[1],
+            "pixels": input_channels.shape[0] * input_channels.shape[1],
             "benchmark_datetime_utc": benchmark_time,
             "preprocessing_instance_type": benchmark_utils.get_gce_instance_type(),
             "preprocessing_gpu_type": gpu_info[0],

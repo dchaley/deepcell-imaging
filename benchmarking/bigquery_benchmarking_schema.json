@@ -11,7 +11,7 @@
   },
   {
     "mode": "NULLABLE",
-    "name": "pixels_m",
+    "name": "pixels",
     "type": "INTEGER"
   },
   {
