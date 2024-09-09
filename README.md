@@ -1,16 +1,14 @@
-# Cloud DeepCell - Scaling Image Analysis
+# Cloud DeepCell – Scaling Image Analysis
 
-This working Repo contains our notes / utilities / info for our cloud [DeepCell](https://github.com/vanvalenlab/deepcell-tf) imaging project. 
+This repository contains our tools & research for running [DeepCell](https://github.com/vanvalenlab/deepcell-tf) segmentation and [QuPath](https://qupath.github.io/) measurements on Google Cloud Batch.
 
-Here is the high level workflow for using DeepCell:
+Our results show an overall improvement from ~13 hours to ~10 minutes for segmenting & measuring a cell. The starting point was running on a laptop or colo machine, and our work ran on GCP Batch with some cloud-focused enhancements.
 
-![high level workflow](images/deepcell-imaging-highlevel.png)<sub><a href="https://lucid.app/lucidchart/67c3f550-b2aa-4194-b527-56e3592829a3/edit?viewport_loc=-310%2C-595%2C3416%2C1848%2C0_0&invitationId=inv_447a9b8a-7711-43cf-a91f-e978075fc132">lucidchart source</a></sub>
+The workflow operates on one or more input images, converted from image to `numpy` pixel array. Then DeepCell preprocesses the data (denoising & normalization), runs the segmentation prediction, and postprocesses the predictions into a cell mask. Then, we load the image and mask into QuPath to compute quantitative metrics (size, channel intensity, etc.) for further analysis. For an example downstream usage, see [SpaFlow](https://github.com/dimi-lab/SpaFlow/) (cell clustering & quantification).
 
-Note that DeepCell itself does not process TIFF files. The TIFF channels must be extracted into Numpy arrays first.
+Here is the workflow diagram:
 
-Also note that DeepCell performs its own pre- and post-processing around the TensorFlow prediction. In particular, DeepCell divides the input into 512x512 tiles which it predicts in batches, then reconstructs the overall image.
-
-![tiling process](images/tiling-process.png)
+![High level workflow](images/deepcell-qupath-overall-process.png)<sub><a href="https://lucid.app/lucidchart/67c3f550-b2aa-4194-b527-56e3592829a3/edit?viewport_loc=-310%2C-595%2C3416%2C1848%2C0_0&invitationId=inv_447a9b8a-7711-43cf-a91f-e978075fc132">lucidchart source</a></sub>
 
 # Running segmentation
 
@@ -126,11 +124,45 @@ scripts/segment-and-measure.py
 
 This will operate on every file whose name begins with the string `SomeTissue`. This would match `SomeTissueSample`, `SomeTissueImage`, etc. Note that this parameter has to come before the `workspace` or `paths` parameter.
 
+# DeepCell deep dive
+
+## Input data
+
+DeepCell does not process TIFF files. The TIFF channels must be extracted into Numpy arrays first.
+
+## Tiled prediction
+
+DeepCell divides the preprocessed input into 512x512 tiles which it predicts in batches, then recombines into a single image for postprocessing.
+
+![tiling process](images/tiling-process.png)
+
+This makes the prediction very resource-efficient, note however that pre- and post-processing still operate on the entire image. This is particularly problematic for post-processing which is very resource-intensive.
+
+## Post-processing
+
+The prediction step outputs which pixels are most likely to be the center of their cell. The post-processing step runs image analysis algorithms to create the final cell masks. It operates a bit like a "flood fill" to expand the center out.
+
+This uses the h_maxima grayscale reconstruction algorithm, which is (counterintuitively) far slower than prediction itself for large images.
+
+# QuPath deep-dive
+
+Once we have cell predictions, we need to generate quantified metrics for the cells: location, size, channel intensities, and so on. This is crucial for downstream processing & analysis, including in a QuPath desktop environment. For example, a researcher might provide an analyzed & packaged QuPath project to a principal investigator for review.
+
+QuPath is distributed as JAR files. Bioinformaticians typically run Groovy scripts in the embedded QuPath environment, however we don't have a desktop or VM environment for that. Instead we compile Kotlin code with the JARs to run on Google Batch.
+
+The source code for quantifying the metrics plus building the container is located in a different repository: [qupath-project-initializer](https://github.com/dchaley/qupath-project-initializer).
+
+## Image pre-fetching
+
+QuPath measurements are computed a cell at a time. The algorithm re-fetches the image region containing the cell for each cell. This is prohibitively expensive for bulk measurement.
+
+Adding code to prefetch the image into memory, then retrieve subregions from memory, provided a dramatic ~99% speed-up.
+
 # Benchmarking
 
 ## Goal and Key Links
 
-- **GOAL: Understand and optimize using DeepCell to perform cellular image segmentation on GCP at scale.**
+- **GOAL: Understand and optimize DeepCell cellular segmentation on GCP at scale.**
   - KEY LINK #1: our [benchmarking process](benchmarking/deepcell-e2e).
   - KEY LINK #2: our support/testing [notebooks](notebooks).
   - KEY LINK #3: our [project board](https://github.com/users/dchaley/projects/1) & work areas for this project.
@@ -153,11 +185,11 @@ Here are some areas we've identified:
 
 - Preprocessing
   - DeepCell converts everything to 64bit float. That's memory intensive. Do we actually need to?
-- Prediction
-  - Benchmark results (GPU, batch size, resolution)
-  - Investigate [Google TensorFlow optimizations](https://cloud.google.com/vertex-ai/docs/predictions/optimized-tensorflow-runtime)
 - Postprocessing
   - h_maxima: need to ship a [~15x speedup optimization](https://github.com/dchaley/deepcell-imaging/tree/main/benchmarking/h_maxima)
+- Cost
+  - Run the prediction phase only with GPU infrastructure. Run everything else with CPU-only infrastructure.
+
 
 # Local development
 
@@ -192,5 +224,5 @@ pip install -r requirements.txt --no-deps
 pip install --editable . --no-deps
 ```
 
-I think but am not sure that the first `--no-deps` invocation is unnecessary as pip install installs dependencies.
+I think but am not sure that the first `--no-deps` invocation is unnecessary as `pip install` installs dependencies.
 
