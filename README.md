@@ -190,10 +190,21 @@ Here are some areas we've identified:
 - Cost
   - Run the prediction phase only with GPU infrastructure. Run everything else with CPU-only infrastructure.
 
+# Development
 
-# Local development
+## Source code checkout
 
-## Mac OS x86_64
+This repo uses [git-lfs](https://git-lfs.com/) (Git Large File System) to exclude large files (like sample numpy data) in the source history. This process is automatic & transparent, but requires `git-lfs` to be installed beforehand. Please see [these instructions](https://github.com/git-lfs/git-lfs?tab=readme-ov-file#installing).
+
+TLDR,
+
+- on Mac, `brew install git-lfs`.
+- on Linux, `sudo [apt-get | yum] install git-lfs`.
+- on Windows, `git-lfs` is included in the Git distribution.
+
+## Local development
+
+### Mac OS x86_64
 
 Nothing special. You just need Python 3.10 at the latest.
 
@@ -203,7 +214,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Mac OS arm64
+### Mac OS arm64
 
 Some incantations are needed to work on Apple silicon computers. You also need Python 3.9.
 
