@@ -18,7 +18,7 @@ You'll need a JSON file available in a cloud bucket, configuring the application
 
 ```json
 {
-  "segment_container_image": "$REPOSITORY/benchmarking:batch",
+  "segment_container_image": "$REPOSITORY/benchmarking:latest",
   "quantify_container_image": "$REPOSITORY/qupath-project-initializer:latest",
   "bigquery_benchmarking_table": "$PROJECT.$DATASET.$TABLE",
   "region": "$REGION",
@@ -44,7 +44,7 @@ For example, using the Docker Hub containers & skipping benchmarking & default n
 
 ```json
 {
-  "segment_container_image": "dchaley/deepcell-imaging:batch",
+  "segment_container_image": "dchaley/deepcell-imaging:latest",
   "quantify_container_image": "dchaley/qupath-project-initializer:latest",
   "region": "us-central1"
 }

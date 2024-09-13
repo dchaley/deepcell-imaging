@@ -6,14 +6,14 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
-      '-t', 'us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:batch',
-      '-t', 'dchaley/deepcell-imaging:batch',
+      '-t', 'us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:latest',
+      '-t', 'dchaley/deepcell-imaging:latest',
       '.',
     ]
   - name: 'gcr.io/cloud-builders/docker'
-    args: [ 'push', 'us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:batch' ]
+    args: [ 'push', 'us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:latest' ]
   - name: 'gcr.io/cloud-builders/docker'
-    args: [ 'push', 'dchaley/deepcell-imaging:batch' ]
+    args: [ 'push', 'dchaley/deepcell-imaging:latest' ]
 availableSecrets:
   secretManager:
     - versionName: projects/deepcell-on-batch/secrets/dockerhub-password/versions/1
