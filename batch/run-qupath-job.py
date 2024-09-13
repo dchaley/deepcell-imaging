@@ -19,7 +19,7 @@ from deepcell_imaging.utils.storage import get_blob_filenames
 
 initialize_gcp_logging()
 
-CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:batch"
+CONTAINER_IMAGE = "us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:latest"
 REGION = "us-central1"
 
 parser = argparse.ArgumentParser("deepcell-on-batch")
