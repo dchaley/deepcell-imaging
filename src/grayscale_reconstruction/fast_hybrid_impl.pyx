@@ -371,9 +371,10 @@ cdef inline uint8_t should_propagate(
     return 0
 
 
+# This function calls the specialized inner function based on the image dtype.
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def fast_hybrid_reconstruct(
+def fast_hybrid_impl(
     image,
     mask,
     footprint,
@@ -386,33 +387,34 @@ def fast_hybrid_reconstruct(
 
     # To support a new type, add it here and to the type alias.
     if image.dtype == np.uint8:
-        fast_hybrid_reconstruct_impl(<uint8_t> dummy_value, image, mask, footprint, method, offset)
+        fast_hybrid_impl_inner(<uint8_t> dummy_value, image, mask, footprint, method, offset)
     elif image.dtype == np.int8:
-        fast_hybrid_reconstruct_impl(<int8_t> dummy_value, image, mask, footprint, method, offset)
+        fast_hybrid_impl_inner(<int8_t> dummy_value, image, mask, footprint, method, offset)
     elif image.dtype == np.uint16:
-        fast_hybrid_reconstruct_impl(<uint16_t> dummy_value, image, mask, footprint, method, offset)
+        fast_hybrid_impl_inner(<uint16_t> dummy_value, image, mask, footprint, method, offset)
     elif image.dtype == np.int16:
-        fast_hybrid_reconstruct_impl(<int16_t> dummy_value, image, mask, footprint, method, offset)
+        fast_hybrid_impl_inner(<int16_t> dummy_value, image, mask, footprint, method, offset)
     elif image.dtype == np.uint32:
-        fast_hybrid_reconstruct_impl(<uint32_t> dummy_value, image, mask, footprint, method, offset)
+        fast_hybrid_impl_inner(<uint32_t> dummy_value, image, mask, footprint, method, offset)
     elif image.dtype == np.int32:
-        fast_hybrid_reconstruct_impl(<int32_t> dummy_value, image, mask, footprint, method, offset)
+        fast_hybrid_impl_inner(<int32_t> dummy_value, image, mask, footprint, method, offset)
     elif image.dtype == np.uint64:
-        fast_hybrid_reconstruct_impl(<uint64_t> dummy_value, image, mask, footprint, method, offset)
+        fast_hybrid_impl_inner(<uint64_t> dummy_value, image, mask, footprint, method, offset)
     elif image.dtype == np.int64:
-        fast_hybrid_reconstruct_impl(<int64_t> dummy_value, image, mask, footprint, method, offset)
+        fast_hybrid_impl_inner(<int64_t> dummy_value, image, mask, footprint, method, offset)
     elif image.dtype == np.float32:
-        fast_hybrid_reconstruct_impl(<float> dummy_value, image, mask, footprint, method, offset)
+        fast_hybrid_impl_inner(<float> dummy_value, image, mask, footprint, method, offset)
     elif image.dtype == np.float64:
-        fast_hybrid_reconstruct_impl(<double> dummy_value, image, mask, footprint, method, offset)
+        fast_hybrid_impl_inner(<double> dummy_value, image, mask, footprint, method, offset)
     else:
         raise ValueError("Unsupported image dtype: %s" % image.dtype)
 
     return image
 
+# This function takes typed buffers.
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef void fast_hybrid_reconstruct_impl(
+cdef void fast_hybrid_impl_inner(
     image_dtype _dummy_value,
     image_numpy,
     mask_numpy,

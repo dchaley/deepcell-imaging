@@ -8,11 +8,10 @@ import pytest
 from numpy.testing import assert_array_almost_equal
 
 from skimage._shared.utils import _supported_float_type
-import skimage.morphology.grayreconstruct
 
-# from skimage.morphology.grayreconstruct import reconstruction
-from benchmark_utils import opencv_reconstruct
-from fast_reconstruct_wrapper import cython_reconstruct_wrapper as reconstruction
+from grayscale_reconstruction.fast_hybrid import (
+    fast_hybrid_reconstruct as reconstruction,
+)
 
 xfail = pytest.mark.xfail
 

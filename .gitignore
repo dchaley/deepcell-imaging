@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 
 # C extensions
+src/grayscale_reconstruction/fast_hybrid_impl.c
 *.so
 
 # Distribution / packaging
