@@ -321,7 +321,7 @@ def make_segmentation_tasks(image_names, npz_root, npz_names, masks_output_root)
         wholecell_tiff_output_uri = (
             f"{masks_output_root}/{image_name}_WholeCellMask.tiff"
         )
-        nuclear_tiff_output_uri = f"{masks_output_root}/{image_name}_NuclearMask.tiff"
+        nuclear_tiff_output_uri = f"{masks_output_root}/{image_name}_NucleusMask.tiff"
 
         input_file_contents = list(npz_headers(npz_path))
         if len(input_file_contents) != 1:
