@@ -17,6 +17,15 @@ RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.
     /usr/bin/python3 -m pip install --no-cache-dir --upgrade pip && \
     gcloud config set storage/parallel_composite_upload_enabled True
 
+# Pull the requirements.txt file.
+# FIXME: we should be using our local copy of the requirements file & source.
+# The way it is now, we can only build from the main branch.
+# Changing this means rearranging how we build, so skipping for now.
+ADD https://raw.githubusercontent.com/dchaley/deepcell-imaging/refs/heads/main/requirements.txt requirements.txt
+
+# Install python requirements
+RUN pip install --user --upgrade -r requirements.txt
+
 # Add the repo sha to the container as the version.
 ADD https://api.github.com/repos/dchaley/deepcell-imaging/git/refs/heads/main version.json
 
@@ -25,9 +34,6 @@ RUN git clone https://github.com/dchaley/deepcell-imaging.git
 
 # Switch into the repo directory
 WORKDIR "/deepcell-imaging"
-
-# Install python requirements
-RUN pip install --user --upgrade -r requirements.txt
 
 # Install our own module
 RUN pip install .
