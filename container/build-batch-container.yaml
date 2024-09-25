@@ -4,8 +4,12 @@ steps:
     args: [ '-c', 'echo "$$PASSWORD" | docker login --username=$$USERNAME --password-stdin' ]
     secretEnv: [ 'USERNAME', 'PASSWORD' ]
   - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args: [ '-c', 'docker pull us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:latest || exit 0' ]
+  - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
+      '--cache-from', 'us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:latest',
       '-t', 'us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking:latest',
       '-t', 'dchaley/deepcell-imaging:latest',
       '.',
