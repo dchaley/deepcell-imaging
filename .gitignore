@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 
 # C extensions
+src/deepcell_imaging/image_processing/fast_hybrid_impl.c
 *.so
 
 # Distribution / packaging

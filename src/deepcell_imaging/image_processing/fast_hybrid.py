@@ -1,13 +1,13 @@
 import numpy as np
-from fasthybridreconstruct import (
-    fast_hybrid_reconstruct,
+from .fast_hybrid_impl import (
+    fast_hybrid_impl,
     METHOD_DILATION,
     METHOD_EROSION,
 )
 from skimage._shared.utils import _supported_float_type
 
 
-def cython_reconstruct_wrapper(
+def fast_hybrid_reconstruct(
     image, mask, method="dilation", footprint=None, offset=None, inplace=False
 ):
     if method == "dilation":
@@ -69,7 +69,7 @@ def cython_reconstruct_wrapper(
 
     offset = offset.astype(np.int64, copy=True)
 
-    fast_hybrid_reconstruct(
+    fast_hybrid_impl(
         image=image,
         mask=mask,
         footprint=footprint,
