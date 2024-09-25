@@ -1,3 +1,9 @@
+"""
+An implementation of grayscale reconstruction using the fast-hybrid algorithm.
+
+The actual implementation is written in Cython (see the .pyx file).
+"""
+
 import numpy as np
 from .fast_hybrid_impl import (
     fast_hybrid_impl,
