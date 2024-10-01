@@ -94,7 +94,7 @@ def main():
 
     bigquery_upload_time_s = timeit.default_timer() - t
 
-    logger.info("Send data to BigQuery in %s s" % bigquery_upload_time_s)
+    logger.info("Sent data to BigQuery in %s s" % bigquery_upload_time_s)
 
 
 if __name__ == "__main__":
