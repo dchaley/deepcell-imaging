@@ -14,15 +14,22 @@ from deepcell_toolbox.processing import histogram_normalization
 from deepcell_toolbox.processing import percentile_threshold
 from deepcell_toolbox.utils import (
     erode_edges,
-    fill_holes,
     resize,
     tile_image,
     untile_image,
 )
 import scipy.ndimage as nd
 from skimage.feature import peak_local_max
-from skimage.measure import label
-from skimage.morphology import disk, ball, square, cube, dilation, remove_small_objects
+from skimage.measure import label, euler_number
+from skimage.morphology import (
+    disk,
+    ball,
+    square,
+    cube,
+    dilation,
+    remove_small_objects,
+    remove_small_holes,
+)
 from skimage.segmentation import relabel_sequential, watershed
 
 from deepcell_imaging.image_processing.extrema import h_maxima
@@ -604,3 +611,41 @@ def deep_watershed(
     label_images = np.expand_dims(label_images, axis=-1)
 
     return label_images
+
+
+# Copied from deepcell-toolbox:
+# https://github.com/vanvalenlab/deepcell-toolbox/blob/e8c1277ee4243bc6a34916d554d0c2eab0cf7505/deepcell_toolbox/utils.py#L660
+# Then adapted
+def fill_holes(label_img, size=10, connectivity=1):
+    """Fills holes located completely within a given label with pixels of the same value
+
+    Args:
+        label_img (numpy.array): a 2D labeled image
+        size (int): maximum size for a hole to be filled in
+        connectivity (int): the connectivity used to define the hole
+
+    Returns:
+        numpy.array: a labeled image with no holes smaller than ``size``
+            contained within any label.
+    """
+    output_image = np.copy(label_img)
+    labeled_image = label_img.astype("int")
+
+    objects = nd.find_objects(labeled_image)
+    for idx, slice in enumerate(objects):
+        if slice is None:
+            continue
+
+        label = idx + 1
+
+        obj_image = labeled_image[slice] == label
+        eu_num = euler_number(obj_image, 2)  # 2 dimensions
+
+        if eu_num < 1:
+            patch = output_image[slice]
+            filled = remove_small_holes(
+                ar=(patch == label), area_threshold=size, connectivity=connectivity
+            )
+            output_image[slice] = np.where(filled, label, patch)
+
+    return output_image
