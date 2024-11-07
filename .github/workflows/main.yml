@@ -8,9 +8,7 @@ on:
     # branches: ["main"]
 
 env:
-  PROJECT_ID: deepcell-on-batch
-  REGION: us-central1
-  GAR_LOCATION: us-central1-docker.pkg.dev/deepcell-on-batch/deepcell-benchmarking-us-central1/benchmarking
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
 
 jobs:
   build-push-artifact:
@@ -31,5 +29,5 @@ jobs:
         run: "gcloud info"
 
       - name: Trigger cloud build
-        run: "gcloud builds submit --region=us-central1 --config=build-batch-container.yaml ."
+        run: "gcloud builds submit --region=${{ vars.GCP_REGION }} --config=build-batch-container.yaml --substitutions=--substitutions=_DOCKERHUB_REPOSITORY=${{ vars.DOCKERHUB_REPOSITORY }},_GCP_REPOSITORY=${{ vars.GCP_ARTIFACT_REPOSITORY }} ."
         working-directory: container
