@@ -1,0 +1,29 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args: [ '-c', 'echo "$$PASSWORD" | docker login --username=$$USERNAME --password-stdin' ]
+    secretEnv: [ 'USERNAME', 'PASSWORD' ]
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args: [ '-c', 'docker pull ${_GCP_CONTAINER}' ]
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args: [ '-c', 'docker image tag ${_GCP_CONTAINER} ${_DOCKERHUB_CONTAINER}' ]
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [ 'push', '${_DOCKERHUB_CONTAINER}' ]
+substitutions:
+  # Assumes these substitutions are available:
+  # - $_GCP_REPOSITORY
+  # - $_DOCKERHUB_REPOSITORY
+  _TAGGED_IMAGE: ${_IMAGE_NAME:-deepcell-segmentation}:${_IMAGE_TAG:-latest}
+  _GCP_CONTAINER_BASE: ${LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_GCP_REPOSITORY}
+  _GCP_CONTAINER: ${_GCP_CONTAINER_BASE}/${_TAGGED_IMAGE}
+  _DOCKERHUB_CONTAINER: ${_DOCKERHUB_REPOSITORY}/${_TAGGED_IMAGE}
+options:
+  dynamicSubstitutions: true
+availableSecrets:
+  secretManager:
+    - versionName: projects/$PROJECT_ID/secrets/${_DOCKERHUB_PASSWORD_SECRET_NAME}
+      env: 'PASSWORD'
+    - versionName: projects/$PROJECT_ID/secrets/${_DOCKERHUB_USERNAME_SECRET_NAME}
+      env: 'USERNAME'
