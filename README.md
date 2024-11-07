@@ -202,6 +202,15 @@ TLDR,
 - on Linux, `sudo [apt-get | yum] install git-lfs`.
 - on Windows, `git-lfs` is included in the Git distribution.
 
+## Github
+
+Set these repository variables:
+
+- `DOCKERHUB_REPOSITORY` eg `dchaley`
+- `GCP_ARTIFACT_REPOSITORY` eg `my-repository`
+- `GCP_PROJECT_ID` eg `my-gcp-project-4321`
+- `GCP_REGION` eg `us-central1`
+
 ## Local development
 
 ### Mac OS x86_64
