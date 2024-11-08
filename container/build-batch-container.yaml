@@ -5,15 +5,19 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
+      '--build-arg GITHUB_REPOSITORY=${_GITHUB_REPOSITORY}',
       '--cache-from', '${_GCP_CONTAINER}',
       '-t', '${_GCP_CONTAINER}',
       '.',
     ]
+    env:
+      - 'GCP_REPOSITORY=${_GCP_REPOSITORY}'
   - name: 'gcr.io/cloud-builders/docker'
     args: [ 'push', '${_GCP_CONTAINER}' ]
 substitutions:
   # Assumes these substitutions are available:
   # - $_GCP_REPOSITORY
+  # - $_GITHUB_REPOSITORY
   _TAGGED_IMAGE: ${_IMAGE_NAME:-deepcell-segmentation}:${_IMAGE_TAG:-latest}
   _GCP_CONTAINER_BASE: ${LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_GCP_REPOSITORY}
   _GCP_CONTAINER: ${_GCP_CONTAINER_BASE}/${_TAGGED_IMAGE}
