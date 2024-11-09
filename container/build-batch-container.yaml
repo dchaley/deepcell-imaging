@@ -18,7 +18,6 @@ steps:
 substitutions:
   # Assumes these substitutions are available:
   # - $_GCP_REPOSITORY
-  # - $_GITHUB_REPOSITORY
   _TAGGED_IMAGE: ${_IMAGE_NAME:-deepcell-segmentation}:${_IMAGE_TAG:-latest}
   _GCP_CONTAINER_BASE: ${LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_GCP_REPOSITORY}
   _GCP_CONTAINER: ${_GCP_CONTAINER_BASE}/${_TAGGED_IMAGE}
