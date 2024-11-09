@@ -1,6 +1,3 @@
-# syntax=docker/dockerfile-upstream:master
-# ^^ we need that for the variable substitution feature.
-
 # Base container image is the *rebuilt* tensorflow 2.8.4-gpu image.
 # See also: https://github.com/dchaley/tensorflow-2.8.4-redux
 ARG GCP_LOCATION=us-central1
@@ -40,10 +37,10 @@ RUN pip install --user --upgrade -r requirements.txt
 ADD https://api.github.com/repos/${GITHUB_REPOSITORY}/git/refs/heads/main version.json
 
 # Clone the deepcell-imaging repo
-RUN git clone https://github.com/${GITHUB_REPOSITORY}.git
+RUN git clone https://github.com/${GITHUB_REPOSITORY}.git /deepcell-imaging
 
 # Switch into the repo directory
-WORKDIR "${GITHUB_REPOSITORY#*/}"
+WORKDIR "/deepcell-imaging"
 
 # Install our own module
 RUN pip install .
