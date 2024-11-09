@@ -1,8 +1,13 @@
 # Base container image is the *rebuilt* tensorflow 2.8.4-gpu image.
 # See also: https://github.com/dchaley/tensorflow-2.8.4-redux
-ARG BASE_IMAGE=${LOCATION}-docker.pkg.dev/${PROJECT_ID}/${GCP_REPOSITORY}/base-tf-2.8.4-rebuilt-gpu:11.8.0-cudnn8-runtime-ubuntu22.04
-ARG GITHUB_REPOSITORY
+ARG GCP_LOCATION
+ARG GCP_PROJECT_ID
+ARG GCP_REPOSITORY
+ARG BASE_IMAGE=${GCP_LOCATION}-docker.pkg.dev/${GCP_PROJECT_ID}/${GCP_REPOSITORY}/base-tf-2.8.4-rebuilt-gpu:11.8.0-cudnn8-runtime-ubuntu22.04
 FROM ${BASE_IMAGE}
+
+# The github repository to build.
+ARG GITHUB_REPOSITORY
 
 # Refresh the key to nvidia's repositories.
 # https://forums.developer.nvidia.com/t/notice-cuda-linux-repository-key-rotation/212771
