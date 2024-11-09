@@ -5,7 +5,7 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
-      '--build-arg GITHUB_REPOSITORY=${_GITHUB_REPOSITORY}',
+      '--build-arg', 'GITHUB_REPOSITORY=${_GITHUB_REPOSITORY}',
       '--cache-from', '${_GCP_CONTAINER}',
       '-t', '${_GCP_CONTAINER}',
       '.',
