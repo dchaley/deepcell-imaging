@@ -1,8 +1,8 @@
 # Base container image is the *rebuilt* tensorflow 2.8.4-gpu image.
 # See also: https://github.com/dchaley/tensorflow-2.8.4-redux
-ARG GCP_LOCATION
-ARG GCP_PROJECT_ID
-ARG GCP_REPOSITORY
+ARG GCP_LOCATION=us-central1
+ARG GCP_PROJECT_ID=my-project
+ARG GCP_REPOSITORY=my-repository
 ARG BASE_IMAGE=${GCP_LOCATION}-docker.pkg.dev/${GCP_PROJECT_ID}/${GCP_REPOSITORY}/base-tf-2.8.4-rebuilt-gpu:11.8.0-cudnn8-runtime-ubuntu22.04
 FROM ${BASE_IMAGE}
 
@@ -40,7 +40,7 @@ ADD https://api.github.com/repos/${GITHUB_REPOSITORY}/git/refs/heads/main versio
 RUN git clone https://github.com/${GITHUB_REPOSITORY}.git
 
 # Switch into the repo directory
-WORKDIR "${GITHUB_REPOSITORY#/}"
+WORKDIR "${GITHUB_REPOSITORY#*/}"
 
 # Install our own module
 RUN pip install .
