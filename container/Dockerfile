@@ -1,3 +1,6 @@
+# syntax=docker/dockerfile-upstream:master
+# ^^ we need that for the variable substitution feature.
+
 # Base container image is the *rebuilt* tensorflow 2.8.4-gpu image.
 # See also: https://github.com/dchaley/tensorflow-2.8.4-redux
 ARG GCP_LOCATION=us-central1
