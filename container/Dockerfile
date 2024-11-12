@@ -6,9 +6,6 @@ ARG GCP_REPOSITORY=my-repository
 ARG BASE_IMAGE=${GCP_LOCATION}-docker.pkg.dev/${GCP_PROJECT_ID}/${GCP_REPOSITORY}/base-tf-2.8.4-rebuilt-gpu:11.8.0-cudnn8-runtime-ubuntu22.04
 FROM ${BASE_IMAGE}
 
-# The github repository to build.
-ARG GITHUB_REPOSITORY
-
 # Refresh the key to nvidia's repositories.
 # https://forums.developer.nvidia.com/t/notice-cuda-linux-repository-key-rotation/212771
 RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
@@ -28,19 +25,17 @@ RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.
 # FIXME: we should be using our local copy of the requirements file & source.
 # The way it is now, we can only build from the main branch.
 # Changing this means rearranging how we build, so skipping for now.
-ADD https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/refs/heads/main/requirements.txt requirements.txt
+ADD requirements.txt .
 
 # Install python requirements
-RUN pip install --user --upgrade -r requirements.txt
+RUN pip install --user --upgrade -r requirements.txt --no-warn-script-location
 
-# Add the repo sha to the container as the version.
-ADD https://api.github.com/repos/${GITHUB_REPOSITORY}/git/refs/heads/main version.json
-
-# Clone the deepcell-imaging repo
-RUN git clone https://github.com/${GITHUB_REPOSITORY}.git /deepcell-imaging
-
-# Switch into the repo directory
-WORKDIR "/deepcell-imaging"
+WORKDIR "/deepcell-segmentation"
+COPY src src
+COPY scripts scripts
+COPY pyproject.toml .
+COPY requirements.txt .
+COPY setup.py .
 
 # Install our own module
 RUN pip install .
