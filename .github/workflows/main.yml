@@ -30,10 +30,8 @@ jobs:
         run: "gcloud info"
 
       - name: Trigger cloud build
-        run: "gcloud builds submit --region=${{ vars.GCP_REGION }} --config=build-batch-container.yaml --substitutions=_GCP_REPOSITORY=${{ vars.GCP_ARTIFACT_REPOSITORY }} ."
-        working-directory: container
+        run: "gcloud builds submit --region=${{ vars.GCP_REGION }} --config=container/build-batch-container.yaml --substitutions=_GCP_REPOSITORY=${{ vars.GCP_ARTIFACT_REPOSITORY }} ."
 
       - name: Push to DockerHub
         if: ${{ vars.DOCKERHUB_REPOSITORY != '' }}
-        run: "gcloud builds submit --region=${{ vars.GCP_REGION }} --config=push-dockerhub-container.yaml --substitutions=_DOCKERHUB_REPOSITORY=${{ vars.DOCKERHUB_REPOSITORY }},_GCP_REPOSITORY=${{ vars.GCP_ARTIFACT_REPOSITORY }},_DOCKERHUB_USERNAME_SECRET_NAME=${{ vars.DOCKERHUB_USERNAME_SECRET_NAME }},_DOCKERHUB_PASSWORD_SECRET_NAME=${{ vars.DOCKERHUB_PASSWORD_SECRET_NAME }} ."
-        working-directory: container
+        run: "gcloud builds submit --region=${{ vars.GCP_REGION }} --config=container/push-dockerhub-container.yaml --substitutions=_DOCKERHUB_REPOSITORY=${{ vars.DOCKERHUB_REPOSITORY }},_GCP_REPOSITORY=${{ vars.GCP_ARTIFACT_REPOSITORY }},_DOCKERHUB_USERNAME_SECRET_NAME=${{ vars.DOCKERHUB_USERNAME_SECRET_NAME }},_DOCKERHUB_PASSWORD_SECRET_NAME=${{ vars.DOCKERHUB_PASSWORD_SECRET_NAME }} ."
