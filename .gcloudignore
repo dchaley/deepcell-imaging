@@ -1,0 +1,11 @@
+/batch
+/benchmarking
+/build
+/images
+/notebooks
+/tests
+/tmp
+/venv
+/sample-data
+/.git
+/.pytest_cache
