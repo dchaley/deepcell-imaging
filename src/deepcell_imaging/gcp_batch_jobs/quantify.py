@@ -28,7 +28,7 @@ BASE_QUANTIFY_JOB_TEMPLATE = """
                             "entrypoint": "java",
                             "commands": [
                                 "-jar",
-                                "/app/qupath-project-initializer-1.0-SNAPSHOT-all.jar",
+                                "/app/qupath-measurement-1.0-SNAPSHOT-all.jar",
                                 "--mode=explicit",
                                 "--images-path={images_path}",
                                 "--segmasks-path={segmasks_path}",
