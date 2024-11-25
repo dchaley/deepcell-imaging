@@ -78,7 +78,7 @@ def append_quantify_task(
             "imageUri": container_image,
             "entrypoint": "python",
             "commands": [
-                f"scripts/launch-qupath-measurement.py",
+                f"scripts/enqueue-qupath-measurement.py",
                 *[arg for pair in cmd_args for arg in pair],
             ],
         }

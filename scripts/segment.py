@@ -43,18 +43,6 @@ def main():
         default="",
     )
     parser.add_argument(
-        "--model_path",
-        help="Path to the model archive",
-        type=str,
-        default="gs://genomics-data-public-central1/cellular-segmentation/vanvalenlab/deep-cell/vanvalenlab-tf-model-multiplex-downloaded-20230706/MultiplexSegmentation-resaved-20240710.h5",
-    )
-    parser.add_argument(
-        "--model_hash",
-        help="Hash of the model archive",
-        type=str,
-        default="56b0f246081fe6b730ca74eab8a37d60",
-    )
-    parser.add_argument(
         "--env_config_uri",
         help="URI to a JSON file containing GCP configuration",
         type=str,
@@ -108,8 +96,8 @@ def main():
     job = build_segment_job_tasks(
         region=env_config.region,
         container_image=env_config.segment_container_image,
-        model_path=args.model_path,
-        model_hash=args.model_hash,
+        model_path=env_config.segment_model_path,
+        model_hash=env_config.segment_model_hash,
         tasks=image_segmentation_tasks,
         compartment="both",
         working_directory=working_directory,
