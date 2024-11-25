@@ -45,6 +45,14 @@ class EnvironmentConfig(BaseModel):
         title="Segment Container Image",
         description="The container image to use for the segmentation job.",
     )
+    segment_model_path: str = Field(
+        title="Segment Model Path",
+        description="The path to the segmentation model archive.",
+    )
+    segment_model_hash: str = Field(
+        title="Segment Model Hash",
+        description="The hash of the segmentation model archive.",
+    )
     quantify_container_image: str = Field(
         title="Quantify Container Image",
         description="The container image to use for the quantify job.",
