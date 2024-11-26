@@ -21,6 +21,7 @@ from deepcell_imaging.gcp_batch_jobs.types import (
     VisualizeArgs,
     SegmentationTask,
     NetworkInterfaceConfig,
+    ComputeConfig,
     ServiceAccountConfig,
 )
 from deepcell_imaging.utils.numpy import npz_headers
@@ -231,6 +232,7 @@ def build_segment_job_tasks(
     working_directory: str,
     bigquery_benchmarking_table: Optional[str] = None,
     networking_interface: NetworkInterfaceConfig = None,
+    compute_config: ComputeConfig = None,
     service_account: ServiceAccountConfig = None,
     config: dict = None,
 ) -> dict:
@@ -279,13 +281,18 @@ def build_segment_job_tasks(
         create_segmenting_runnable(container_image, "visualize", phase_task_defs),
     ]
 
+    if not compute_config:
+        compute_config = ComputeConfig(
+            machine_type="n1-standard-8",
+            provisioning_model="SPOT",
+            accelerator_count=1,
+            accelerator_type="nvidia-tesla-t4",
+        )
+
     apply_allocation_policy(
         job,
         region,
-        "n1-standard-8",
-        "SPOT",
-        gpu_type="nvidia-tesla-t4",
-        gpu_count=1,
+        compute_config,
     )
     apply_cloud_logs_policy(job)
 

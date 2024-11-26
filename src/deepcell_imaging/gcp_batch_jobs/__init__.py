@@ -12,6 +12,7 @@ import smart_open
 from deepcell_imaging.gcp_batch_jobs.types import (
     NetworkInterfaceConfig,
     ServiceAccountConfig,
+    ComputeConfig,
 )
 
 
@@ -28,35 +29,37 @@ def get_batch_indexed_task(tasks_spec_uri, args_cls):
 def apply_allocation_policy(
     job: dict,
     region: str,
-    machine_type: str,
-    provisioning_model: str,
-    gpu_type: str = None,
-    gpu_count: int = None,
+    compute_config: ComputeConfig,
 ) -> None:
     """
     Apply an allocation policy to the job definition: machine type, provisioning model, and GPU.
     """
-    if gpu_type and not gpu_count or gpu_count and not gpu_type:
+    if (compute_config.accelerator_type and not compute_config.accelerator_count) or (
+        compute_config.accelerator_count and not compute_config.accelerator_type
+    ):
         raise ValueError("GPU type and GPU count must be set together")
-    if provisioning_model not in ["SPOT", "STANDARD"]:
+    if compute_config.provisioning_model not in ["SPOT", "STANDARD"]:
         raise ValueError("Provisioning model must be either SPOT or STANDARD")
 
     job["allocationPolicy"] = {
         "instances": [
             {
                 "policy": {
-                    "machineType": machine_type,
-                    "provisioningModel": provisioning_model,
+                    "machineType": compute_config.machine_type,
+                    "provisioningModel": compute_config.provisioning_model,
                 },
             }
         ],
         "location": {"allowedLocations": [f"regions/{region}"]},
     }
 
-    if gpu_type:
+    if compute_config.accelerator_type:
         job["allocationPolicy"]["instances"][0]["installGpuDrivers"] = True
         job["allocationPolicy"]["instances"][0]["policy"]["accelerators"] = [
-            {"type": gpu_type, "count": gpu_count}
+            {
+                "type": compute_config.accelerator_type,
+                "count": compute_config.accelerator_count,
+            }
         ]
 
 

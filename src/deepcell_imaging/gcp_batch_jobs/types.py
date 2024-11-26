@@ -23,6 +23,29 @@ class NetworkInterfaceConfig(BaseModel):
     )
 
 
+class ComputeConfig(BaseModel):
+    machine_type: str = Field(
+        default="n1-standard-8",
+        title="Machine Type",
+        description="The machine type to use for the job.",
+    )
+    provisioning_model: str = Field(
+        default="SPOT",
+        title="Provisioning Model",
+        description="The provisioning model to use for the job.",
+    )
+    accelerator_count: int = Field(
+        default=0,
+        title="Accelerator Count",
+        description="The number of accelerators to use for the job.",
+    )
+    accelerator_type: str = Field(
+        default="",
+        title="Accelerator Type",
+        description="The type of accelerator to use for the job.",
+    )
+
+
 class ServiceAccountConfig(BaseModel):
     email: str = Field(
         default="",

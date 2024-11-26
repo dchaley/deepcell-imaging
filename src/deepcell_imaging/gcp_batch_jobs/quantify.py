@@ -13,6 +13,7 @@ from deepcell_imaging.gcp_batch_jobs.types import (
     QuantifyArgs,
     ServiceAccountConfig,
     NetworkInterfaceConfig,
+    ComputeConfig,
 )
 
 # Note: Need to escape the curly braces in the JSON template
@@ -91,6 +92,7 @@ def make_quantify_job(
     container_image: str,
     args: QuantifyArgs,
     networking_interface: NetworkInterfaceConfig = None,
+    compute_config: ComputeConfig = None,
     service_account: ServiceAccountConfig = None,
     config: dict = None,
 ) -> dict:
@@ -107,12 +109,13 @@ def make_quantify_job(
     print(json_str)
     job = json.loads(json_str)
 
-    apply_allocation_policy(
-        job,
-        region,
-        "n1-standard-8",
-        "SPOT",
-    )
+    if not compute_config:
+        compute_config = ComputeConfig(
+            machine_type="n1-standard-8",
+            provisioning_model="SPOT",
+        )
+
+    apply_allocation_policy(job, region, compute_config)
     apply_cloud_logs_policy(job)
 
     # We know this is (probably) way too much– but we don't have accurate
