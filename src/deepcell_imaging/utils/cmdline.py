@@ -4,7 +4,7 @@ from typing import TypeVar, Type
 
 import smart_open
 
-from deepcell_imaging.gcp_batch_jobs import get_batch_indexed_task
+from deepcell_imaging.gcp_batch_jobs import get_batch_indexed_task, ComputeConfig
 from deepcell_imaging.gcp_batch_jobs.types import EnvironmentConfig
 
 ArgType = TypeVar("ArgType")
@@ -154,3 +154,44 @@ def get_dataset_paths(args) -> dict:
         "project_root": project_root,
         "reports_root": reports_root,
     }
+
+
+# Parse strings in the format:
+# machine_type:provisioning_model+accelerator_type:accelerator_count
+# where each part is optional.
+#
+# Defaults:
+#   - machine_type: n1-standard-8
+#   - provisioning_model: SPOT
+#   - accelerator_type: nvidia-tesla-t4
+#   - accelerator_count: 1
+def parse_compute_config(compute_str: str) -> ComputeConfig:
+    compute_parts = compute_str.split("+")
+
+    if len(compute_parts) == 1:
+        compute_parts = [compute_parts[0], ""]
+
+    machine_parts = compute_parts[0].split(":")
+    if len(machine_parts) == 1:
+        machine_type = machine_parts[0]
+        provisioning_model = "SPOT"
+    elif len(machine_parts) == 2:
+        machine_type, provisioning_model = machine_parts
+    else:
+        raise ValueError(f"Invalid machine type/provisioning model: {machine_parts}")
+
+    accelerator_parts = compute_parts[1].split(":")
+    if len(accelerator_parts) == 1:
+        accelerator_type = accelerator_parts[0]
+        accelerator_count = 1
+    elif len(accelerator_parts) == 2:
+        accelerator_type, accelerator_count = accelerator_parts
+    else:
+        raise ValueError(f"Invalid accelerator type/count: {accelerator_parts}")
+
+    return ComputeConfig(
+        machine_type=machine_type or "n1-standard-8",
+        provisioning_model=provisioning_model or "SPOT",
+        accelerator_type=accelerator_type or "nvidia-tesla-t4",
+        accelerator_count=int(accelerator_count or 1),
+    )

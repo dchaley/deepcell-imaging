@@ -25,7 +25,11 @@ from deepcell_imaging.gcp_batch_jobs.segment import (
     upload_tasks,
 )
 from deepcell_imaging.gcp_batch_jobs.types import EnvironmentConfig
-from deepcell_imaging.utils.cmdline import add_dataset_parameters, get_dataset_paths
+from deepcell_imaging.utils.cmdline import (
+    add_dataset_parameters,
+    get_dataset_paths,
+    parse_compute_config,
+)
 from deepcell_imaging.utils.storage import get_blob_filenames
 
 
@@ -48,10 +52,17 @@ def main():
         type=str,
         required=True,
     )
+    parser.add_argument(
+        "--compute_config",
+        help="Compute config for segmentation",
+        type=str,
+        default="n1-standard-8:SPOT+nvidia-tesla-t4:1",
+    )
 
     add_dataset_parameters(parser, require_measurement_parameters=False)
 
     args = parser.parse_args()
+    compute_config = parse_compute_config(args.compute_config)
 
     dataset_paths = get_dataset_paths(args)
 
@@ -96,6 +107,7 @@ def main():
     job = build_segment_job_tasks(
         region=env_config.region,
         container_image=env_config.segment_container_image,
+        compute_config=compute_config,
         model_path=env_config.segment_model_path,
         model_hash=env_config.segment_model_hash,
         tasks=image_segmentation_tasks,

@@ -278,3 +278,7 @@ class EnqueueQuantifyArgs(BaseModel):
         title="Image Filter",
         description="Filter for which image names to process. Default/blank: no filter.",
     )
+    compute_config: str = Field(
+        title="Compute Config",
+        description="The compute config (machine type + accelerator) to use for the job.",
+    )

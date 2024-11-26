@@ -19,7 +19,7 @@ from deepcell_imaging.gcp_batch_jobs.quantify import (
     make_quantify_job,
 )
 from deepcell_imaging.gcp_batch_jobs.types import EnqueueQuantifyArgs
-from deepcell_imaging.utils.cmdline import get_task_arguments
+from deepcell_imaging.utils.cmdline import get_task_arguments, parse_compute_config
 
 
 def main():
@@ -52,6 +52,7 @@ def main():
         args=args,
         networking_interface=env_config.networking_interface,
         service_account=env_config.service_account,
+        compute_config=parse_compute_config(args.compute_config),
     )
 
     job_json_file = tempfile.NamedTemporaryFile()
