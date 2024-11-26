@@ -25,7 +25,7 @@ from deepcell_imaging.gcp_batch_jobs.segment import (
     build_segment_job_tasks,
     upload_tasks,
 )
-from deepcell_imaging.gcp_batch_jobs.types import QuantifyArgs, EnvironmentConfig
+from deepcell_imaging.gcp_batch_jobs.types import EnqueueQuantifyArgs, EnvironmentConfig
 from deepcell_imaging.utils.cmdline import add_dataset_parameters, get_dataset_paths
 from deepcell_imaging.utils.storage import get_blob_filenames
 
@@ -113,7 +113,7 @@ def main():
     append_quantify_enqueuer(
         job,
         env_config.segment_container_image,
-        QuantifyArgs(
+        EnqueueQuantifyArgs(
             images_path=dataset_paths["image_root"],
             segmasks_path=dataset_paths["masks_output_root"],
             project_path=dataset_paths["project_root"],

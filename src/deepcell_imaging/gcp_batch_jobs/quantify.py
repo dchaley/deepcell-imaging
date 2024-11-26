@@ -10,7 +10,7 @@ from deepcell_imaging.gcp_batch_jobs import (
     add_service_account,
 )
 from deepcell_imaging.gcp_batch_jobs.types import (
-    QuantifyArgs,
+    EnqueueQuantifyArgs,
     ServiceAccountConfig,
     NetworkInterfaceConfig,
     ComputeConfig,
@@ -65,7 +65,7 @@ BASE_QUANTIFY_JOB_TEMPLATE = """
 def append_quantify_enqueuer(
     job: dict,
     container_image: str,
-    args: QuantifyArgs,
+    args: EnqueueQuantifyArgs,
     env_config_uri: str = "",
 ):
     cmd_args = [
@@ -90,7 +90,7 @@ def append_quantify_enqueuer(
 def make_quantify_job(
     region: str,
     container_image: str,
-    args: QuantifyArgs,
+    args: EnqueueQuantifyArgs,
     networking_interface: NetworkInterfaceConfig = None,
     compute_config: ComputeConfig = None,
     service_account: ServiceAccountConfig = None,

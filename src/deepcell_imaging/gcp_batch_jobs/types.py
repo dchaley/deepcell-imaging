@@ -256,7 +256,7 @@ class GatherBenchmarkArgs(BaseModel):
     )
 
 
-class QuantifyArgs(BaseModel):
+class EnqueueQuantifyArgs(BaseModel):
     images_path: str = Field(
         title="Images Path",
         description="Path to the directory containing the images for QuPath.",

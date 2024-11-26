@@ -18,7 +18,7 @@ import logging
 from deepcell_imaging.gcp_batch_jobs.quantify import (
     make_quantify_job,
 )
-from deepcell_imaging.gcp_batch_jobs.types import QuantifyArgs
+from deepcell_imaging.gcp_batch_jobs.types import EnqueueQuantifyArgs
 from deepcell_imaging.utils.cmdline import get_task_arguments
 
 
@@ -36,7 +36,9 @@ def main():
         logger.info(f"Skipping task {task_index}; we only run the first task.")
         return
 
-    args, env_config = get_task_arguments("launch_qupath_measurement", QuantifyArgs)
+    args, env_config = get_task_arguments(
+        "launch_qupath_measurement", EnqueueQuantifyArgs
+    )
 
     if not env_config:
         raise ValueError("Environment configuration is required")
