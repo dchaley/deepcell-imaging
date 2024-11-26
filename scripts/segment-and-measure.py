@@ -19,7 +19,7 @@ from google.cloud import storage
 
 import deepcell_imaging.gcp_logging
 from deepcell_imaging.gcp_batch_jobs import submit_job
-from deepcell_imaging.gcp_batch_jobs.quantify import append_quantify_task
+from deepcell_imaging.gcp_batch_jobs.quantify import append_quantify_enqueuer
 from deepcell_imaging.gcp_batch_jobs.segment import (
     make_segmentation_tasks,
     build_segment_job_tasks,
@@ -104,12 +104,13 @@ def main():
         working_directory=working_directory,
         bigquery_benchmarking_table=env_config.bigquery_benchmarking_table,
         networking_interface=env_config.networking_interface,
+        compute_config=segment_compute_config,
         service_account=env_config.service_account,
     )
 
     # Note that we use the SEGMENT container here, not quantify,
     # because we launch the quantify job FROM the segment job.
-    append_quantify_task(
+    append_quantify_enqueuer(
         job,
         env_config.segment_container_image,
         QuantifyArgs(

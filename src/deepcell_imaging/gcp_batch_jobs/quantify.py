@@ -62,7 +62,7 @@ BASE_QUANTIFY_JOB_TEMPLATE = """
 """
 
 
-def append_quantify_task(
+def append_quantify_enqueuer(
     job: dict,
     container_image: str,
     args: QuantifyArgs,
