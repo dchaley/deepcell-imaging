@@ -19,14 +19,18 @@ from google.cloud import storage
 
 import deepcell_imaging.gcp_logging
 from deepcell_imaging.gcp_batch_jobs import submit_job
-from deepcell_imaging.gcp_batch_jobs.quantify import append_quantify_task
+from deepcell_imaging.gcp_batch_jobs.quantify import append_quantify_enqueuer
 from deepcell_imaging.gcp_batch_jobs.segment import (
     make_segmentation_tasks,
     build_segment_job_tasks,
     upload_tasks,
 )
-from deepcell_imaging.gcp_batch_jobs.types import QuantifyArgs, EnvironmentConfig
-from deepcell_imaging.utils.cmdline import add_dataset_parameters, get_dataset_paths
+from deepcell_imaging.gcp_batch_jobs.types import EnqueueQuantifyArgs, EnvironmentConfig
+from deepcell_imaging.utils.cmdline import (
+    add_dataset_parameters,
+    get_dataset_paths,
+    parse_compute_config,
+)
 from deepcell_imaging.utils.storage import get_blob_filenames
 
 
@@ -49,12 +53,27 @@ def main():
         type=str,
         required=True,
     )
+    parser.add_argument(
+        "--segmentation_compute_config",
+        help="Compute config for segmentation",
+        type=str,
+        default="n1-standard-8:SPOT+nvidia-tesla-t4:1",
+    )
+    parser.add_argument(
+        "--measurement_compute_config",
+        help="Compute config for measurement",
+        type=str,
+        default="n1-standard-8:SPOT",
+    )
 
     add_dataset_parameters(parser, require_measurement_parameters=True)
 
     args = parser.parse_args()
 
     dataset_paths = get_dataset_paths(args)
+    segment_compute_config = parse_compute_config(args.segmentation_compute_config)
+    # Validate the measurement config; we pass the string as-is to the enqueuer task
+    parse_compute_config(args.measurement_compute_config)
 
     with smart_open.open(args.env_config_uri, "r") as env_config_file:
         env_config_json = json.load(env_config_file)
@@ -104,20 +123,22 @@ def main():
         working_directory=working_directory,
         bigquery_benchmarking_table=env_config.bigquery_benchmarking_table,
         networking_interface=env_config.networking_interface,
+        compute_config=segment_compute_config,
         service_account=env_config.service_account,
     )
 
     # Note that we use the SEGMENT container here, not quantify,
     # because we launch the quantify job FROM the segment job.
-    append_quantify_task(
+    append_quantify_enqueuer(
         job,
         env_config.segment_container_image,
-        QuantifyArgs(
+        EnqueueQuantifyArgs(
             images_path=dataset_paths["image_root"],
             segmasks_path=dataset_paths["masks_output_root"],
             project_path=dataset_paths["project_root"],
             reports_path=dataset_paths["reports_root"],
             image_filter=args.image_filter,
+            compute_config=args.measurement_compute_config,
         ),
         env_config_uri=args.env_config_uri,
     )

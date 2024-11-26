@@ -23,6 +23,29 @@ class NetworkInterfaceConfig(BaseModel):
     )
 
 
+class ComputeConfig(BaseModel):
+    machine_type: str = Field(
+        default="n1-standard-8",
+        title="Machine Type",
+        description="The machine type to use for the job.",
+    )
+    provisioning_model: str = Field(
+        default="SPOT",
+        title="Provisioning Model",
+        description="The provisioning model to use for the job.",
+    )
+    accelerator_count: int = Field(
+        default=0,
+        title="Accelerator Count",
+        description="The number of accelerators to use for the job.",
+    )
+    accelerator_type: str = Field(
+        default="",
+        title="Accelerator Type",
+        description="The type of accelerator to use for the job.",
+    )
+
+
 class ServiceAccountConfig(BaseModel):
     email: str = Field(
         default="",
@@ -233,7 +256,7 @@ class GatherBenchmarkArgs(BaseModel):
     )
 
 
-class QuantifyArgs(BaseModel):
+class EnqueueQuantifyArgs(BaseModel):
     images_path: str = Field(
         title="Images Path",
         description="Path to the directory containing the images for QuPath.",
@@ -254,4 +277,8 @@ class QuantifyArgs(BaseModel):
         default="",
         title="Image Filter",
         description="Filter for which image names to process. Default/blank: no filter.",
+    )
+    compute_config: str = Field(
+        title="Compute Config",
+        description="The compute config (machine type + accelerator) to use for the job.",
     )

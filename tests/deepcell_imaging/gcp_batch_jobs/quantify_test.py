@@ -1,7 +1,7 @@
 from unittest.mock import ANY, patch
 
 from deepcell_imaging.gcp_batch_jobs.quantify import make_quantify_job
-from deepcell_imaging.gcp_batch_jobs.types import QuantifyArgs
+from deepcell_imaging.gcp_batch_jobs.types import EnqueueQuantifyArgs
 
 
 @patch("smart_open.open")
@@ -9,7 +9,7 @@ def test_make_quantify_job(_patched_open):
     job = make_quantify_job(
         region="a-region",
         container_image="an-image",
-        args=QuantifyArgs(
+        args=EnqueueQuantifyArgs(
             images_path="/images/path",
             segmasks_path="/segmasks/path",
             project_path="/project/path",
