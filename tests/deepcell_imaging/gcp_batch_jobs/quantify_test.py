@@ -15,6 +15,7 @@ def test_make_quantify_job(_patched_open):
             project_path="/project/path",
             reports_path="/reports/path",
             image_filter="a-filter",
+            compute_config="my-machine",
         ),
     )
 
@@ -51,7 +52,7 @@ def test_make_quantify_job(_patched_open):
             "instances": [
                 {
                     "policy": {
-                        "machineType": "n1-standard-8",
+                        "machineType": "my-machine",
                         "provisioningModel": "SPOT",
                         "disks": ANY,
                     },
