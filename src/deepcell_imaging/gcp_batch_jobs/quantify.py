@@ -15,6 +15,7 @@ from deepcell_imaging.gcp_batch_jobs.types import (
     NetworkInterfaceConfig,
     ComputeConfig,
 )
+from deepcell_imaging.utils.cmdline import parse_compute_config
 
 # Note: Need to escape the curly braces in the JSON template
 BASE_QUANTIFY_JOB_TEMPLATE = """
@@ -92,7 +93,6 @@ def make_quantify_job(
     container_image: str,
     args: EnqueueQuantifyArgs,
     networking_interface: NetworkInterfaceConfig = None,
-    compute_config: ComputeConfig = None,
     service_account: ServiceAccountConfig = None,
     config: dict = None,
 ) -> dict:
@@ -109,6 +109,7 @@ def make_quantify_job(
     print(json_str)
     job = json.loads(json_str)
 
+    compute_config = parse_compute_config(args.compute_config)
     if not compute_config:
         compute_config = ComputeConfig(
             machine_type="n1-standard-8",

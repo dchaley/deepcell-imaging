@@ -52,7 +52,6 @@ def main():
         args=args,
         networking_interface=env_config.networking_interface,
         service_account=env_config.service_account,
-        compute_config=parse_compute_config(args.compute_config),
     )
 
     job_json_file = tempfile.NamedTemporaryFile()

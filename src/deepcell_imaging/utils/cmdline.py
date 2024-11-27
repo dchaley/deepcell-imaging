@@ -183,15 +183,22 @@ def parse_compute_config(compute_str: str) -> ComputeConfig:
     accelerator_parts = compute_parts[1].split(":")
     if len(accelerator_parts) == 1:
         accelerator_type = accelerator_parts[0]
-        accelerator_count = 1
+        if accelerator_type:
+            accelerator_count = 1
+        else:
+            accelerator_count = 0
     elif len(accelerator_parts) == 2:
-        accelerator_type, accelerator_count = accelerator_parts
+        accelerator_type = accelerator_parts[0]
+        accelerator_count = int(accelerator_parts[1] or 0)
+
+        if accelerator_count > 0 and not accelerator_type:
+            raise ValueError(f"Accelerator count specified without accelerator type")
     else:
         raise ValueError(f"Invalid accelerator type/count: {accelerator_parts}")
 
     return ComputeConfig(
-        machine_type=machine_type or "n1-standard-8",
+        machine_type=machine_type or "n1-standard-4",
         provisioning_model=provisioning_model or "SPOT",
-        accelerator_type=accelerator_type or "nvidia-tesla-t4",
-        accelerator_count=int(accelerator_count or 1),
+        accelerator_type=accelerator_type or "",
+        accelerator_count=int(accelerator_count or 0),
     )

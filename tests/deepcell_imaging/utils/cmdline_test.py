@@ -1,3 +1,4 @@
+import pytest
 import sys
 from unittest.mock import ANY, patch
 
@@ -74,37 +75,35 @@ def test_parse_compute_config():
     assert compute_config.accelerator_count == 321
 
     compute_config = parse_compute_config("")
-    assert compute_config.machine_type == "n1-standard-8"
+    assert compute_config.machine_type == "n1-standard-4"
     assert compute_config.provisioning_model == "SPOT"
-    assert compute_config.accelerator_type == "nvidia-tesla-t4"
-    assert compute_config.accelerator_count == 1
+    assert compute_config.accelerator_type == ""
+    assert compute_config.accelerator_count == 0
 
     compute_config = parse_compute_config("a-b-c")
     assert compute_config.machine_type == "a-b-c"
     assert compute_config.provisioning_model == "SPOT"
-    assert compute_config.accelerator_type == "nvidia-tesla-t4"
-    assert compute_config.accelerator_count == 1
+    assert compute_config.accelerator_type == ""
+    assert compute_config.accelerator_count == 0
 
     compute_config = parse_compute_config(":SPOT")
-    assert compute_config.machine_type == "n1-standard-8"
+    assert compute_config.machine_type == "n1-standard-4"
     assert compute_config.provisioning_model == "SPOT"
-    assert compute_config.accelerator_type == "nvidia-tesla-t4"
-    assert compute_config.accelerator_count == 1
+    assert compute_config.accelerator_type == ""
+    assert compute_config.accelerator_count == 0
 
-    compute_config = parse_compute_config(":SPOT+:7")
-    assert compute_config.machine_type == "n1-standard-8"
-    assert compute_config.provisioning_model == "SPOT"
-    assert compute_config.accelerator_type == "nvidia-tesla-t4"
-    assert compute_config.accelerator_count == 7
+    with pytest.raises(ValueError):
+        # Should fail, gpu count w/o gpu
+        parse_compute_config("machine:SPOT+:3")
 
     compute_config = parse_compute_config("+gpu:3")
-    assert compute_config.machine_type == "n1-standard-8"
+    assert compute_config.machine_type == "n1-standard-4"
     assert compute_config.provisioning_model == "SPOT"
     assert compute_config.accelerator_type == "gpu"
     assert compute_config.accelerator_count == 3
 
     compute_config = parse_compute_config("+gpu")
-    assert compute_config.machine_type == "n1-standard-8"
+    assert compute_config.machine_type == "n1-standard-4"
     assert compute_config.provisioning_model == "SPOT"
     assert compute_config.accelerator_type == "gpu"
     assert compute_config.accelerator_count == 1
