@@ -29,7 +29,7 @@ from skimage.morphology._util import (
 from skimage.util import crop, regular_seeds
 
 
-def _validate_inputs(image, markers, mask, connectivity):
+def _validate_inputs(image, markers, mask, connectivity, in_place=False):
     """Ensure that all inputs to watershed have matching shapes and types.
 
     Parameters
@@ -78,14 +78,31 @@ def _validate_inputs(image, markers, mask, connectivity):
         markers = regular_seeds(image.shape, int(markers / (n_pixels / image.size)))
         markers *= mask
     else:
-        markers = np.asanyarray(markers) * mask
+        if in_place:
+            markers = np.asanyarray(markers)
+            markers *= mask
+        else:
+            markers = np.asanyarray(markers) * mask
+
         if markers.shape != image.shape:
             message = (
                 f"`markers` (shape {markers.shape}) must have same "
                 f"shape as `image` (shape {image.shape})"
             )
             raise ValueError(message)
-    return (image.astype(np.float64), markers, mask.astype(np.int8))
+
+    if image.dtype == np.float32:
+        return (
+            image.astype(np.float32, copy=not in_place),
+            markers,
+            mask.astype(np.int8, copy=not in_place),
+        )
+    else:
+        return (
+            image.astype(np.float64, copy=not in_place),
+            markers,
+            mask.astype(np.int8, copy=not in_place),
+        )
 
 
 def watershed(
@@ -96,6 +113,7 @@ def watershed(
     mask=None,
     compactness=0,
     watershed_line=False,
+    in_place=False,
 ):
     """Find watershed basins in an image flooded from given markers.
 
@@ -215,7 +233,9 @@ def watershed(
     The algorithm works also for 3D images, and can be used for example to
     separate overlapping spheres.
     """
-    image, markers, mask = _validate_inputs(image, markers, mask, connectivity)
+    image, markers, mask = _validate_inputs(
+        image, markers, mask, connectivity, in_place
+    )
     connectivity, offset = _validate_connectivity(image.ndim, connectivity, offset)
 
     # pad the image, markers, and mask so that we can use the mask to
