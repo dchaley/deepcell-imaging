@@ -20,10 +20,13 @@ be split between markers on opposite sides.
 import numpy as np
 from scipy import ndimage as ndi
 
-from . import _watershed_cy
-from ..morphology.extrema import local_minima
-from ..morphology._util import _validate_connectivity, _offsets_to_raveled_neighbors
-from ..util import crop, regular_seeds
+from .watershed_cy import watershed_raveled_wrapper
+from skimage.morphology.extrema import local_minima
+from skimage.morphology._util import (
+    _validate_connectivity,
+    _offsets_to_raveled_neighbors,
+)
+from skimage.util import crop, regular_seeds
 
 
 def _validate_inputs(image, markers, mask, connectivity):
@@ -228,7 +231,7 @@ def watershed(
     marker_locations = np.flatnonzero(output)
     image_strides = np.array(image.strides, dtype=np.intp) // image.itemsize
 
-    _watershed_cy.watershed_raveled(
+    watershed_raveled_wrapper(
         image.ravel(),
         marker_locations,
         flat_neighborhood,
