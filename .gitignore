@@ -9,7 +9,11 @@ __pycache__/
 
 # C extensions
 src/deepcell_imaging/image_processing/fast_hybrid_impl.c
+src/deepcell_imaging/image_processing/watershed_cy.c
 *.so
+
+# Memory profiling
+/mprofile_*.dat
 
 # Distribution / packaging
 .Python

@@ -30,9 +30,10 @@ from skimage.morphology import (
     remove_small_objects,
     remove_small_holes,
 )
-from skimage.segmentation import relabel_sequential, watershed
+from skimage.segmentation import relabel_sequential
 
 from deepcell_imaging.image_processing.extrema import h_maxima
+from deepcell_imaging.image_processing.watershed import watershed
 
 MODEL_REMOTE_PATH = "gs://davids-genomics-data-public/cellular-segmentation/deep-cell/vanvalenlab-tf-model-multiplex-downloaded-20230706/MultiplexSegmentation.tar.gz"
 
@@ -586,7 +587,11 @@ def deep_watershed(
 
         markers = label(markers)
         label_image = watershed(
-            -1 * interior, markers, mask=interior > interior_threshold, watershed_line=0
+            -1 * interior,
+            markers,
+            mask=interior > interior_threshold,
+            watershed_line=0,
+            in_place=True,
         )
 
         if label_erosion:
