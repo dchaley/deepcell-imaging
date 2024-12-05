@@ -114,6 +114,8 @@ def main():
         compartment="both",
         working_directory=working_directory,
         bigquery_benchmarking_table=env_config.bigquery_benchmarking_table,
+        service_account=env_config.service_account,
+        networking_interface=env_config.networking_interface,
     )
 
     logger.info("Uploading task files")
