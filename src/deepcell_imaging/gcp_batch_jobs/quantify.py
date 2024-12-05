@@ -17,6 +17,8 @@ from deepcell_imaging.gcp_batch_jobs.types import (
 )
 from deepcell_imaging.utils.cmdline import parse_compute_config
 
+DEFAULT_TMP_DIR = "/mnt/disks/qupath-workspace"
+
 # Note: Need to escape the curly braces in the JSON template
 BASE_QUANTIFY_JOB_TEMPLATE = """
 {{
@@ -29,6 +31,7 @@ BASE_QUANTIFY_JOB_TEMPLATE = """
                             "imageUri": "{container_image}",
                             "entrypoint": "java",
                             "commands": [
+                                "-Djava.io.tmpdir={tmp_dir}",
                                 "-jar",
                                 "/app/qupath-measurement-1.0-SNAPSHOT-all.jar",
                                 "--mode=explicit",
@@ -96,6 +99,8 @@ def make_quantify_job(
     service_account: ServiceAccountConfig = None,
     config: dict = None,
 ) -> dict:
+    tmp_dir = DEFAULT_TMP_DIR
+
     json_str = BASE_QUANTIFY_JOB_TEMPLATE.format(
         container_image=container_image,
         region=region,
@@ -104,6 +109,7 @@ def make_quantify_job(
         project_path=args.project_path,
         reports_path=args.reports_path,
         image_filter=args.image_filter,
+        tmp_dir=tmp_dir,
     )
 
     print(json_str)
@@ -125,7 +131,6 @@ def make_quantify_job(
     size_in_gb = 500
 
     volume_name = "qupath-workspace"
-    tmp_dir = "/mnt/disks/qupath-workspace"
     add_attached_disk(job, volume_name, size_in_gb)
     add_task_volume(job, tmp_dir, volume_name)
     set_task_environment_variable(job, "TMPDIR", tmp_dir)

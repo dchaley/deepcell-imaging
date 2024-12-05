@@ -1,6 +1,6 @@
 from unittest.mock import ANY, patch
 
-from deepcell_imaging.gcp_batch_jobs.quantify import make_quantify_job
+from deepcell_imaging.gcp_batch_jobs.quantify import make_quantify_job, DEFAULT_TMP_DIR
 from deepcell_imaging.gcp_batch_jobs.types import EnqueueQuantifyArgs
 
 
@@ -24,7 +24,23 @@ def test_make_quantify_job(_patched_open):
             {
                 "taskSpec": {
                     "runnables": [
-                        ANY,
+                        {
+                            "container": {
+                                "imageUri": "an-image",
+                                "entrypoint": "java",
+                                "commands": [
+                                    f"-Djava.io.tmpdir={DEFAULT_TMP_DIR}",
+                                    "-jar",
+                                    "/app/qupath-measurement-1.0-SNAPSHOT-all.jar",
+                                    "--mode=explicit",
+                                    "--images-path=/images/path",
+                                    "--segmasks-path=/segmasks/path",
+                                    "--project-path=/project/path",
+                                    "--reports-path=/reports/path",
+                                    "--image-filter=a-filter",
+                                ],
+                            },
+                        },
                     ],
                     "computeResource": {
                         "memoryMib": ANY,
@@ -39,9 +55,14 @@ def test_make_quantify_job(_patched_open):
                         },
                     ],
                     "environment": {
-                        "variables": {"TMPDIR": ANY},
+                        "variables": {"TMPDIR": DEFAULT_TMP_DIR},
                     },
-                    "volumes": ANY,
+                    "volumes": [
+                        {
+                            "deviceName": "qupath-workspace",
+                            "mountPath": DEFAULT_TMP_DIR,
+                        }
+                    ],
                 },
                 "taskCount": 1,
                 "taskCountPerNode": 1,
@@ -54,7 +75,12 @@ def test_make_quantify_job(_patched_open):
                     "policy": {
                         "machineType": "my-machine",
                         "provisioningModel": "SPOT",
-                        "disks": ANY,
+                        "disks": [
+                            {
+                                "deviceName": "qupath-workspace",
+                                "newDisk": ANY,
+                            }
+                        ],
                     },
                 },
             ],
