@@ -1,4 +1,4 @@
-deepcell==0.12.9
+deepcell==0.12.10
 google-cloud-bigquery
 google-cloud-notebooks
 gs-fastcopy
@@ -8,6 +8,7 @@ numpy
 protobuf==3.20.3
 pydantic
 pytest
+rasterio
 requests
 smart_open[gcs]
 snakeviz

@@ -212,6 +212,17 @@ class PostprocessArgs(BaseModel):
     )
 
 
+class PredictionsToGeoJsonArgs(BaseModel):
+    predictions_uri: str = Field(
+        title="Predictions URI",
+        description="URI to post-processed predictions of shape (height, width, 1)",
+    )
+    output_uri: str = Field(
+        title="Output URI",
+        description="URI to write json file containing GeoJSON shapes for detected objects.",
+    )
+
+
 class VisualizeArgs(BaseModel):
     image_uri: str = Field(
         title="Image URI",
