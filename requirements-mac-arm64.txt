@@ -10,7 +10,7 @@ smart_open[gcs]
 
 # DeepCell requirements
 deepcell-toolbox>=0.12.1
-deepcell-tracking~=0.6.1
+deepcell-tracking~=0.6.5
 scipy>=1.2.3,<2
 scikit-image>=0.19.3
 # scikit-learn>=0.20.4
