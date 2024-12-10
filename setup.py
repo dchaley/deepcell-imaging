@@ -29,7 +29,13 @@ def run_setup():
     setuptools.setup(
         name=PACKAGE_NAME,
         ext_modules=ext_modules,
-        packages=[PACKAGE_NAME, f"{PACKAGE_NAME}.image_processing"],
+        # FIXME: use package discovery here
+        packages=[
+            PACKAGE_NAME,
+            f"{PACKAGE_NAME}.gcp_batch_jobs",
+            f"{PACKAGE_NAME}.image_processing",
+            f"{PACKAGE_NAME}.utils",
+        ],
         package_dir={PACKAGE_NAME: PACKAGE_SRC},
     )
 
