@@ -30,7 +30,6 @@ def main():
     )
 
     predictions_uri = args.predictions_uri
-    output_uri = args.output_uri
 
     logger.info("Loading predictions")
 
@@ -38,14 +37,10 @@ def main():
 
     with gs_fastcopy.read(predictions_uri) as predictions_file:
         with np.load(predictions_file) as loader:
-            # An array of shape [height, width, 1] containing intensity of nuclear & membrane channels
-            predictions = np.squeeze(loader["image"])
+            # An array of shape [height, width, 1-2] containing intensity of nuclear & membrane channels
+            predictions = loader["image"]
 
     logger.info("Loaded predictions in %s s" % round(timeit.default_timer() - t, 2))
-
-    logger.info("Getting prediction shapes")
-
-    t = timeit.default_timer()
 
     max_int32 = 2**31 - 1
     if predictions.max() > max_int32:
@@ -54,27 +49,44 @@ def main():
             % (max_int32, predictions.max())
         )
 
-    mask = predictions != 0
-    shapes = list(
-        features.shapes(
-            predictions.astype(np.int32, copy=True),
-            mask=mask,
-            connectivity=8,
-        )
-    )
+    predictions = predictions.astype(np.int32, copy=True)
 
-    logger.info("Got prediction shapes in %s s" % round(timeit.default_timer() - t, 2))
+    logger.info("Writing whole cell predictions")
+    write_shapes(np.squeeze(predictions[..., 0]), args.whole_cell_output_uri)
 
-    logger.info("Writing GeoJSON shapes to %s" % output_uri)
+    logger.info("Writing nucleus predictions")
+    write_shapes(np.squeeze(predictions[..., 1]), args.nucleus_output_uri)
 
+
+def write_shapes(predictions, output_uri):
+    logger = logging.getLogger(__name__)
+
+    logger.info("Detecting predicted shapes")
     t = timeit.default_timer()
 
-    geojson_shapes = [x[0] for x in shapes]
+    # Don't put a shape around the background.
+    mask = predictions != 0
+
+    # Extract the polygon from the result pair.
+    shapes = list(x[0] for x in features.shapes(predictions, mask, connectivity=8))
+
+    # Release references to free memory if needed
+    predictions = mask = None
+
+    logger.info(
+        "Detected %s shapes in %s s",
+        len(shapes),
+        round(timeit.default_timer() - t, 2),
+    )
+
+    logger.info("Writing shapes to %s" % output_uri)
+    t = timeit.default_timer()
+
     with gs_fastcopy.write(output_uri) as output_writer:
-        output_writer.write(json.dumps(geojson_shapes).encode())
+        output_writer.write(json.dumps(shapes).encode())
 
     output_json_time_s = timeit.default_timer() - t
-    logger.info("Wrote GeoJSON shapes in %s s" % round(output_json_time_s, 2))
+    logger.info("Wrote %s shapes in %s s", len(shapes), round(output_json_time_s, 2))
 
 
 if __name__ == "__main__":
