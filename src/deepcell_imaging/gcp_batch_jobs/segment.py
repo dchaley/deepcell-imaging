@@ -69,7 +69,7 @@ def create_segmenting_runnable(
         "preprocess",
         "predict",
         "postprocess",
-        "geojson",
+        "predictions-to-geojson",
         "gather-benchmark",
         "visualize",
     ]:
@@ -285,7 +285,7 @@ def build_segment_job_tasks(
         "preprocess": (preprocess_tasks, preprocess_tasks_spec_uri),
         "predict": (predict_tasks, predict_tasks_spec_uri),
         "postprocess": (postprocess_tasks, postprocess_tasks_spec_uri),
-        "geojson": (geojson_tasks, geojson_tasks_spec_uri),
+        "predictions-to-geojson": (geojson_tasks, geojson_tasks_spec_uri),
         "gather-benchmark": (gather_benchmark_tasks, gather_benchmark_tasks_spec_uri),
         "visualize": (visualize_tasks, visualize_tasks_spec_uri),
     }
@@ -298,7 +298,9 @@ def build_segment_job_tasks(
         create_segmenting_runnable(container_image, "preprocess", phase_task_defs),
         create_segmenting_runnable(container_image, "predict", phase_task_defs),
         create_segmenting_runnable(container_image, "postprocess", phase_task_defs),
-        create_segmenting_runnable(container_image, "geojson", phase_task_defs),
+        create_segmenting_runnable(
+            container_image, "predictions-to-geojson", phase_task_defs
+        ),
         create_segmenting_runnable(
             container_image, "gather-benchmark", phase_task_defs
         ),
