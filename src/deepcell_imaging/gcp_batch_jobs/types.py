@@ -108,6 +108,8 @@ class SegmentationTask(BaseModel):
     image_name: str
     wholecell_tiff_output_uri: str = ""
     nuclear_tiff_output_uri: str = ""
+    wholecell_geojson_output_uri: str = ""
+    nuclear_geojson_output_uri: str = ""
     input_image_rows: int
     input_image_cols: int
 

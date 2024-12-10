@@ -23,6 +23,7 @@ from deepcell_imaging.gcp_batch_jobs.types import (
     NetworkInterfaceConfig,
     ComputeConfig,
     ServiceAccountConfig,
+    PredictionsToGeoJsonArgs,
 )
 from deepcell_imaging.utils.numpy import npz_headers
 from deepcell_imaging.utils.storage import find_matching_npz
@@ -68,6 +69,7 @@ def create_segmenting_runnable(
         "preprocess",
         "predict",
         "postprocess",
+        "geojson",
         "gather-benchmark",
         "visualize",
     ]:
@@ -165,6 +167,24 @@ def make_segment_postprocess_tasks(
     return postprocess_tasks
 
 
+def make_segment_geojson_tasks(
+    tasks: list[SegmentationTask],
+    working_directory: str,
+):
+    geojson_tasks = []
+    for index, task in enumerate(tasks):
+        task_directory = f"{working_directory}/task_{index}"
+        geojson_tasks.append(
+            PredictionsToGeoJsonArgs(
+                predictions_uri=f"{task_directory}/predictions.npz.gz",
+                whole_cell_output_uri=f"{task.wholecell_geojson_output_uri}",
+                nucleus_output_uri=f"{task.nuclear_geojson_output_uri}",
+            )
+        )
+
+    return geojson_tasks
+
+
 def make_segment_benchmark_tasks(
     tasks: list[SegmentationTask],
     working_directory: str,
@@ -246,6 +266,7 @@ def build_segment_job_tasks(
     postprocess_tasks = make_segment_postprocess_tasks(
         tasks, working_directory, compartment, bigquery_benchmarking_table
     )
+    geojson_tasks = make_segment_geojson_tasks(tasks, working_directory)
     gather_benchmark_tasks = make_segment_benchmark_tasks(
         tasks, working_directory, bigquery_benchmarking_table
     )
@@ -256,6 +277,7 @@ def build_segment_job_tasks(
     preprocess_tasks_spec_uri = f"{working_directory}/preprocess_tasks.json"
     predict_tasks_spec_uri = f"{working_directory}/predict_tasks.json"
     postprocess_tasks_spec_uri = f"{working_directory}/postprocess_tasks.json"
+    geojson_tasks_spec_uri = f"{working_directory}/geojson_tasks.json"
     gather_benchmark_tasks_spec_uri = f"{working_directory}/gather_benchmark_tasks.json"
     visualize_tasks_spec_uri = f"{working_directory}/visualize_tasks.json"
 
@@ -263,6 +285,7 @@ def build_segment_job_tasks(
         "preprocess": (preprocess_tasks, preprocess_tasks_spec_uri),
         "predict": (predict_tasks, predict_tasks_spec_uri),
         "postprocess": (postprocess_tasks, postprocess_tasks_spec_uri),
+        "geojson": (geojson_tasks, geojson_tasks_spec_uri),
         "gather-benchmark": (gather_benchmark_tasks, gather_benchmark_tasks_spec_uri),
         "visualize": (visualize_tasks, visualize_tasks_spec_uri),
     }
@@ -275,6 +298,7 @@ def build_segment_job_tasks(
         create_segmenting_runnable(container_image, "preprocess", phase_task_defs),
         create_segmenting_runnable(container_image, "predict", phase_task_defs),
         create_segmenting_runnable(container_image, "postprocess", phase_task_defs),
+        create_segmenting_runnable(container_image, "geojson", phase_task_defs),
         create_segmenting_runnable(
             container_image, "gather-benchmark", phase_task_defs
         ),
@@ -328,7 +352,13 @@ def make_segmentation_tasks(image_names, npz_root, npz_names, masks_output_root)
         wholecell_tiff_output_uri = (
             f"{masks_output_root}/{image_name}_WholeCellMask.tiff"
         )
+        wholecell_geojson_output_uri = (
+            f"{masks_output_root}/{image_name}_WholeCellShapes.json"
+        )
         nuclear_tiff_output_uri = f"{masks_output_root}/{image_name}_NucleusMask.tiff"
+        nuclear_geojson_output_uri = (
+            f"{masks_output_root}/{image_name}_NucleusShapes.json"
+        )
 
         input_file_contents = list(npz_headers(npz_path))
         if len(input_file_contents) != 1:
@@ -340,6 +370,8 @@ def make_segmentation_tasks(image_names, npz_root, npz_names, masks_output_root)
             image_name=image_name,
             wholecell_tiff_output_uri=wholecell_tiff_output_uri,
             nuclear_tiff_output_uri=nuclear_tiff_output_uri,
+            wholecell_geojson_output_uri=wholecell_geojson_output_uri,
+            nuclear_geojson_output_uri=nuclear_geojson_output_uri,
             input_image_rows=input_image_shape[0],
             input_image_cols=input_image_shape[1],
         )
