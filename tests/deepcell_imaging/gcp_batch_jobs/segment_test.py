@@ -25,6 +25,8 @@ def test_make_segmentation_tasks(_mock_npz_headers):
             image_name="a-prefix",
             wholecell_tiff_output_uri="gs://a-dataset/SEGMASK/a-prefix_WholeCellMask.tiff",
             nuclear_tiff_output_uri="gs://a-dataset/SEGMASK/a-prefix_NucleusMask.tiff",
+            wholecell_geojson_output_uri="gs://a-dataset/SEGMASK/a-prefix_WholeCellShapes.jsonl",
+            nuclear_geojson_output_uri="gs://a-dataset/SEGMASK/a-prefix_NucleusShapes.jsonl",
             input_image_rows=123,
             input_image_cols=456,
         ),
@@ -33,6 +35,8 @@ def test_make_segmentation_tasks(_mock_npz_headers):
             image_name="b-prefix",
             wholecell_tiff_output_uri="gs://a-dataset/SEGMASK/b-prefix_WholeCellMask.tiff",
             nuclear_tiff_output_uri="gs://a-dataset/SEGMASK/b-prefix_NucleusMask.tiff",
+            wholecell_geojson_output_uri="gs://a-dataset/SEGMASK/b-prefix_WholeCellShapes.jsonl",
+            nuclear_geojson_output_uri="gs://a-dataset/SEGMASK/b-prefix_NucleusShapes.jsonl",
             input_image_rows=123,
             input_image_cols=456,
         ),
@@ -40,12 +44,12 @@ def test_make_segmentation_tasks(_mock_npz_headers):
 
 
 def test_build_segment_job_tasks():
-    job = build_segment_job_tasks(
-        region="a-region",
-        container_image="an-image",
-        model_path="a-model",
-        model_hash="a-hash",
-        tasks=[
+    args = {
+        "region": "a-region",
+        "container_image": "an-image",
+        "model_path": "a-model",
+        "model_hash": "a-hash",
+        "tasks": [
             SegmentationTask(
                 input_channels_path="/channels/path",
                 image_name="an-image",
@@ -55,12 +59,14 @@ def test_build_segment_job_tasks():
                 input_image_cols=456,
             )
         ],
-        compartment="a-compartment",
-        working_directory="a-directory",
-        bigquery_benchmarking_table="a-table",
-    )
+        "compartment": "a-compartment",
+        "working_directory": "a-directory",
+        "bigquery_benchmarking_table": "a-table",
+        "visualize": False,
+    }
+    job = build_segment_job_tasks(**args)
 
-    assert job["job_definition"] == {
+    expected_result = {
         "taskGroups": [
             {
                 "taskSpec": {
@@ -90,14 +96,17 @@ def test_build_segment_job_tasks():
                             "container": {
                                 "imageUri": "an-image",
                                 "entrypoint": "python",
-                                "commands": ["scripts/gather-benchmark.py", ANY],
+                                "commands": [
+                                    "scripts/predictions-to-geojson.py",
+                                    ANY,
+                                ],
                             }
                         },
                         {
                             "container": {
                                 "imageUri": "an-image",
                                 "entrypoint": "python",
-                                "commands": ["scripts/visualize.py", ANY],
+                                "commands": ["scripts/gather-benchmark.py", ANY],
                             }
                         },
                     ],
@@ -145,4 +154,16 @@ def test_build_segment_job_tasks():
             },
         },
         "logsPolicy": {"destination": "CLOUD_LOGGING"},
+    }
+
+    assert job["job_definition"] == expected_result
+
+    args["visualize"] = True
+    job = build_segment_job_tasks(**args)
+    assert job["job_definition"]["taskGroups"][-1]["taskSpec"]["runnables"][-1][
+        "container"
+    ] == {
+        "imageUri": "an-image",
+        "entrypoint": "python",
+        "commands": ["scripts/visualize.py", ANY],
     }
