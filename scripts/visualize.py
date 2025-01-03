@@ -14,11 +14,11 @@ import gs_fastcopy
 import numpy as np
 import smart_open
 from PIL import Image
-from deepcell.utils.plot_utils import create_rgb_image, make_outline_overlay
 
 import deepcell_imaging
 from deepcell_imaging import gcp_logging
 from deepcell_imaging.gcp_batch_jobs.types import VisualizeArgs
+from deepcell_imaging.patched_plot_utils import create_rgb_image, make_outline_overlay
 from deepcell_imaging.utils.cmdline import get_task_arguments
 
 
