@@ -11,7 +11,7 @@ FROM ${BASE_IMAGE}
 # Lastly, install and/or update pip.
 RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
     curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg && \
-    apt-get update -y && \
+    apt-get update -y && apt-get dist-upgrade -y \
     apt-get install -y --no-install-recommends git google-cloud-sdk google-cloud-cli pigz python3.10 python3-pip python3-dev python3.10-distutils && \
     rm -rf /var/lib/apt/lists/* && \
     python3.10 -m pip install --no-cache-dir --upgrade pip && \
