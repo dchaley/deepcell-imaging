@@ -83,7 +83,9 @@ def write_shapes(predictions, output_uri):
     t = timeit.default_timer()
 
     with gs_fastcopy.write(output_uri) as output_writer:
-        output_writer.write(json.dumps(shapes).encode())
+        for shape in shapes:
+            output_writer.write(json.dumps(shape).encode())
+            output_writer.write(b"\n")
 
     output_json_time_s = timeit.default_timer() - t
     logger.info("Wrote %s shapes in %s s", len(shapes), round(output_json_time_s, 2))

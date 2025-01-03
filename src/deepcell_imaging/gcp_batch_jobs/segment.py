@@ -355,11 +355,11 @@ def make_segmentation_tasks(image_names, npz_root, npz_names, masks_output_root)
             f"{masks_output_root}/{image_name}_WholeCellMask.tiff"
         )
         wholecell_geojson_output_uri = (
-            f"{masks_output_root}/{image_name}_WholeCellShapes.json"
+            f"{masks_output_root}/{image_name}_WholeCellShapes.jsonl"
         )
         nuclear_tiff_output_uri = f"{masks_output_root}/{image_name}_NucleusMask.tiff"
         nuclear_geojson_output_uri = (
-            f"{masks_output_root}/{image_name}_NucleusShapes.json"
+            f"{masks_output_root}/{image_name}_NucleusShapes.jsonl"
         )
 
         input_file_contents = list(npz_headers(npz_path))
