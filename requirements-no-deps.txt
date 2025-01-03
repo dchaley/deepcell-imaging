@@ -1,0 +1,7 @@
+# DeepCell requirements– we don't want their deps
+# (in particular the old tensorflow 2.8 they depend on)
+deepcell==0.12.10
+deepcell-toolbox>=0.12.1
+deepcell-tracking~=0.6.5
+jupyterlab
+matplotlib
