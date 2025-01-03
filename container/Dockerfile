@@ -26,8 +26,12 @@ RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.
 # The way it is now, we can only build from the main branch.
 # Changing this means rearranging how we build, so skipping for now.
 ADD requirements.txt .
+ADD requirements-no-deps.txt .
 
 # Install python requirements
+# This one is for packages we need, but which specify outdated dependencies.
+RUN pip install --user --upgrade --no-deps -r requirements-no-deps.txt --no-warn-script-location
+# This one we install as usual.
 RUN pip install --user --upgrade -r requirements.txt --no-warn-script-location
 
 WORKDIR "/deepcell-segmentation"

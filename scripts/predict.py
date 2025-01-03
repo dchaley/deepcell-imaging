@@ -22,7 +22,8 @@ import gs_fastcopy
 import numpy as np
 import smart_open
 import tensorflow as tf
-from deepcell.layers.location import Location2D
+
+from deepcell_imaging.patched_location import Location2D
 
 import deepcell_imaging
 from deepcell_imaging import (
