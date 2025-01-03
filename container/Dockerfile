@@ -3,12 +3,8 @@
 ARG GCP_LOCATION=us-central1
 ARG GCP_PROJECT_ID=my-project
 ARG GCP_REPOSITORY=my-repository
-ARG BASE_IMAGE=${GCP_LOCATION}-docker.pkg.dev/${GCP_PROJECT_ID}/${GCP_REPOSITORY}/base-tf-2.8.4-rebuilt-gpu:11.8.0-cudnn8-runtime-ubuntu22.04
+ARG BASE_IMAGE=${GCP_LOCATION}-docker.pkg.dev/${GCP_PROJECT_ID}/${GCP_REPOSITORY}/tensorflow:2.17.0-gpu
 FROM ${BASE_IMAGE}
-
-# Refresh the key to nvidia's repositories.
-# https://forums.developer.nvidia.com/t/notice-cuda-linux-repository-key-rotation/212771
-RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
 
 # Update installed packages & install graphviz & git
 # Clear out the aptitude cache as well.
@@ -16,9 +12,9 @@ RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/
 RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
     curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg && \
     apt-get update -y && \
-    apt-get install -y --no-install-recommends git google-cloud-sdk google-cloud-cli pigz && \
+    apt-get install -y --no-install-recommends git google-cloud-sdk google-cloud-cli pigz python3.10 python3-pip python3-dev python3.10-distutils && \
     rm -rf /var/lib/apt/lists/* && \
-    /usr/bin/python3 -m pip install --no-cache-dir --upgrade pip && \
+    python3.10 -m pip install --no-cache-dir --upgrade pip && \
     gcloud config set storage/parallel_composite_upload_enabled True
 
 # Pull the requirements.txt file.
@@ -30,9 +26,9 @@ ADD requirements-no-deps.txt .
 
 # Install python requirements
 # This one is for packages we need, but which specify outdated dependencies.
-RUN pip install --user --upgrade --no-deps -r requirements-no-deps.txt --no-warn-script-location
+RUN python3.10 -m pip install --user --upgrade --no-deps -r requirements-no-deps.txt --no-warn-script-location
 # This one we install as usual.
-RUN pip install --user --upgrade -r requirements.txt --no-warn-script-location
+RUN python3.10 -m pip install --user --upgrade -r requirements.txt --no-warn-script-location
 
 WORKDIR "/deepcell-segmentation"
 COPY src src
