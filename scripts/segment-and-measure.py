@@ -65,6 +65,11 @@ def main():
         type=str,
         default="n1-standard-8:SPOT",
     )
+    parser.add_argument(
+        "--visualize",
+        help="Visualize input & segmentation results",
+        action="store_true",
+    )
 
     add_dataset_parameters(parser, require_measurement_parameters=True)
 
@@ -125,6 +130,7 @@ def main():
         networking_interface=env_config.networking_interface,
         compute_config=segment_compute_config,
         service_account=env_config.service_account,
+        visualize=args.visualize,
     )
 
     # Note that we use the SEGMENT container here, not quantify,

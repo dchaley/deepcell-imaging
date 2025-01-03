@@ -58,6 +58,11 @@ def main():
         type=str,
         default="n1-standard-8:SPOT+nvidia-tesla-t4:1",
     )
+    parser.add_argument(
+        "--visualize",
+        help="Visualize the segmentation output",
+        action="store_true",
+    )
 
     add_dataset_parameters(parser, require_measurement_parameters=False)
 
@@ -116,6 +121,7 @@ def main():
         bigquery_benchmarking_table=env_config.bigquery_benchmarking_table,
         service_account=env_config.service_account,
         networking_interface=env_config.networking_interface,
+        visualize=args.visualize,
     )
 
     logger.info("Uploading task files")

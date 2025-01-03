@@ -250,6 +250,7 @@ def build_segment_job_tasks(
     tasks: list[SegmentationTask],
     compartment: str,
     working_directory: str,
+    visualize: bool = False,
     bigquery_benchmarking_table: Optional[str] = None,
     networking_interface: NetworkInterfaceConfig = None,
     compute_config: ComputeConfig = None,
@@ -270,16 +271,12 @@ def build_segment_job_tasks(
     gather_benchmark_tasks = make_segment_benchmark_tasks(
         tasks, working_directory, bigquery_benchmarking_table
     )
-    visualize_tasks = make_segment_visualize_tasks(
-        tasks, working_directory, "input_channels"
-    )
 
     preprocess_tasks_spec_uri = f"{working_directory}/preprocess_tasks.json"
     predict_tasks_spec_uri = f"{working_directory}/predict_tasks.json"
     postprocess_tasks_spec_uri = f"{working_directory}/postprocess_tasks.json"
     geojson_tasks_spec_uri = f"{working_directory}/geojson_tasks.json"
     gather_benchmark_tasks_spec_uri = f"{working_directory}/gather_benchmark_tasks.json"
-    visualize_tasks_spec_uri = f"{working_directory}/visualize_tasks.json"
 
     phase_task_defs = {
         "preprocess": (preprocess_tasks, preprocess_tasks_spec_uri),
@@ -287,8 +284,14 @@ def build_segment_job_tasks(
         "postprocess": (postprocess_tasks, postprocess_tasks_spec_uri),
         "predictions-to-geojson": (geojson_tasks, geojson_tasks_spec_uri),
         "gather-benchmark": (gather_benchmark_tasks, gather_benchmark_tasks_spec_uri),
-        "visualize": (visualize_tasks, visualize_tasks_spec_uri),
     }
+
+    if visualize:
+        visualize_tasks = make_segment_visualize_tasks(
+            tasks, working_directory, "input_channels"
+        )
+        visualize_tasks_spec_uri = f"{working_directory}/visualize_tasks.json"
+        phase_task_defs["visualize"] = (visualize_tasks, visualize_tasks_spec_uri)
 
     json_str = BASE_MULTITASK_TEMPLATE.format(task_count=len(tasks))
 
@@ -304,8 +307,12 @@ def build_segment_job_tasks(
         create_segmenting_runnable(
             container_image, "gather-benchmark", phase_task_defs
         ),
-        create_segmenting_runnable(container_image, "visualize", phase_task_defs),
     ]
+
+    if visualize:
+        job["taskGroups"][0]["taskSpec"]["runnables"].append(
+            create_segmenting_runnable(container_image, "visualize", phase_task_defs)
+        )
 
     if not compute_config:
         compute_config = ComputeConfig(
